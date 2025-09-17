@@ -1,0 +1,20 @@
+tools:
+  - class_name: "verl.tools.sandbox_tool.SandBoxTool"
+    config: 
+      sandbox_fusion_url: "http://10.206.0.184:8080/run_code"
+      num_workers: 1
+      enable_global_rate_limit: true
+      rate_limit: 4
+      default_timeout: 60
+      default_language: "python"
+      type: native
+      
+    tool_schema:
+      type: "function"
+      function:
+        name: "calc_code_reward"
+        description: "A tool for reward calculation via the code interpreter in a sandbox environment (1.0 if the code is correct, 0.0 if code is incorrect). This tool does not accept any parameters, but it requires the code to be wrapped in triple backticks (e.g., ```python ... ```) to ensure proper formatting. Do NOT pass in the code as a argument. The function itself will automatically extract the code snippet from the triple backticks for interpretation. Call this tool simply as `{\"name\": \"calc_code_reward\", \"arguments\": {}}`."
+        parameters:
+          type: "object"
+          properties: {}
+          required: []
