@@ -10,8 +10,8 @@ export VLLM_USE_V1=1
 export HF_DATASETS_DISABLE_PROGRESS_BARS=1
 
 
-NNODES=1
-GPUS_PER_NODE=2
+NNODES=16
+GPUS_PER_NODE=8
 
 
 max_turns=8
@@ -20,15 +20,14 @@ max_response_length=16384
 max_token_length=$max_response_length
 actor_lr=1e-6
 
-train_batch_size=2  
-ppo_mini_batch_size=1
+train_batch_size=128
+ppo_mini_batch_size=64
 
-infer_tp=2 # vllm
-train_sp=2 # train
+infer_tp=4 # vllm
+train_sp=8 # train
 
 n_resp_per_prompt=16
 n_resp_per_prompt_val=32
-
 
 
 
@@ -41,7 +40,7 @@ project_name=retool_rl
 # =============== path settings ===============
 ROOT_PATH=${1:-$PWD}
 
-model_path="/cfs_turbo/beauzbhe/retool/verl/checkpoint/multiturn-sft-qwen-2.5-7b-instruct/global_step_372_merge"
+model_path=checkpoint/retool_sft/qwen-2.5-32b-instruct/global_step_372_merge
 dapo_math_17k=${ROOT_PATH}/datasets/BytedTsinghua-SIA/DAPO-Math-17k
 aime_2024=${ROOT_PATH}/datasets/Maxwell-Jia/AIME_2024
 aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
@@ -62,7 +61,7 @@ trajectory_buffer_size=16
 advantage_threshold=1
 trajectory_tolerate_steps=5
 replay_loss_coef=1
-max_replay_loss_ascending_steps=200
+max_replay_loss_ascending_steps=300
 
 loss_mode="vanilla"
 clip_cov_ratio_replay=0.02 
@@ -73,12 +72,12 @@ kl_cov_ratio_replay=0.02
 
 ## re-estimate advantage 
 weight_decay_trajectory_replay=-1 # use p50 change to estimate the advantage
-baseline_buffer_size=32
+baseline_buffer_size=10240
 
 
 # =============== intrinsic reward settings ===============
 use_toolcall_reward="cosine"
-max_toolcall_steps=100
+max_toolcall_steps=200
 
 
 # ================ Dr.BoT settings ================
@@ -128,7 +127,7 @@ python3 -m verl.trainer.main_ppo \
     data.custom_cls.name=CustomRLHFDataset \
     reward_model.reward_manager=agentConcurrent \
     custom_reward_function.path=${ROOT_PATH}/recipe/retool/reward.py \
-    custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay_qwen3 \
+    custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \

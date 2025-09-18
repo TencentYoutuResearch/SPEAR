@@ -8,12 +8,12 @@ num_cpus_per_env_worker=0.1 # The CPU resource allocated for each environment wo
 export HF_DATASETS_DISABLE_PROGRESS_BARS=1
 
 
-train_data_size=4
+train_data_size=32
 val_data_size=128
 group_size=8
-ppo_mini_batch_size=4
-ppo_micro_batch_size_per_gpu=2
-log_prob_micro_batch_size_per_gpu=2
+ppo_mini_batch_size=256
+ppo_micro_batch_size_per_gpu=4
+log_prob_micro_batch_size_per_gpu=4
 
 N_NODES=1
 N_GPUS=2
@@ -57,7 +57,7 @@ baseline_buffer_size=10240
 
 # =============== intrinsic reward settings ===============
 use_toolcall_reward="cosine"
-max_toolcall_steps=100
+max_toolcall_steps=200
 
 # ================ Dr.BoT settings ================
 use_kl_in_reward=False
@@ -172,7 +172,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.nnodes=${N_NODES} \
     trainer.save_freq=10 \
     trainer.test_freq=5 \
-    trainer.total_epochs=200 \
+    trainer.total_epochs=350 \
     trainer.val_before_train=False
     # actor_rollout_ref.rollout.val_kwargs.n=3
     

@@ -134,12 +134,4 @@ data/
 
 checkpoint
 analysis
-agent_system
-statistics_alfworld_1.5b
-statistics_alfworld_7b
-statistics_webshop_7b
-sokoban_snapshots
-statistics_webshop_1.5b
-examples/ablations
-models
-geometry3k
+

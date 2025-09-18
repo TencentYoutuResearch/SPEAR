@@ -57,9 +57,9 @@ Results using Qwen2.5-32B-Instruct and Qwen3-32B-Instruct on AIME24 and AIME25:
 | PPO          | Qwen2.5-32B-Instruct | -      | 55.0   |
 | GRPO         | Qwen2.5-32B-Instruct | -      | 60.0   |
 | Dr.BoT(GRPO) | Qwen2.5-32B-Instruct | 64.7   | 54.0   |
-| +CSAL(ours)  | Qwen2.5-32B-Instruct | 66.3   | 60.1   |
+| +CSAL(ours)  | Qwen2.5-32B-Instruct | 66.3(+1.6)   | 60.1(+6.1)   |
 | Dr.BoT(GRPO) | Qwen3-32B-Instruct   | 82.5   | 77.3   |
-| +CSAL(ours)  | Qwen3-32B-Instruct   | 85.6   | 80.5   |
+| +CSAL(ours)  | Qwen3-32B-Instruct   | 85.6(+3.1)   | 80.5(+3.2)   |
 
 
 
@@ -121,36 +121,36 @@ actor_rollout_ref:
     policy_loss:
       # Loss mode for regularization. Options: (see https://arxiv.org/abs/2505.22617)
       #   - vanilla
-      #   - clip-cov
+      #   - clip-cov, default = clip-cov for Dr.BoT
       #   - kl-cov
       #   - gpg 
       loss_mode: "vanilla"
 
       # ================== Hyperparameters for On-policy RL Loss ==================
       # Ratio of tokens to be clipped for clip-cov loss
-      clip_cov_ratio: 0.0002
+      clip_cov_ratio: 0.02
       
       # Lower bound for clip-cov loss
       clip_cov_lb: 1.0
       
       # Upper bound for clip-cov loss
-      clip_cov_ub: 5.0
+      clip_cov_ub: 40.0
       
       # Ratio of tokens to apply KL penalty for kl-cov loss
-      kl_cov_ratio: 0.0002
+      kl_cov_ratio: 0.02
 
       # ================== Hyperparameters for SIL Loss ==========================
       # [Replay Only] Ratio of tokens to be clipped for clip-cov loss
-      clip_cov_ratio_replay: 0.0002
+      clip_cov_ratio_replay: 0.02
       
       # [Replay Only] Lower bound for clip-cov loss
       clip_cov_lb_replay: 1.0
       
       # [Replay Only] Upper bound for clip-cov loss
-      clip_cov_ub_replay: 5.0
+      clip_cov_ub_replay: 40.0
       
       # [Replay Only] Ratio of tokens to apply KL penalty for kl-cov loss
-      kl_cov_ratio_replay: 0.0002
+      kl_cov_ratio_replay: 0.02
 ```
 
 
@@ -235,17 +235,17 @@ Filtering low-quality samples:
 
 ```yaml
 algorithm:
-  # Filter out overlong responses
-  filter_overlong_responses: False
+  # Filter out overlong responses, default = True for Dr.BoT
+  filter_overlong_responses: True
   
-  # Filter out incomplete responses (void-turn)
-  filter_incomplete_responses: False
+  # Filter out incomplete responses (void-turn), default = True for Dr.BoT
+  filter_incomplete_responses: True
   
-  # Filter out repetitive responses
-  filter_repetitive_responses: False
+  # Filter out repetitive responses, default = True for Dr.BoT
+  filter_repetitive_responses: True
   
-  # Filter out unreadable responses
-  filter_unreadable_responses: False
+  # Filter out unreadable responses, default = True for Dr.BoT
+  filter_unreadable_responses: True
 ```
 
 
@@ -344,8 +344,6 @@ python3 recipe/retool/retool_sft_preprocess.py
 ```bash
 bash recipe/retool/run_qwen2-32b_sft.sh
 ```
-
-> verl/utils/dataset/multiturn_sft_dataset.py为什么注释？
 
 3. Transform to HuggingFace format:
 ```bash
@@ -456,8 +454,6 @@ pip3 install -r requirements-vllm-0.8.2.txt --no-deps
 
 Installing ``mistral_common`` will update ``numpy`` and cause errors in the following training. So we don't install it here.
 
-#### 
-
 
 
 ### 2. Training 
@@ -489,9 +485,3 @@ bash verl-agent-qyl/examples/gigpo_trainer/run_webshop.sh # GRPO baseline
 bash verl-agent-qyl/examples/gigpo_trainer/run_webshop_drbot.sh # Dr.BoT
 bash verl-agent-qyl/examples/gigpo_trainer/run_webshop_sal.sh # SAL
 ```
-
-
-
-
-
-
