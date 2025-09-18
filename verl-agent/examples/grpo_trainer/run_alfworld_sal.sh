@@ -1,19 +1,19 @@
 set -x
 
 # =============== env and training settings ===============
-max_steps=50
+max_steps=15
 ENGINE=vllm
 export VLLM_ATTENTION_BACKEND=XFORMERS
 num_cpus_per_env_worker=0.1 # The CPU resource allocated for each environment worker. If you want to use less CPU resources, you can decrease this value.
 export HF_DATASETS_DISABLE_PROGRESS_BARS=1
 
 
-train_data_size=32
+train_data_size=4
 val_data_size=128
 group_size=8
-ppo_mini_batch_size=1024
-ppo_micro_batch_size_per_gpu=8
-log_prob_micro_batch_size_per_gpu=8
+ppo_mini_batch_size=128
+ppo_micro_batch_size_per_gpu=1
+log_prob_micro_batch_size_per_gpu=1
 
 N_NODES=1
 N_GPUS=2
@@ -162,7 +162,7 @@ python3 -m verl.trainer.main_ppo \
     env.max_steps=${max_steps} \
     env.rollout.n=$group_size \
     trainer.critic_warmup=0 \
-    trainer.logger=['console'] \
+    trainer.logger=['console','wandb'] \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXP_NAME} \
     trainer.default_local_dir=${LOCAL_DIR} \

@@ -1,4 +1,4 @@
-# CSAL: Curriculum-based Self-Imitation Learning for Agentic LLM Training
+# Learn the Ropes, Then Trust the Wins: Taming Exploration with Curriculum-based Self-Imitation for Agentic LLMs
 
 <p align="center">
   <a href="xxxx">
@@ -16,11 +16,11 @@ CSAL is a curriculum-based self-imitation learning (SIL) framework for training 
 
 
 
-# News
+## News
 
 
 
-# Contents
+## Contents
 
 - [Results](#Results)  
 
@@ -35,7 +35,7 @@ CSAL is a curriculum-based self-imitation learning (SIL) framework for training 
   - [Retool](#retool)
   - [verl-agent](#verl-agent)
 
-# Results
+## Results
 
 Results using Qwen2.5-1.5B-Instruct on ALFWorld and WebShop:
 
@@ -65,9 +65,9 @@ Results using Qwen2.5-32B-Instruct and Qwen3-32B-Instruct on AIME24 and AIME25:
 
 
 
-# Training Configuration
+## Training Configuration
 
-## Self-imitation Learning
+### Self-imitation Learning
 
 ```yaml
 actor_rollout_ref:
@@ -93,7 +93,7 @@ actor_rollout_ref:
 
 
 
-## Advantage Recalibration for Off-Policy Estimation
+### Advantage Recalibration for Off-Policy Estimation
 
 ```yaml
 actor_rollout_ref:
@@ -113,7 +113,7 @@ actor_rollout_ref:
 
   
   
-## Regularization for Entropy Control (Clip-cov Loss)
+### Regularization for Entropy Control (Clip-cov Loss)
 
 ```yaml
 actor_rollout_ref:
@@ -155,7 +155,7 @@ actor_rollout_ref:
 
 
 
-## Intrinsic Reward
+### Intrinsic Reward
 
 ```yaml
 algorithm:
@@ -173,7 +173,7 @@ algorithm:
 
 
 
-## Dr.BoT Settings
+### Dr.BoT Settings
 
 Removing KL divergence to the reference model: 
 
@@ -264,15 +264,15 @@ actor_rollout_ref:
 
 
 
-# Reproduce results
+## Reproduce results
 
-## Retool
+### Retool
 
-### 1. Install
+#### 1. Install
 
 We follow the installation instructions in [verl documentation](https://verl.readthedocs.io/en/latest/start/install.html#install-from-custom-environment) to install the nessary environment.
 
-#### a) Install CUDA, cuDNN and Apex (Optional)
+**a) Install CUDA, cuDNN and Apex (Optional)**
 
 Install CUDA>=12.4
 
@@ -312,7 +312,7 @@ cd apex && \
 MAX_JOB=32 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
 ```
 
-#### b) Install dependencies 
+**b) Install dependencies**
 
 Create a new environment:
 
@@ -327,14 +327,14 @@ Then, execute the `install.sh` script provided in verl:
 USE_MEGATRON=0 bash scripts/install_vllm_sglang_mcore.sh
 ```
 
-#### c)  Install verl
+**c)  Install verl**
 
 ```bash
 cd repo_root
 pip install --no-deps -e .
 ```
 
-### 2. Preparing data and cold-start model
+#### 2. Preparing data and cold-start model
 1. Preparing data:
 ```bash
 python3 recipe/retool/retool_sft_preprocess.py
@@ -355,7 +355,7 @@ python -m verl.model_merger merge \
 
 
 
-### 3. Training 
+#### 3. Training 
 
 
 Training with GRPO baseline:
@@ -377,15 +377,15 @@ bash recipe/retool/run_qwen2-32b_sal.sh
 ```
 
 
-## verl-agent
+### verl-agent
 
-### 1. Install
+#### 1. Install
 
 We follow the installation instructions in ``verl-agent``[documentation](https://github.com/langfengQ/verl-agent?tab=readme-ov-file#install-supported-environments) to install the nessary environment.
 
 > Due to potential package version conflicts, we recommend setting independent conda environments for different agent environments.
 
-#### ALFWorld
+**ALFWorld**
 
 Install verl and ALFWorld dependencies
 
@@ -419,7 +419,7 @@ Play a Textworld game:
 alfworld-play-tw
 ```
 
-#### WebShop
+**WebShop**
 
 WebShop requires Python <=3.10, so begin by creating a new `verl-agent-webshop` environment
 
@@ -456,7 +456,7 @@ Installing ``mistral_common`` will update ``numpy`` and cause errors in the foll
 
 
 
-### 2. Training 
+#### 2. Training 
 
 Training with GRPO:
 

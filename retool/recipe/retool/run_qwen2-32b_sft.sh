@@ -14,7 +14,7 @@ ROOT_PATH=${1:-$PWD}
 TRAIN_DATA=$ROOT_PATH/dataset/ReTool-SFT/data/train-00000-of-00001.parquet
 EVAL_DATA=$ROOT_PATH/dataset/ReTool-SFT/data/train-00000-of-00001.parquet
 MODEL_PATH=$ROOT_PATH/model/Qwen2.5-32B-Instruct
-SAVE_PATH=$ROOT_PATH/checkpoint/$project_name/$experiment_name
+SAVE_PATH=$ROOT_PATH/checkpoints/$project_name/$experiment_name
 echo $SAVE_PATH
 
 
@@ -37,7 +37,7 @@ torchrun --nnodes=$nnodes \
     trainer.default_local_dir=$SAVE_PATH \
     trainer.project_name=$project_name \
     trainer.experiment_name=$experiment_name \
-    trainer.logger='["console"]' \
+    trainer.logger='["console","wandb"]' \
     trainer.total_epochs=1 \
     ulysses_sequence_parallel_size=1 \
     use_remove_padding=true

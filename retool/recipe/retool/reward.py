@@ -3,7 +3,6 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent))
 
 import re
-from ftlangdetect import detect
 from collections import Counter
 import numpy as np
 
@@ -22,6 +21,50 @@ def remove_tool_tags(text):
     text = re.sub(r'<tool_response>.*?</tool_response>', '', text, flags=re.DOTALL)
     return text
 
+
+def default_compute_score(data_source, solution_str, ground_truth, user_query, file_path, tools=None, messages=[],\
+    extra_info=None, sandbox_fusion_url=None, concurrent_semaphore=None, global_steps=-1, use_toolcall_reward="none", max_toolcall_steps=200):
+    if data_source in ["openai/gsm8k"]:
+        from verl.utils.reward_score import gsm8k
+
+        res = gsm8k.compute_score(solution_str, ground_truth)
+    elif data_source in ["lighteval/MATH", "DigitalLearningGmbH/MATH-lighteval"]:
+        from verl.utils.reward_score import math
+
+        res = math.compute_score(solution_str, ground_truth)
+    elif data_source.startswith("math_verify") or data_source in ["DeepScaleR", "ReTool"]:
+        from verl.utils.reward_score import math_verify
+        # [Optional] Math-Verify Integration
+        # For enhanced accuracy, consider utilizing Math-Verify (https://github.com/huggingface/Math-Verify).
+        # Note: Math-Verify needs to be manually installed via pip: `pip install math-verify`.
+        # To use it, override the `compute_score` function with the following implementation:
+        res = math_verify.compute_score(solution_str, ground_truth)
+        if res["pred"] in ['"{"predictions": []}"', "TimeoutVerification", "FailedVerification"]:
+            res["is_incomplete"] = 1
+        else:
+            res["is_incomplete"] = 0
+    elif data_source in ["math_dapo", "aime_2025", "aime_2024"] or data_source.startswith("aime"):
+        from verl.utils.reward_score import math_dapo
+        # "pred": "[INVALID]"
+        res = math_dapo.compute_score(solution_str, ground_truth, strict_box_verify=True)
+        if res["pred"] in ["[INVALID]"]:
+            res["is_incomplete"] = 1
+            res["pred"] = ""
+        else:
+            res["is_incomplete"] = 0
+        if res["pred"] is None:
+            res["pred"] = ""
+
+    else:
+        raise NotImplementedError("only for maths and code")
+
+    # import pdb;pdb.set_trace();
+    if isinstance(res, dict):
+        return res
+    elif isinstance(res, (int, float, bool)):
+        return float(res)
+    else:
+        return float(res[0])
 
 def default_compute_score_enforce_toolcall_posneg_decay(data_source, solution_str, ground_truth, user_query, file_path, tools=None, messages=[],\
     extra_info=None, sandbox_fusion_url=None, concurrent_semaphore=None, global_steps=-1, use_toolcall_reward="none", max_toolcall_steps=200):

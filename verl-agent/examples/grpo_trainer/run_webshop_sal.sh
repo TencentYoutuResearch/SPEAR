@@ -155,7 +155,7 @@ python3 -m verl.trainer.main_ppo \
     env.max_steps=${max_steps} \
     env.rollout.n=$group_size \
     trainer.critic_warmup=0 \
-    trainer.logger=['console'] \
+    trainer.logger=['console','wandb'] \
     trainer.project_name=${PROJECT_NAME} \
     trainer.experiment_name=${EXP_NAME} \
     trainer.default_local_dir=${LOCAL_DIR} \

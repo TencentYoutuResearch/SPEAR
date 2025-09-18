@@ -21,4 +21,5 @@ xgrammar==0.1.16
 msgspec
 openai>=1.52.0
 pyzmq
-
+jiter==0.4.0
+distro

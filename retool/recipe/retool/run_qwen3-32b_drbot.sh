@@ -41,7 +41,7 @@ project_name=retool_rl
 # =============== path settings ===============
 ROOT_PATH=${1:-$PWD}
 
-model_path=checkpoint/retool_sft/qwen-3-32b-instruct/global_step_372_merge
+model_path=checkpoints/retool_sft/qwen-3-32b-instruct/global_step_372_merge
 dapo_math_17k=${ROOT_PATH}/datasets/BytedTsinghua-SIA/DAPO-Math-17k
 aime_2024=${ROOT_PATH}/datasets/Maxwell-Jia/AIME_2024
 aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
@@ -58,7 +58,7 @@ mkdir -p ${default_local_dir}
 
 # =============== self-imitation learning settings ===============
 enable_trajectory_replay=False
-trajectory_buffer_size=16
+trajectory_buffer_size=2048
 advantage_threshold=1
 trajectory_tolerate_steps=5
 replay_loss_coef=1
@@ -182,7 +182,7 @@ python3 -m verl.trainer.main_ppo \
     algorithm.filter_unreadable_responses=${filter_unreadable_responses} \
     algorithm.use_toolcall_reward=${use_toolcall_reward} \
     algorithm.max_toolcall_steps=${max_toolcall_steps} \
-    trainer.logger=['console'] \
+    trainer.logger=['console','wandb'] \
     trainer.project_name=$project_name \
     trainer.experiment_name=$experiment_name \
     trainer.n_gpus_per_node=$GPUS_PER_NODE \

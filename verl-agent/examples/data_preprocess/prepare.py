@@ -35,9 +35,8 @@ if __name__ == '__main__':
 
     data_source = 'hiyouga/geometry3k'
 
-    # dataset = datasets.load_dataset(data_source)
-    dataset = datasets.load_dataset("parquet", data_files={'train': 'geometry3k/data/train-00000-of-00001.parquet',\
-        'test': 'geometry3k/data/validation-00000-of-00001.parquet'})
+    dataset = datasets.load_dataset(data_source)
+    # dataset = datasets.load_dataset("parquet", data_files={'train': 'geometry3k/data/train-00000-of-00001.parquet','test': 'geometry3k/data/validation-00000-of-00001.parquet'})
 
     train_dataset = dataset['train'].select(range(args.train_data_size))
     test_dataset = dataset['test'].select(range(args.val_data_size))
