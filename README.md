@@ -491,4 +491,4 @@ bash examples/gigpo_trainer/run_webshop_csal.sh # CSAL
 
 ## Acknowledgement
 
-Our code are bulit upon [verl](https://github.com/volcengine/verl) and [verl-agent](https://github.com/langfengQ/verl-agent). We greatly appreciate their awesome work and the dedication of the contributors who made these projects available to the community. 
+Our codebase is bulit upon [verl](https://github.com/volcengine/verl) and [verl-agent](https://github.com/langfengQ/verl-agent). We greatly appreciate their awesome work and the dedication of the contributors who made these projects available to the community. 
