@@ -35,7 +35,7 @@ n_resp_per_prompt_val=32
 # =============== log settings ===============
 
 experiment_name=qwen3-32b_sal
-project_name=retool_rl
+project_name=dapo_math_17k
 
 
 # =============== path settings ===============
@@ -49,7 +49,7 @@ aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
 train_files="['$dapo_math_17k']"
 test_files="['$aime_2024','$aime_2025']"
 
-tool_config_path=${ROOT_PATH}/recipe/retool/sandbox_fusion_tool_config.yaml
+tool_config_path=${ROOT_PATH}/recipe/csal/sandbox_fusion_tool_config.yaml
 
 default_local_dir=$ROOT_PATH/checkpoints/$project_name/$experiment_name
 mkdir -p ${default_local_dir}
@@ -124,10 +124,10 @@ python3 -m verl.trainer.main_ppo \
     data.max_length=$max_token_length \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
-    data.custom_cls.path=${ROOT_PATH}/recipe/retool/retool.py \
+    data.custom_cls.path=${ROOT_PATH}/recipe/csal/retool.py \
     data.custom_cls.name=CustomRLHFDataset \
     reward_model.reward_manager=agentConcurrent \
-    custom_reward_function.path=${ROOT_PATH}/recipe/retool/reward.py \
+    custom_reward_function.path=${ROOT_PATH}/recipe/csal/reward.py \
     custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay_qwen3 \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.model.use_remove_padding=True \
