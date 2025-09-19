@@ -16,11 +16,11 @@ CSAL is a curriculum-based self-imitation learning (SIL) framework for training 
 
 
 
-## News
+# News
 
 
 
-## Contents
+# Contents
 
 - [Results](#Results)  
 
@@ -35,7 +35,7 @@ CSAL is a curriculum-based self-imitation learning (SIL) framework for training 
   - [Retool](#retool)
   - [verl-agent](#verl-agent)
 
-## Results
+# Results
 
 Results using Qwen2.5-1.5B-Instruct on ALFWorld and WebShop:
 
@@ -65,9 +65,9 @@ Results using Qwen2.5-32B-Instruct and Qwen3-32B-Instruct on AIME24 and AIME25:
 
 
 
-## Training Configuration
+# Training Configuration
 
-### Self-imitation Learning
+## Self-imitation Learning
 
 ```yaml
 actor_rollout_ref:
@@ -93,7 +93,7 @@ actor_rollout_ref:
 
 
 
-### Advantage Recalibration for Off-Policy Estimation
+## Advantage Recalibration for Off-Policy Estimation
 
 ```yaml
 actor_rollout_ref:
@@ -113,7 +113,7 @@ actor_rollout_ref:
 
   
   
-### Regularization for Entropy Control (Clip-cov Loss)
+## Regularization for Entropy Control (Clip-cov Loss)
 
 ```yaml
 actor_rollout_ref:
@@ -155,7 +155,7 @@ actor_rollout_ref:
 
 
 
-### Intrinsic Reward
+## Intrinsic Reward
 
 ```yaml
 algorithm:
@@ -173,7 +173,7 @@ algorithm:
 
 
 
-### Dr.BoT Settings
+## Dr.BoT Settings
 
 Removing KL divergence to the reference model: 
 
@@ -264,15 +264,15 @@ actor_rollout_ref:
 
 
 
-## Reproduce results
+# Reproduce results
 
-### Retool
+## Retool
 
-#### 1. Install
+### 1. Install
 
 We follow the installation instructions in [verl documentation](https://verl.readthedocs.io/en/latest/start/install.html#install-from-custom-environment) to install the nessary environment.
 
-**a) Install CUDA, cuDNN and Apex (Optional)**
+#### a) Install CUDA, cuDNN and Apex (Optional)
 
 Install CUDA>=12.4
 
@@ -312,29 +312,30 @@ cd apex && \
 MAX_JOB=32 pip install -v --disable-pip-version-check --no-cache-dir --no-build-isolation --config-settings "--build-option=--cpp_ext" --config-settings "--build-option=--cuda_ext" ./
 ```
 
-**b) Install dependencies**
+#### b) Install dependencies 
 
 Create a new environment:
 
 ```bash
-conda create -n verl python==3.10
+conda create -n verl python==3.10 -y
 conda activate verl
 ```
 
 Then, execute the `install.sh` script provided in verl:
 
 ```bash
-USE_MEGATRON=0 bash scripts/install_vllm_sglang_mcore.sh
+cd repo_root/retool
+USE_MEGATRON=0 USE_SGLANG=0 bash scripts/install_vllm_sglang_mcore.sh
 ```
 
-**c)  Install verl**
+#### c)  Install verl
 
 ```bash
-cd repo_root
+cd repo_root/retool
 pip install --no-deps -e .
 ```
 
-#### 2. Preparing data and cold-start model
+### 2. Preparing data and cold-start model
 1. Preparing data:
 ```bash
 python3 recipe/retool/retool_sft_preprocess.py
@@ -347,15 +348,14 @@ bash recipe/retool/run_qwen2-32b_sft.sh
 
 3. Transform to HuggingFace format:
 ```bash
-python -m verl.model_merger merge \
-    --backend fsdp \
+python -m verl.model_merger merge --backend fsdp \
     --local_dir <SFT_SAVE_PATH>/global_step_372/actor \
     --target_dir <SFT_SAVE_PATH>/global_step_372_merge
 ```
 
 
 
-#### 3. Training 
+### 3. Training 
 
 
 Training with GRPO baseline:
@@ -370,22 +370,22 @@ Training with Dr.BoT:
 bash recipe/retool/run_qwen2-32b_drbot.sh
 ```
 
-Training with SAL:
+Training with CSAL:
 
 ```bash
-bash recipe/retool/run_qwen2-32b_sal.sh
+bash recipe/retool/run_qwen2-32b_csal.sh
 ```
 
 
-### verl-agent
+## verl-agent
 
-#### 1. Install
+### 1. Install
 
 We follow the installation instructions in ``verl-agent``[documentation](https://github.com/langfengQ/verl-agent?tab=readme-ov-file#install-supported-environments) to install the nessary environment.
 
 > Due to potential package version conflicts, we recommend setting independent conda environments for different agent environments.
 
-**ALFWorld**
+#### ALFWorld
 
 Install verl and ALFWorld dependencies
 
@@ -394,15 +394,18 @@ Install verl and ALFWorld dependencies
 conda create -n verl-agent-alfworld python==3.12 -y
 conda activate verl-agent-alfworld
 pip3 install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-pip3 install flash-attn==2.7.4.post1 --no-build-isolation
-pip3 install -e .
-pip3 install vllm==0.8.5
+pip3 install flash-attn==2.7.4.post1 --no-build-isolation 
+pip install -r requirements.txt
+pip3 install -e . 
+pip3 install vllm==0.8.5 
+
+
 
 ## Install ALFWorld dependencies
-pip3 install gymnasium==0.29.1
-pip3 install stable-baselines3==2.6.0
-pip install alfworld
-pip install vllm==0.8.5
+pip3 install gymnasium==0.29.1 
+pip3 install stable-baselines3==2.6.0 
+pip install alfworld 
+pip install vllm==0.8.5 
 ```
 
 Download PDDL & Game files and pre-trained MaskRCNN detector (will be stored in `~/.cache/alfworld/`):
@@ -419,7 +422,7 @@ Play a Textworld game:
 alfworld-play-tw
 ```
 
-**WebShop**
+#### WebShop
 
 WebShop requires Python <=3.10, so begin by creating a new `verl-agent-webshop` environment
 
@@ -440,7 +443,7 @@ Note: If you encounter issues with gdown, you may need to visit `https://drive.g
 After WebShop is installed, return to the root directory of the repository and install the verl package in `verl-agent`:
 
 ```bash
-cd repo_root/
+cd repo_root/verl-agent
 pip3 install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 pip3 install flash-attn==2.7.4.post1 --no-build-isolation
 pip3 install -e .
@@ -456,32 +459,36 @@ Installing ``mistral_common`` will update ``numpy`` and cause errors in the foll
 
 
 
-#### 2. Training 
+### 2. Training 
 
 Training with GRPO:
 
 ```bash
 # ALFWorld
-bash verl-agent-qyl/examples/grpo_trainer/run_alfworld.sh # GRPO baseline
-bash verl-agent-qyl/examples/grpo_trainer/run_alfworld_drbot.sh # Dr.BoT
-bash verl-agent-qyl/examples/grpo_trainer/run_alfworld_sal.sh # SAL
+bash examples/grpo_trainer/run_alfworld.sh # GRPO baseline
+bash examples/grpo_trainer/run_alfworld_drbot.sh # Dr.BoT
+bash examples/grpo_trainer/run_alfworld_csal.sh # CSAL
 
 # WebShop
-bash verl-agent-qyl/examples/grpo_trainer/run_webshop.sh # GRPO baseline
-bash verl-agent-qyl/examples/grpo_trainer/run_webshop_drbot.sh # Dr.BoT
-bash verl-agent-qyl/examples/grpo_trainer/run_webshop_sal.sh # SAL
+bash examples/grpo_trainer/run_webshop.sh # GRPO baseline
+bash examples/grpo_trainer/run_webshop_drbot.sh # Dr.BoT
+bash examples/grpo_trainer/run_webshop_csal.sh # CSAL
 ```
 
 Training with GiGPO:
 
 ```bash
 # ALFWorld
-bash verl-agent-qyl/examples/gigpo_trainer/run_alfworld.sh # GRPO baseline
-bash verl-agent-qyl/examples/gigpo_trainer/run_alfworld_drbot.sh # Dr.BoT
-bash verl-agent-qyl/examples/gigpo_trainer/run_alfworld_sal.sh # SAL
+bash examples/gigpo_trainer/run_alfworld.sh # GRPO baseline
+bash examples/gigpo_trainer/run_alfworld_drbot.sh # Dr.BoT
+bash examples/gigpo_trainer/run_alfworld_csal.sh # CSAL
 
 # WebShop
-bash verl-agent-qyl/examples/gigpo_trainer/run_webshop.sh # GRPO baseline
-bash verl-agent-qyl/examples/gigpo_trainer/run_webshop_drbot.sh # Dr.BoT
-bash verl-agent-qyl/examples/gigpo_trainer/run_webshop_sal.sh # SAL
+bash examples/gigpo_trainer/run_webshop.sh # GRPO baseline
+bash examples/gigpo_trainer/run_webshop_drbot.sh # Dr.BoT
+bash examples/gigpo_trainer/run_webshop_csal.sh # CSAL
 ```
+
+## Acknowledgement
+
+Our code are bulit upon [verl](https://github.com/volcengine/verl) and [verl-agent](https://github.com/langfengQ/verl-agent). We greatly appreciate their awesome work and the dedication of the contributors who made these projects available to the community. 
