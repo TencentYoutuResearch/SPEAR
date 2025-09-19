@@ -12,5 +12,5 @@ tools:
           properties:
             answer:
               type: "string"
-              description: "The final answer to the GSM8K math problem."
+              description: "The model's answer to the GSM8K math problem, must be a digits"
           required: ["answer"]

@@ -1,13 +1,11 @@
 tools:
   - class_name: verl.tools.search_tool.SearchTool
     config:
-      # retrieval_service_url: http://127.0.0.1:8000/retrieve
-      retrieval_service_url: http://10.0.20.141:8501/retrieve
+      retrieval_service_url: http://127.0.0.1:8000/retrieve
       num_workers: 120
       rate_limit: 120
       timeout: 30
       type: native
-      
     tool_schema:
       type: function
       function:
