@@ -1,7 +1,6 @@
 beautifulsoup4==4.11.1
 cleantext==1.1.4
 env==0.1.0
-Flask==2.2.5
 gdown
 gym==0.24.0
 numpy==1.26.4
