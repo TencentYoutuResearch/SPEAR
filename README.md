@@ -32,7 +32,7 @@ CSAL is a curriculum-based self-imitation learning (SIL) framework for training 
   - [Dr.BoT](##drbot-settings)
 
 - [Reproduce results](#reproduce-results)
-  - [Retool](#retool)
+  - [Math](#math)
   - [verl-agent](#verl-agent)
 
 # Results
@@ -266,7 +266,7 @@ actor_rollout_ref:
 
 # Reproduce results
 
-## Retool
+## Math
 
 ### 1. Install
 
@@ -324,26 +324,26 @@ conda activate verl
 Then, execute the `install.sh` script provided in verl:
 
 ```bash
-cd repo_root/retool
+cd repo_root/verl
 USE_MEGATRON=0 USE_SGLANG=0 bash scripts/install_vllm_sglang_mcore.sh
 ```
 
 #### c)  Install verl
 
 ```bash
-cd repo_root/retool
+cd repo_root/verl
 pip install --no-deps -e .
 ```
 
 ### 2. Preparing data and cold-start model
 1. Preparing data:
 ```bash
-python3 recipe/retool/retool_sft_preprocess.py
+python3 recipe/csal/sft_preprocess.py
 ```
 
 2. Getting the cold-start model:
 ```bash
-bash recipe/retool/run_qwen2-32b_sft.sh
+bash recipe/csal/run_qwen2-32b_sft.sh
 ```
 
 3. Transform to HuggingFace format:
@@ -361,19 +361,19 @@ python -m verl.model_merger merge --backend fsdp \
 Training with GRPO baseline:
 
 ```bash
-bash recipe/retool/run_qwen2-32b.sh
+bash recipe/csal/run_qwen2-32b.sh
 ```
 
 Training with Dr.BoT:
 
 ```bash
-bash recipe/retool/run_qwen2-32b_drbot.sh
+bash recipe/csal/run_qwen2-32b_drbot.sh
 ```
 
 Training with CSAL:
 
 ```bash
-bash recipe/retool/run_qwen2-32b_csal.sh
+bash recipe/csal/run_qwen2-32b_csal.sh
 ```
 
 
