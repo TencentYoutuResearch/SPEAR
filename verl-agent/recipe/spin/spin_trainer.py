@@ -970,326 +970,326 @@ class RaySPINTrainer:
         last_val_metrics = None
         should_stop = False
 
-        for epoch in range(self.config.trainer.total_epochs):
-            if should_stop: break
-            print(f"--- Starting Online DPO Epoch {epoch} ---")
-            try:
-                train_iterator = iter(self.train_dataloader)
-            except TypeError:
-                print("Warning: Dataloader is not iterable.")
-                train_iterator = self.train_dataloader # Fallback attempt
+        # for epoch in range(self.config.trainer.total_epochs):
+        #     if should_stop: break
+        #     print(f"--- Starting Online DPO Epoch {epoch} ---")
+        #     try:
+        #         train_iterator = iter(self.train_dataloader)
+        #     except TypeError:
+        #         print("Warning: Dataloader is not iterable.")
+        #         train_iterator = self.train_dataloader # Fallback attempt
 
-            for batch_idx, batch_dict in enumerate(train_iterator):
-                if self.global_steps > self.total_training_steps:
-                      should_stop = True; break
+        #     for batch_idx, batch_dict in enumerate(train_iterator):
+        #         if self.global_steps > self.total_training_steps:
+        #               should_stop = True; break
 
-                metrics = {}
-                timing_raw = {}
-                step_timer = Timer(logger=None)
-                ref_log_prob_computed = False # Flag to track if ref log probs were computed
+        #         metrics = {}
+        #         timing_raw = {}
+        #         step_timer = Timer(logger=None)
+        #         ref_log_prob_computed = False # Flag to track if ref log probs were computed
 
-                try: # Outer try-except for the whole step
-                    step_timer.start()
-                    with _timer('step', timing_raw):
-                        batch: DataProto = DataProto.from_single_dict(batch_dict)
-                        current_batch_size = batch.batch.batch_size[0]
-                        print(f"\n[Step {self.global_steps}, Batch {batch_idx}] Processing batch size: {current_batch_size}")
+        #         try: # Outer try-except for the whole step
+        #             step_timer.start()
+        #             with _timer('step', timing_raw):
+        #                 batch: DataProto = DataProto.from_single_dict(batch_dict)
+        #                 current_batch_size = batch.batch.batch_size[0]
+        #                 print(f"\n[Step {self.global_steps}, Batch {batch_idx}] Processing batch size: {current_batch_size}")
 
-                        # --- Reference Model Update ---
-                        ref_update_freq = self.config.trainer.get('ref_update_freq', -1)
-                        if self.use_reference_policy and ref_update_freq > 0 and self.global_steps % ref_update_freq == 0:
-                            print(f"\n[Step {self.global_steps}] Updating Reference Model Weights from Actor...")
-                            try:
-                                # --- This requires careful implementation with FSDP ---
-                                # 1. Save actor state dict (potentially to CPU memory or disk)
-                                #    This needs to be done collectively across actor worker ranks.
-                                #    The checkpoint_manager might be adaptable, or use FSDP APIs directly.
-                                #    Example placeholder using a conceptual save/load mechanism:
-                                actor_state_path = "/tmp/actor_state_mid" # Temporary path
-                                self.actor_rollout_wg.save_checkpoint(actor_state_path) # Adapt save logic
+        #                 # --- Reference Model Update ---
+        #                 ref_update_freq = self.config.trainer.get('ref_update_freq', -1)
+        #                 if self.use_reference_policy and ref_update_freq > 0 and self.global_steps % ref_update_freq == 0:
+        #                     print(f"\n[Step {self.global_steps}] Updating Reference Model Weights from Actor...")
+        #                     try:
+        #                         # --- This requires careful implementation with FSDP ---
+        #                         # 1. Save actor state dict (potentially to CPU memory or disk)
+        #                         #    This needs to be done collectively across actor worker ranks.
+        #                         #    The checkpoint_manager might be adaptable, or use FSDP APIs directly.
+        #                         #    Example placeholder using a conceptual save/load mechanism:
+        #                         actor_state_path = "/tmp/actor_state_mid" # Temporary path
+        #                         self.actor_rollout_wg.save_checkpoint(actor_state_path) # Adapt save logic
 
-                                # 2. Load the state dict onto the reference model worker group
-                                #    This also needs collective loading on the ref worker ranks.
-                                self.ref_policy_wg.load_checkpoint(actor_state_path,None, True) # Adapt load logic
+        #                         # 2. Load the state dict onto the reference model worker group
+        #                         #    This also needs collective loading on the ref worker ranks.
+        #                         self.ref_policy_wg.load_checkpoint(actor_state_path,None, True) # Adapt load logic
 
-                                print(f"[Step {self.global_steps}] Reference Model Weights Updated.")
-                                # Optionally remove the temporary state file
-                                # os.remove(actor_state_path) # Needs rank-aware removal or shared storage
+        #                         print(f"[Step {self.global_steps}] Reference Model Weights Updated.")
+        #                         # Optionally remove the temporary state file
+        #                         # os.remove(actor_state_path) # Needs rank-aware removal or shared storage
 
-                            except Exception as sync_e:
-                                print(f"ERROR during reference model sync at step {self.global_steps}: {sync_e}")
-                                traceback.print_exc()
+        #                     except Exception as sync_e:
+        #                         print(f"ERROR during reference model sync at step {self.global_steps}: {sync_e}")
+        #                         traceback.print_exc()
 
-                        # Pop keys for generation
-                        pop_batch_keys=['input_ids', 'attention_mask']
-                        if 'position_ids' in batch.batch: pop_batch_keys.append('position_ids')
-                        pop_non_tensor_keys = ['raw_prompt_ids'] if 'raw_prompt_ids' in batch.non_tensor_batch else []
-                        if 'multi_modal_inputs' in batch.non_tensor_batch.keys():
-                            pop_non_tensor_keys.extend(['multi_modal_data', 'multi_modal_inputs'])
-                        original_non_tensor_data = batch.non_tensor_batch
-                        gen_batch = batch.pop(
-                            batch_keys=pop_batch_keys,
-                            non_tensor_batch_keys=pop_non_tensor_keys,
-                        )
-                        # (Add Debug prints for gen_batch if needed)
+        #                 # Pop keys for generation
+        #                 pop_batch_keys=['input_ids', 'attention_mask']
+        #                 if 'position_ids' in batch.batch: pop_batch_keys.append('position_ids')
+        #                 pop_non_tensor_keys = ['raw_prompt_ids'] if 'raw_prompt_ids' in batch.non_tensor_batch else []
+        #                 if 'multi_modal_inputs' in batch.non_tensor_batch.keys():
+        #                     pop_non_tensor_keys.extend(['multi_modal_data', 'multi_modal_inputs'])
+        #                 original_non_tensor_data = batch.non_tensor_batch
+        #                 gen_batch = batch.pop(
+        #                     batch_keys=pop_batch_keys,
+        #                     non_tensor_batch_keys=pop_non_tensor_keys,
+        #                 )
+        #                 # (Add Debug prints for gen_batch if needed)
 
-                        # Generate sequences (chosen/rejected pairs)
-                        with _timer('gen', timing_raw):
-                            try:
-                                gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
-                                # (Add Debug prints for gen_batch_output if needed)
-                            except Exception as gen_e:
-                                print(f"\n!!!!!!!! ERROR DURING GENERATION (Step {self.global_steps}) !!!!!!!!")
-                                print(gen_e); traceback.print_exc()
-                                print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                                step_timer.stop(); continue
+        #                 # Generate sequences (chosen/rejected pairs)
+        #                 with _timer('gen', timing_raw):
+        #                     try:
+        #                         gen_batch_output = self.actor_rollout_wg.generate_sequences(gen_batch)
+        #                         # (Add Debug prints for gen_batch_output if needed)
+        #                     except Exception as gen_e:
+        #                         print(f"\n!!!!!!!! ERROR DURING GENERATION (Step {self.global_steps}) !!!!!!!!")
+        #                         print(gen_e); traceback.print_exc()
+        #                         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #                         step_timer.stop(); continue
 
-                        # Combine original prompts with generated sequences
-                        batch.non_tensor_batch = original_non_tensor_data # Restore non-tensor data
-                        batch.non_tensor_batch['uid'] = np.array([str(uuid.uuid4()) for _ in range(current_batch_size)], dtype=object)
-                        batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
-                        batch = batch.union(gen_batch_output)
-                        # (Add Debug prints after union if needed)
+        #                 # Combine original prompts with generated sequences
+        #                 batch.non_tensor_batch = original_non_tensor_data # Restore non-tensor data
+        #                 batch.non_tensor_batch['uid'] = np.array([str(uuid.uuid4()) for _ in range(current_batch_size)], dtype=object)
+        #                 batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
+        #                 batch = batch.union(gen_batch_output)
+        #                 # (Add Debug prints after union if needed)
 
-                        # Compute response mask (needed for ref logprob calc and DPO prep)
-                        batch.batch['response_mask'] = compute_response_mask(batch)
+        #                 # Compute response mask (needed for ref logprob calc and DPO prep)
+        #                 batch.batch['response_mask'] = compute_response_mask(batch)
 
-                        if self.config.trainer.balance_batch:
-                            self._balance_batch(batch, metrics=metrics)
+        #                 if self.config.trainer.balance_batch:
+        #                     self._balance_batch(batch, metrics=metrics)
 
-                        batch.meta_info['global_token_num'] = torch.sum(batch.batch['attention_mask'], dim=-1).tolist()
+        #                 batch.meta_info['global_token_num'] = torch.sum(batch.batch['attention_mask'], dim=-1).tolist()
 
-                        # --- Compute Log Probs for the CURRENT policy (used for KL if enabled, or ActorAsRef fallback) ---
-                        # Note: For pure DPO with external ref, this 'old_log_probs' might not be strictly needed
-                        #       unless used for other metrics or a fallback. Keep it for now.
-                        with _timer('policy_log_prob', timing_raw):
-                             policy_log_prob_output = self.actor_rollout_wg.compute_log_prob(batch)
-                             batch = batch.union(policy_log_prob_output) # Adds 'old_log_probs'
-                             # (Debug prints for old_log_probs)
+        #                 # --- Compute Log Probs for the CURRENT policy (used for KL if enabled, or ActorAsRef fallback) ---
+        #                 # Note: For pure DPO with external ref, this 'old_log_probs' might not be strictly needed
+        #                 #       unless used for other metrics or a fallback. Keep it for now.
+        #                 with _timer('policy_log_prob', timing_raw):
+        #                      policy_log_prob_output = self.actor_rollout_wg.compute_log_prob(batch)
+        #                      batch = batch.union(policy_log_prob_output) # Adds 'old_log_probs'
+        #                      # (Debug prints for old_log_probs)
 
-                        # --- Compute Log Probs using the EXTERNAL Reference Model ---
-                        if self.use_reference_policy:
-                            with _timer('ref_log_prob_dpo', timing_raw):
-                                # print(f"---- [Step {self.global_steps}] DEBUG DPO: Calling compute_ref_log_prob ----")
-                                try:
-                                    # 'batch' contains interleaved chosen/rejected sequences
-                                    ref_log_prob_output = self.ref_policy_wg.compute_ref_log_prob(batch) # Returns DataProto with 'ref_log_prob'
-                                    batch = batch.union(ref_log_prob_output) # Adds 'ref_log_prob' key [batch_size * n, seq_len]
-                                    ref_log_prob_computed = True # Mark success
-                                    # print(f"---- [Step {self.global_steps}] DEBUG DPO: ref_log_prob tensor shape: {batch.batch['ref_log_prob'].shape} ----")
-                                except Exception as ref_e:
-                                     print(f"ERROR computing reference log probs at step {self.global_steps}: {ref_e}")
-                                     traceback.print_exc()
-                                     batch.batch['ref_log_prob'] = None # Mark as failed
-                                     ref_log_prob_computed = False
-                        else:
-                            print("Warning: Skipping external reference log prob calculation as use_reference_policy is False.")
-                            # DPO update will likely fail unless ActorAsRef logic is re-enabled in dp_actor
+        #                 # --- Compute Log Probs using the EXTERNAL Reference Model ---
+        #                 if self.use_reference_policy:
+        #                     with _timer('ref_log_prob_dpo', timing_raw):
+        #                         # print(f"---- [Step {self.global_steps}] DEBUG DPO: Calling compute_ref_log_prob ----")
+        #                         try:
+        #                             # 'batch' contains interleaved chosen/rejected sequences
+        #                             ref_log_prob_output = self.ref_policy_wg.compute_ref_log_prob(batch) # Returns DataProto with 'ref_log_prob'
+        #                             batch = batch.union(ref_log_prob_output) # Adds 'ref_log_prob' key [batch_size * n, seq_len]
+        #                             ref_log_prob_computed = True # Mark success
+        #                             # print(f"---- [Step {self.global_steps}] DEBUG DPO: ref_log_prob tensor shape: {batch.batch['ref_log_prob'].shape} ----")
+        #                         except Exception as ref_e:
+        #                              print(f"ERROR computing reference log probs at step {self.global_steps}: {ref_e}")
+        #                              traceback.print_exc()
+        #                              batch.batch['ref_log_prob'] = None # Mark as failed
+        #                              ref_log_prob_computed = False
+        #                 else:
+        #                     print("Warning: Skipping external reference log prob calculation as use_reference_policy is False.")
+        #                     # DPO update will likely fail unless ActorAsRef logic is re-enabled in dp_actor
 
 
-                        # --- Compute Rewards/Scores (used to determine preference) ---
-                        with _timer('reward_calc', timing_raw):
-                             # (Reward calculation logic using RM or reward_fn as before)
-                             # ... Ensure this calculates 'token_level_rewards' or similar ...
-                            if self.use_rm:
-                                reward_tensor_rm = self.rm_wg.compute_rm_score(batch)
-                                batch = batch.union(reward_tensor_rm) # Adds 'rm_scores'
+        #                 # --- Compute Rewards/Scores (used to determine preference) ---
+        #                 with _timer('reward_calc', timing_raw):
+        #                      # (Reward calculation logic using RM or reward_fn as before)
+        #                      # ... Ensure this calculates 'token_level_rewards' or similar ...
+        #                     if self.use_rm:
+        #                         reward_tensor_rm = self.rm_wg.compute_rm_score(batch)
+        #                         batch = batch.union(reward_tensor_rm) # Adds 'rm_scores'
 
-                            reward_extra_infos_dict = {}
-                            try:
-                                if self.reward_fn is None:
-                                    #  print(f"---- [DEBUG Step {self.global_steps}] ERROR: self.reward_fn is None! Using dummy rewards. ----")
-                                     # Use rm_scores if available, otherwise zeros
-                                     reward_tensor = batch.batch.get('rm_scores', torch.zeros_like(batch.batch['response_mask'], dtype=torch.float32))
-                                else:
-                                     reward_result = self.reward_fn(batch, return_dict=True)
-                                     reward_tensor = reward_result['reward_tensor'] # Final combined reward
-                                     reward_extra_infos_dict = reward_result.get('reward_extra_info', {})
+        #                     reward_extra_infos_dict = {}
+        #                     try:
+        #                         if self.reward_fn is None:
+        #                             #  print(f"---- [DEBUG Step {self.global_steps}] ERROR: self.reward_fn is None! Using dummy rewards. ----")
+        #                              # Use rm_scores if available, otherwise zeros
+        #                              reward_tensor = batch.batch.get('rm_scores', torch.zeros_like(batch.batch['response_mask'], dtype=torch.float32))
+        #                         else:
+        #                              reward_result = self.reward_fn(batch, return_dict=True)
+        #                              reward_tensor = reward_result['reward_tensor'] # Final combined reward
+        #                              reward_extra_infos_dict = reward_result.get('reward_extra_info', {})
 
-                            except Exception:
-                                # print(f'---- [DEBUG Step {self.global_steps}] Error in reward_fn call: {e}. Using dummy rewards. ----')
-                                traceback.print_exc()
-                                reward_tensor = torch.zeros_like(batch.batch['response_mask'], dtype=torch.float32)
-                                reward_extra_infos_dict = {}
+        #                     except Exception:
+        #                         # print(f'---- [DEBUG Step {self.global_steps}] Error in reward_fn call: {e}. Using dummy rewards. ----')
+        #                         traceback.print_exc()
+        #                         reward_tensor = torch.zeros_like(batch.batch['response_mask'], dtype=torch.float32)
+        #                         reward_extra_infos_dict = {}
 
-                            # Use 'token_level_rewards' as the key for preference calculation
-                            batch.batch['token_level_rewards'] = reward_tensor
-                            if reward_extra_infos_dict: batch.non_tensor_batch.update({k: np.array(v) for k, v in reward_extra_infos_dict.items()})
+        #                     # Use 'token_level_rewards' as the key for preference calculation
+        #                     batch.batch['token_level_rewards'] = reward_tensor
+        #                     if reward_extra_infos_dict: batch.non_tensor_batch.update({k: np.array(v) for k, v in reward_extra_infos_dict.items()})
                             
 
-                        # --- Determine Preferences ---
-                        # Uses 'token_level_rewards' to determine chosen/rejected based on score
-                        batch = compute_onlineDPO_pref(batch) # Adds 'preferences' key
+        #                 # --- Determine Preferences ---
+        #                 # Uses 'token_level_rewards' to determine chosen/rejected based on score
+        #                 batch = compute_onlineDPO_pref(batch) # Adds 'preferences' key
 
-                        # --- Prepare DPO Batch ---
-                        dpo_update_batch_proto = None # Initialize
-                        with _timer('prepare_dpo_batch', timing_raw):
-                            try:
-                                if 'preferences' not in batch.batch or batch.batch['preferences'] is None:
-                                    raise ValueError("'preferences' key missing or None after compute_onlineDPO_pref.")
+        #                 # --- Prepare DPO Batch ---
+        #                 dpo_update_batch_proto = None # Initialize
+        #                 with _timer('prepare_dpo_batch', timing_raw):
+        #                     try:
+        #                         if 'preferences' not in batch.batch or batch.batch['preferences'] is None:
+        #                             raise ValueError("'preferences' key missing or None after compute_onlineDPO_pref.")
 
-                                # Check if reference log probs were computed successfully (if needed)
-                                if self.use_reference_policy and not ref_log_prob_computed:
-                                     raise ValueError("Reference log probs required but failed to compute.")
+        #                         # Check if reference log probs were computed successfully (if needed)
+        #                         if self.use_reference_policy and not ref_log_prob_computed:
+        #                              raise ValueError("Reference log probs required but failed to compute.")
 
-                                # Check required base keys
-                                required_keys = ['input_ids', 'attention_mask', 'response_mask']
-                                for rk in required_keys:
-                                    if rk not in batch.batch or batch.batch[rk] is None:
-                                        raise KeyError(f"Required key '{rk}' missing from batch for DPO prep.")
+        #                         # Check required base keys
+        #                         required_keys = ['input_ids', 'attention_mask', 'response_mask']
+        #                         for rk in required_keys:
+        #                             if rk not in batch.batch or batch.batch[rk] is None:
+        #                                 raise KeyError(f"Required key '{rk}' missing from batch for DPO prep.")
 
-                                preferences_mask = batch.batch['preferences'] # Shape [batch_size * n]
-                                not_preferences_mask = ~preferences_mask
+        #                         preferences_mask = batch.batch['preferences'] # Shape [batch_size * n]
+        #                         not_preferences_mask = ~preferences_mask
 
-                                # Gather Chosen/Rejected Base Tensors
-                                chosen_input_ids = batch.batch['input_ids'][preferences_mask]
-                                chosen_attention_mask = batch.batch['attention_mask'][preferences_mask]
-                                rejected_input_ids = batch.batch['input_ids'][not_preferences_mask]
-                                rejected_attention_mask = batch.batch['attention_mask'][not_preferences_mask]
-                                chosen_position_ids = batch.batch.get('position_ids')[preferences_mask] if 'position_ids' in batch.batch else None
-                                rejected_position_ids = batch.batch.get('position_ids')[not_preferences_mask] if 'position_ids' in batch.batch else None
+        #                         # Gather Chosen/Rejected Base Tensors
+        #                         chosen_input_ids = batch.batch['input_ids'][preferences_mask]
+        #                         chosen_attention_mask = batch.batch['attention_mask'][preferences_mask]
+        #                         rejected_input_ids = batch.batch['input_ids'][not_preferences_mask]
+        #                         rejected_attention_mask = batch.batch['attention_mask'][not_preferences_mask]
+        #                         chosen_position_ids = batch.batch.get('position_ids')[preferences_mask] if 'position_ids' in batch.batch else None
+        #                         rejected_position_ids = batch.batch.get('position_ids')[not_preferences_mask] if 'position_ids' in batch.batch else None
 
-                                # Create Labels
-                                print("WARNING: Creating DPO labels using configured max_prompt_length...")
-                                prompt_len = self.config.data.max_prompt_length
-                                chosen_labels = chosen_input_ids.clone(); chosen_labels[:, :prompt_len] = -100
-                                rejected_labels = rejected_input_ids.clone(); rejected_labels[:, :prompt_len] = -100
+        #                         # Create Labels
+        #                         print("WARNING: Creating DPO labels using configured max_prompt_length...")
+        #                         prompt_len = self.config.data.max_prompt_length
+        #                         chosen_labels = chosen_input_ids.clone(); chosen_labels[:, :prompt_len] = -100
+        #                         rejected_labels = rejected_input_ids.clone(); rejected_labels[:, :prompt_len] = -100
 
-                                # Calculate and Gather Reference Log Probs (Sequence Level)
-                                if self.use_reference_policy:
-                                    ref_log_prob_tensor = batch.batch['ref_log_prob'] # Token level [bsz * n, seq_len]
-                                    response_mask_full = batch.batch['response_mask'] # Response mask [bsz * n, seq_len]
-                                    ref_sequence_logps = (ref_log_prob_tensor * response_mask_full).sum(dim=-1) # Sequence level [bsz * n]
-                                    reference_chosen_logps = ref_sequence_logps[preferences_mask]
-                                    reference_rejected_logps = ref_sequence_logps[not_preferences_mask]
-                                else:
-                                     # If not using external ref, DPO needs ActorAsRef logic in dp_actor
-                                     # We won't add the keys here, dp_actor will handle it (or fail if not modified)
-                                     print("Info: Not adding explicit reference logps to DPO batch (use_reference_policy=False).")
-                                     reference_chosen_logps = None # Explicitly None
-                                     reference_rejected_logps = None
+        #                         # Calculate and Gather Reference Log Probs (Sequence Level)
+        #                         if self.use_reference_policy:
+        #                             ref_log_prob_tensor = batch.batch['ref_log_prob'] # Token level [bsz * n, seq_len]
+        #                             response_mask_full = batch.batch['response_mask'] # Response mask [bsz * n, seq_len]
+        #                             ref_sequence_logps = (ref_log_prob_tensor * response_mask_full).sum(dim=-1) # Sequence level [bsz * n]
+        #                             reference_chosen_logps = ref_sequence_logps[preferences_mask]
+        #                             reference_rejected_logps = ref_sequence_logps[not_preferences_mask]
+        #                         else:
+        #                              # If not using external ref, DPO needs ActorAsRef logic in dp_actor
+        #                              # We won't add the keys here, dp_actor will handle it (or fail if not modified)
+        #                              print("Info: Not adding explicit reference logps to DPO batch (use_reference_policy=False).")
+        #                              reference_chosen_logps = None # Explicitly None
+        #                              reference_rejected_logps = None
 
-                                # Package Tensors
-                                dpo_tensors = {
-                                     'chosen_input_ids': chosen_input_ids,
-                                     'chosen_attention_mask': chosen_attention_mask,
-                                     'chosen_labels': chosen_labels,
-                                     'rejected_input_ids': rejected_input_ids,
-                                     'rejected_attention_mask': rejected_attention_mask,
-                                     'rejected_labels': rejected_labels,
-                                }
-                                # Conditionally add reference logps if computed
-                                if reference_chosen_logps is not None:
-                                    dpo_tensors['reference_chosen_logps'] = reference_chosen_logps
-                                if reference_rejected_logps is not None:
-                                    dpo_tensors['reference_rejected_logps'] = reference_rejected_logps
-                                # Add position ids if they exist
-                                if chosen_position_ids is not None: dpo_tensors['chosen_position_ids'] = chosen_position_ids
-                                if rejected_position_ids is not None: dpo_tensors['rejected_position_ids'] = rejected_position_ids
+        #                         # Package Tensors
+        #                         dpo_tensors = {
+        #                              'chosen_input_ids': chosen_input_ids,
+        #                              'chosen_attention_mask': chosen_attention_mask,
+        #                              'chosen_labels': chosen_labels,
+        #                              'rejected_input_ids': rejected_input_ids,
+        #                              'rejected_attention_mask': rejected_attention_mask,
+        #                              'rejected_labels': rejected_labels,
+        #                         }
+        #                         # Conditionally add reference logps if computed
+        #                         if reference_chosen_logps is not None:
+        #                             dpo_tensors['reference_chosen_logps'] = reference_chosen_logps
+        #                         if reference_rejected_logps is not None:
+        #                             dpo_tensors['reference_rejected_logps'] = reference_rejected_logps
+        #                         # Add position ids if they exist
+        #                         if chosen_position_ids is not None: dpo_tensors['chosen_position_ids'] = chosen_position_ids
+        #                         if rejected_position_ids is not None: dpo_tensors['rejected_position_ids'] = rejected_position_ids
 
-                                # Prepare Meta Info
-                                dpo_meta = {
-                                     'dpo_beta': OmegaConf.select(self.config.algorithm, "dpo_beta", default=0.1),
-                                     'dpo_loss_type': OmegaConf.select(self.config.algorithm, "dpo_loss_type", default='sigmoid'),
-                                     'dpo_label_smoothing': OmegaConf.select(self.config.algorithm, "dpo_label_smoothing", default=0.0),
-                                     'use_reference_policy': self.use_reference_policy,
-                                     'reference_free': not self.use_reference_policy, # False if using external ref
-                                     'global_step': self.global_steps
-                                }
+        #                         # Prepare Meta Info
+        #                         dpo_meta = {
+        #                              'dpo_beta': OmegaConf.select(self.config.algorithm, "dpo_beta", default=0.1),
+        #                              'dpo_loss_type': OmegaConf.select(self.config.algorithm, "dpo_loss_type", default='sigmoid'),
+        #                              'dpo_label_smoothing': OmegaConf.select(self.config.algorithm, "dpo_label_smoothing", default=0.0),
+        #                              'use_reference_policy': self.use_reference_policy,
+        #                              'reference_free': not self.use_reference_policy, # False if using external ref
+        #                              'global_step': self.global_steps
+        #                         }
 
-                                dpo_update_batch_proto = DataProto.from_dict(tensors=dpo_tensors, meta_info=dpo_meta)
-                                # print(f"---- [Step {self.global_steps}] DEBUG DPO: Prepared DPO Update Batch ----")
-                                # print(f"  Keys: {list(dpo_update_batch_proto.batch.keys())}")
-                                # print(f"  Meta Info: {dpo_meta}")
+        #                         dpo_update_batch_proto = DataProto.from_dict(tensors=dpo_tensors, meta_info=dpo_meta)
+        #                         # print(f"---- [Step {self.global_steps}] DEBUG DPO: Prepared DPO Update Batch ----")
+        #                         # print(f"  Keys: {list(dpo_update_batch_proto.batch.keys())}")
+        #                         # print(f"  Meta Info: {dpo_meta}")
 
-                            except Exception as e_prep:
-                                print(f"ERROR preparing DPO batch at step {self.global_steps}: {e_prep}")
-                                traceback.print_exc()
-                                dpo_update_batch_proto = None # Skip update on error
-
-
-                        # --- Actor Update Step ---
-                        actor_output = None
-                        if self.config.trainer.critic_warmup <= self.global_steps and dpo_update_batch_proto:
-                            with _timer('update_actor', timing_raw):
-                                # Pass the batch containing reference log probs (if computed)
-                                # The modified update_actor_dpo expects them if reference_free=False
-                                actor_output = self.actor_rollout_wg.update_actor_dpo(dpo_update_batch_proto)
-                            if actor_output and 'metrics' in actor_output.meta_info:
-                                metrics.update(reduce_metrics(actor_output.meta_info['metrics']))
-                        elif dpo_update_batch_proto is None:
-                            print(f"Skipping actor update at step {self.global_steps} due to DPO batch preparation error.")
+        #                     except Exception as e_prep:
+        #                         print(f"ERROR preparing DPO batch at step {self.global_steps}: {e_prep}")
+        #                         traceback.print_exc()
+        #                         dpo_update_batch_proto = None # Skip update on error
 
 
-                        # --- Validation and Saving ---
-                        test_freq = OmegaConf.select(self.config.trainer, "test_freq", default = -1)
-                        is_last_step = self.global_steps >= self.total_training_steps
-                        if self.val_reward_fn is not None and test_freq > 0 and (is_last_step or self.global_steps % test_freq == 0):
-                            print(f"\nRunning DPO validation at step {self.global_steps}...")
-                            val_timing_raw = {}
-                            with _timer('testing', val_timing_raw):
-                                val_metrics: dict = self._validate()
-                            if is_last_step: last_val_metrics = val_metrics
-                            if val_metrics:
-                                metrics['time/validation_run'] = val_timing_raw.get('testing', 0)
-                                metrics.update(val_metrics)
-                            else: print("Validation skipped or returned no metrics.")
+        #                 # --- Actor Update Step ---
+        #                 actor_output = None
+        #                 if self.config.trainer.critic_warmup <= self.global_steps and dpo_update_batch_proto:
+        #                     with _timer('update_actor', timing_raw):
+        #                         # Pass the batch containing reference log probs (if computed)
+        #                         # The modified update_actor_dpo expects them if reference_free=False
+        #                         actor_output = self.actor_rollout_wg.update_actor_dpo(dpo_update_batch_proto)
+        #                     if actor_output and 'metrics' in actor_output.meta_info:
+        #                         metrics.update(reduce_metrics(actor_output.meta_info['metrics']))
+        #                 elif dpo_update_batch_proto is None:
+        #                     print(f"Skipping actor update at step {self.global_steps} due to DPO batch preparation error.")
 
-                        save_freq = OmegaConf.select(self.config.trainer, "save_freq", default = -1)
-                        if save_freq > 0 and ( is_last_step or self.global_steps % save_freq == 0):
-                            print(f"\nSaving DPO checkpoint at step {self.global_steps}...")
-                            with _timer('save_checkpoint', timing_raw):
-                                self._save_checkpoint() # Saves actor (and potentially critic if used elsewhere)
-                            metrics['time/save_checkpoint'] = timing_raw.get('save_checkpoint', 0)
 
-                    # --- End main step timer context ---
+        #                 # --- Validation and Saving ---
+        #                 test_freq = OmegaConf.select(self.config.trainer, "test_freq", default = -1)
+        #                 is_last_step = self.global_steps >= self.total_training_steps
+        #                 if self.val_reward_fn is not None and test_freq > 0 and (is_last_step or self.global_steps % test_freq == 0):
+        #                     print(f"\nRunning DPO validation at step {self.global_steps}...")
+        #                     val_timing_raw = {}
+        #                     with _timer('testing', val_timing_raw):
+        #                         val_metrics: dict = self._validate()
+        #                     if is_last_step: last_val_metrics = val_metrics
+        #                     if val_metrics:
+        #                         metrics['time/validation_run'] = val_timing_raw.get('testing', 0)
+        #                         metrics.update(val_metrics)
+        #                     else: print("Validation skipped or returned no metrics.")
 
-                    # --- Metrics calculation AFTER the 'step' timer block ---
-                    metrics.update(compute_dpo_data_metrics(batch=batch)) # Use DPO-specific metrics
-                    metrics.update(compute_timing_metrics(batch=batch, timing_raw=timing_raw))
-                    n_gpus = self.resource_pool_manager.get_n_gpus()
-                    if 'step' in timing_raw:
-                         metrics.update(compute_throughout_metrics(batch=batch, timing_raw=timing_raw, n_gpus=n_gpus))
-                    else:
-                         print(f"Warning: 'step' key missing from timing_raw at step {self.global_steps}. Skipping throughput.")
+        #                 save_freq = OmegaConf.select(self.config.trainer, "save_freq", default = -1)
+        #                 if save_freq > 0 and ( is_last_step or self.global_steps % save_freq == 0):
+        #                     print(f"\nSaving DPO checkpoint at step {self.global_steps}...")
+        #                     with _timer('save_checkpoint', timing_raw):
+        #                         self._save_checkpoint() # Saves actor (and potentially critic if used elsewhere)
+        #                     metrics['time/save_checkpoint'] = timing_raw.get('save_checkpoint', 0)
 
-                    step_timer.stop()
-                    metrics['time/step'] = step_timer.last
+        #             # --- End main step timer context ---
 
-                    # Log metrics
-                    log_freq = OmegaConf.select(self.config.trainer, "log_freq", default = 1)
-                    if logger and self.global_steps % log_freq == 0:
-                        log_payload = metrics.copy()
-                        # Add learning rate to log payload
-                        if actor_output and 'actor/lr' in metrics: log_payload['actor/lr'] = metrics['actor/lr']
+        #             # --- Metrics calculation AFTER the 'step' timer block ---
+        #             metrics.update(compute_dpo_data_metrics(batch=batch)) # Use DPO-specific metrics
+        #             metrics.update(compute_timing_metrics(batch=batch, timing_raw=timing_raw))
+        #             n_gpus = self.resource_pool_manager.get_n_gpus()
+        #             if 'step' in timing_raw:
+        #                  metrics.update(compute_throughout_metrics(batch=batch, timing_raw=timing_raw, n_gpus=n_gpus))
+        #             else:
+        #                  print(f"Warning: 'step' key missing from timing_raw at step {self.global_steps}. Skipping throughput.")
 
-                        print(f"[Step {self.global_steps} DPO] Logging Step Payload Keys: {list(log_payload.keys())}")
-                        try: logger.log(data=log_payload, step=self.global_steps)
-                        except Exception as e: print(f"Logging failed at step {self.global_steps}: {e}")
+        #             step_timer.stop()
+        #             metrics['time/step'] = step_timer.last
 
-                    # Update progress bar
-                    postfix_metrics = {k: f"{v:.3f}" if isinstance(v, float) else v for k, v in metrics.items() if isinstance(v, (int, float))}
-                    progress_bar.set_postfix(postfix_metrics)
+        #             # Log metrics
+        #             log_freq = OmegaConf.select(self.config.trainer, "log_freq", default = 1)
+        #             if logger and self.global_steps % log_freq == 0:
+        #                 log_payload = metrics.copy()
+        #                 # Add learning rate to log payload
+        #                 if actor_output and 'actor/lr' in metrics: log_payload['actor/lr'] = metrics['actor/lr']
 
-                except Exception as step_e:
-                    print(f"\n!!!!!!!! ERROR DURING DPO Step {self.global_steps} !!!!!!!!")
-                    print(f"Caught Exception: {step_e}")
-                    traceback.print_exc()
-                    print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-                    step_timer.stop(); should_stop = True; break
+        #                 print(f"[Step {self.global_steps} DPO] Logging Step Payload Keys: {list(log_payload.keys())}")
+        #                 try: logger.log(data=log_payload, step=self.global_steps)
+        #                 except Exception as e: print(f"Logging failed at step {self.global_steps}: {e}")
 
-                if is_last_step or should_stop:
-                    print(f'Stopping DPO training at step {self.global_steps}.')
-                    break
+        #             # Update progress bar
+        #             postfix_metrics = {k: f"{v:.3f}" if isinstance(v, float) else v for k, v in metrics.items() if isinstance(v, (int, float))}
+        #             progress_bar.set_postfix(postfix_metrics)
 
-                self.global_steps += 1
-                progress_bar.update(1)
+        #         except Exception as step_e:
+        #             print(f"\n!!!!!!!! ERROR DURING DPO Step {self.global_steps} !!!!!!!!")
+        #             print(f"Caught Exception: {step_e}")
+        #             traceback.print_exc()
+        #             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #             step_timer.stop(); should_stop = True; break
 
-            # End of epoch handling
-            if hasattr(self.train_dataloader, 'reset'):
-                 try: self.train_dataloader.reset()
-                 except Exception as e: print(f"Warning: Failed to reset train dataloader state: {e}")
-            if should_stop: break
+        #         if is_last_step or should_stop:
+        #             print(f'Stopping DPO training at step {self.global_steps}.')
+        #             break
+
+        #         self.global_steps += 1
+        #         progress_bar.update(1)
+
+        #     # End of epoch handling
+        #     if hasattr(self.train_dataloader, 'reset'):
+        #          try: self.train_dataloader.reset()
+        #          except Exception as e: print(f"Warning: Failed to reset train dataloader state: {e}")
+        #     if should_stop: break
 
         # --- Final cleanup and logging ---
         progress_bar.close()
