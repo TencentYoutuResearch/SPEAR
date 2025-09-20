@@ -39,7 +39,8 @@ class Agent:
         # network
         if args.network == 'rnn':
             self.network = RCDQN(vocab_size, embedding_dim, 
-                args.hidden_dim, args.arch_encoder, args.grad_encoder, None, args.gru_embed, args.get_image, args.bert_path)
+                args.hidden_dim, args.arch_encoder, args.grad_encoder,\
+                    None, args.gru_embed, args.get_image, args.bert_path)
             self.network.rl_forward = self.network.forward
         elif args.network == 'bert':
             config = BertConfigForWebshop(image=args.get_image, pretrained_bert=(args.bert_path != 'scratch'))
@@ -98,7 +99,12 @@ class Agent:
         elif method == 'greedy':
             act_idxs = [vals.argmax(dim=0).item() for vals in act_values]
         elif method == 'eps': # eps exploration
-            act_idxs = [vals.argmax(dim=0).item() if random.random() > eps else random.randint(0, len(vals)-1) for vals in act_values]
+            act_idxs = []
+            for vals in act_values:
+                if random.random() > eps:
+                    act_idxs.append(vals.argmax(dim=0).item())
+                else:
+                    act_idxs.append(random.randint(0, len(vals)-1))
         acts = [acts[idx] for acts, idx in zip(act_ids, act_idxs)]
 
         # decode actions
@@ -125,7 +131,7 @@ class Agent:
             log_valid, valid_sizes = self.network.rl_forward(transition.state, transition.valid_acts)
             act_values = log_valid.split(valid_sizes)
             log_a = torch.stack([values[acts.index(act)]
-                                        for values, acts, act in zip(act_values, transition.valid_acts, transition.act)])
+                for values, acts, act in zip(act_values, transition.valid_acts, transition.act)])
 
             stats['loss_pg'] = - (log_a * adv.detach()).mean()
             stats['loss_td'] = adv.pow(2).mean()
@@ -139,9 +145,11 @@ class Agent:
             stats['loss'].backward()
 
             # Compute the gradient norm
-            stats['gradnorm_unclipped'] = sum(p.grad.norm(2).item() for p in self.network.parameters() if p.grad is not None)
+            stats['gradnorm_unclipped'] = \
+                sum(p.grad.norm(2).item() for p in self.network.parameters() if p.grad is not None)
             nn.utils.clip_grad_norm_(self.network.parameters(), self.clip)
-            stats['gradnorm_clipped'] = sum(p.grad.norm(2).item() for p in self.network.parameters() if p.grad is not None)
+            stats['gradnorm_clipped'] = \
+                sum(p.grad.norm(2).item() for p in self.network.parameters() if p.grad is not None)
             for k, v in stats.items():
                 stats_global[k] += v.item() if torch.is_tensor(v) else v
             del stats

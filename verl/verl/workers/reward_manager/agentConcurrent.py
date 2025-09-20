@@ -59,7 +59,8 @@ def get_file_path(download_dir):
     try:
         not_downloaded_files = ["prompt.jsonl"]
         file_names = os.listdir(download_dir)
-        # assert len(file_names) <= len(not_downloaded_files) + 1, f"Expected at most 1 downloaded file, got {len(file_names)}"
+        # assert len(file_names) <= len(not_downloaded_files) + 1, 
+        # f"Expected at most 1 downloaded file, got {len(file_names)}"
         if len(file_names) == 0:
             return None
         file_path = None
@@ -81,7 +82,8 @@ def get_file_path(download_dir):
 class AgentConcurrentRewardManager:
     """The reward manager."""
 
-    def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", **reward_kwargs) -> None:
+    def __init__(self, tokenizer, num_examine, compute_score=None,\
+        reward_fn_key="data_source", **reward_kwargs) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or _default_compute_score
@@ -160,7 +162,8 @@ class AgentConcurrentRewardManager:
         )
         if data_source in ["web_donwload"]:
             print(f"🌏 Download score: {score}, 🗂️ Download_dir: {download_dir}")
-        return i, score, valid_response_length, valid_response_ids, data_source, prompt_str, response_str, ground_truth, extra_info, user_query, download_dir, file_path
+        return i, score, valid_response_length, valid_response_ids, data_source,\
+            prompt_str, response_str, ground_truth, extra_info, user_query, download_dir, file_path
 
 
     def __call__(self, data: DataProto, return_dict=False, max_response_len=16384):
@@ -185,10 +188,11 @@ class AgentConcurrentRewardManager:
         with ThreadPoolExecutor(max_workers=30) as executor:
             futures = {executor.submit(self.process_data_item, data[i], i): i for i in range(len(data))}
             for future in tqdm(as_completed(futures), total=len(futures)):
-                i, score, valid_response_length, valid_response_ids, data_source, prompt_str, response_str,\
-                    ground_truth, extra_info, user_query, download_dir, file_path = future.result()
-                results_all_by_idx[i] = (score, valid_response_length, valid_response_ids, data_source, prompt_str, response_str,\
-                    ground_truth, extra_info, user_query, download_dir, file_path)
+                i, score, valid_response_length, valid_response_ids, data_source, prompt_str,\
+                    response_str,ground_truth, extra_info, user_query, download_dir, file_path = future.result()
+                results_all_by_idx[i] = (score, valid_response_length, valid_response_ids,\
+                    data_source, prompt_str, response_str,\
+                        ground_truth, extra_info, user_query, download_dir, file_path)
 
         for i in range(len(data)):
             score, valid_response_length, valid_response_ids, data_source, prompt_str, response_str,\

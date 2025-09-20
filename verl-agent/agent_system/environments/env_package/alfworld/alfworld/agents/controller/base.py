@@ -17,7 +17,8 @@ class BaseAgent(object):
     # constants
     RECEPTACLES = set(constants.RECEPTACLES) | {'Sink', 'Bathtub'}
     OBJECTS = (set(constants.OBJECTS_WSLICED) - set(RECEPTACLES)) | set(constants.MOVABLE_RECEPTACLES)
-    OBJECTS -= {'Blinds', 'Boots', 'Cart', 'Chair', 'Curtains', 'Footstool', 'Mirror', 'LightSwtich', 'Painting', 'Poster', 'ShowerGlass', 'Window'}
+    OBJECTS -= {'Blinds', 'Boots', 'Cart', 'Chair', 'Curtains',\
+        'Footstool', 'Mirror', 'LightSwtich', 'Painting', 'Poster', 'ShowerGlass', 'Window'}
     STATIC_RECEPTACLES = set(RECEPTACLES) - set(constants.MOVABLE_RECEPTACLES)
 
     # action enum
@@ -123,7 +124,8 @@ class BaseAgent(object):
 
     # display initial observation and task text
     def print_intro(self):
-        self.feedback = "-= Welcome to TextWorld, ALFRED! =-\n\nYou are in the middle of a room. Looking quickly around you, you see "
+        self.feedback = """-= Welcome to TextWorld, ALFRED! =-
+        You are in the middle of a room. Looking quickly around you, you see """
         recep_list = ["a %s," % (recep['num_id']) for id, recep in self.receptacles.items()]
         self.feedback += self.fix_and_comma_in_the_end(" ".join(recep_list)) + "\n\n"
 

@@ -47,7 +47,8 @@ def get_file_path(download_dir):
     try:
         not_downloaded_files = ["prompt.jsonl"]
         file_names = os.listdir(download_dir)
-        # assert len(file_names) <= len(not_downloaded_files) + 1, f"Expected at most 1 downloaded file, got {len(file_names)}"
+        # assert len(file_names) <= len(not_downloaded_files) + 1,
+        # f"Expected at most 1 downloaded file, got {len(file_names)}"
         if len(file_names) == 0:
             return None
         file_path = None
@@ -69,7 +70,8 @@ def get_file_path(download_dir):
 class AgentRewardManager:
     """The reward manager."""
 
-    def __init__(self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", **reward_kwargs) -> None:
+    def __init__(self, tokenizer, num_examine, compute_score=None,\
+        reward_fn_key="data_source", **reward_kwargs) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or _default_compute_score

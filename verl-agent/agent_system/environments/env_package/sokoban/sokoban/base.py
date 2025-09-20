@@ -117,7 +117,8 @@ class BaseEnv(ABC):
         cur_actions, action_is_valid = cls.postprocess_predictions(envs, predictions)
         next_obs, dones = [], []
         
-        for env, action, response, response_id, av in zip(envs, cur_actions, predictions, prediction_ids, action_is_valid):
+        for env, action, response, response_id, av in zip(envs, cur_actions,\
+            predictions, prediction_ids, action_is_valid):
             obs = ""
             if "<|im_end|>" not in response:
                 obs += "<|im_end|>"
@@ -244,8 +245,10 @@ class BaseDiscreteActionEnv(BaseEnv, ABC):
         """
         observation, reward, done, _ = update_info
         if not action_is_valid:
-            return f"Action is invalid. You stay in the same position. The observation is: \n{observation}\nreward: {reward}\ndone: {done}\n"
-        return f"After you take this action, the observation is: \n{observation}\nreward: {reward}\ndone: {done}\n"
+            return f"""Action is invalid. You stay in the same position. 
+            The observation is: \n{observation}\nreward: {reward}\ndone: {done}\n"""
+        return f"""After you take this action, the observation is: \n{observation}\n
+            reward: {reward}\ndone: {done}\n"""
 
 
     def get_all_actions(self) -> List[int]:

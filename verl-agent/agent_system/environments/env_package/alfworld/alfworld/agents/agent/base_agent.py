@@ -11,7 +11,10 @@ logging.getLogger("transformers.tokenization_utils").setLevel(logging.ERROR)
 
 import alfworld.agents.modules.memory as memory
 from alfworld.agents.modules.model import Policy
-from alfworld.agents.modules.generic import to_np, to_pt, _words_to_ids, pad_sequences, preproc, max_len, ez_gather_dim_1, LinearSchedule, BeamSearchNode
+from alfworld.agents.modules.generic import to_np, to_pt
+from alfworld.agents.modules.generic import _words_to_ids, pad_sequences
+from alfworld.agents.modules.generic import preproc, max_len, ez_gather_dim_1
+from alfworld.agents.modules.generic import LinearSchedule, BeamSearchNode
 
 
 class ObservationPool(object):
@@ -114,7 +117,8 @@ class BaseAgent:
             self.target_net.cuda()
 
         # optimizer
-        self.optimizer = torch.optim.Adam(self.online_net.parameters(), lr=self.config['general']['training']['optimizer']['learning_rate'])
+        self.optimizer = torch.optim.Adam(self.online_net.parameters(),\
+            lr=self.config['general']['training']['optimizer']['learning_rate'])
         self.clip_grad_norm = self.config['general']['training']['optimizer']['clip_grad_norm']
 
         # losses
@@ -164,7 +168,8 @@ class BaseAgent:
         self.epsilon_anneal_from = self.config['rl']['epsilon_greedy']['epsilon_anneal_from']
         self.epsilon_anneal_to = self.config['rl']['epsilon_greedy']['epsilon_anneal_to']
         self.epsilon = self.epsilon_anneal_from
-        self.epsilon_scheduler = LinearSchedule(schedule_timesteps=self.epsilon_anneal_episodes, initial_p=self.epsilon_anneal_from, final_p=self.epsilon_anneal_to)
+        self.epsilon_scheduler = LinearSchedule(schedule_timesteps=self.epsilon_anneal_episodes,\
+            initial_p=self.epsilon_anneal_from, final_p=self.epsilon_anneal_to)
         self.noisy_net = self.config['rl']['epsilon_greedy']['noisy_net']
         if self.noisy_net:
             # disable epsilon greedy
@@ -178,11 +183,11 @@ class BaseAgent:
         self.discount_gamma_novel_object_reward = self.config['rl']['replay']['discount_gamma_novel_object_reward']
         self.replay_batch_size = self.config['rl']['replay']['replay_batch_size']
         self.dqn_memory = memory.PrioritizedReplayMemory(self.config['rl']['replay']['replay_memory_capacity'],
-                                                         priority_fraction=self.config['rl']['replay']['replay_memory_priority_fraction'],
-                                                         discount_gamma_game_reward=self.discount_gamma_game_reward,
-                                                         discount_gamma_count_reward=self.discount_gamma_count_reward,
-                                                         discount_gamma_novel_object_reward=self.discount_gamma_novel_object_reward,
-                                                         accumulate_reward_from_final=self.accumulate_reward_from_final)
+            priority_fraction=self.config['rl']['replay']['replay_memory_priority_fraction'],
+            discount_gamma_game_reward=self.discount_gamma_game_reward,
+            discount_gamma_count_reward=self.discount_gamma_count_reward,
+            discount_gamma_novel_object_reward=self.discount_gamma_novel_object_reward,
+            accumulate_reward_from_final=self.accumulate_reward_from_final)
         self.update_per_k_game_steps = self.config['rl']['replay']['update_per_k_game_steps']
         self.multi_step = self.config['rl']['replay']['multi_step']
         self.count_reward_lambda = self.config['rl']['replay']['count_reward_lambda']
@@ -199,13 +204,15 @@ class BaseAgent:
         self.fraction_assist_anneal_from = self.config['dagger']['fraction_assist']['fraction_assist_anneal_from']
         self.fraction_assist_anneal_to = self.config['dagger']['fraction_assist']['fraction_assist_anneal_to']
         self.fraction_assist = self.fraction_assist_anneal_from
-        self.fraction_assist_scheduler = LinearSchedule(schedule_timesteps=self.fraction_assist_anneal_episodes, initial_p=self.fraction_assist_anneal_from, final_p=self.fraction_assist_anneal_to)
+        self.fraction_assist_scheduler = LinearSchedule(schedule_timesteps=self.fraction_assist_anneal_episodes,\
+            initial_p=self.fraction_assist_anneal_from, final_p=self.fraction_assist_anneal_to)
 
         self.fraction_random_anneal_episodes = self.config['dagger']['fraction_random']['fraction_random_anneal_episodes']
         self.fraction_random_anneal_from = self.config['dagger']['fraction_random']['fraction_random_anneal_from']
         self.fraction_random_anneal_to = self.config['dagger']['fraction_random']['fraction_random_anneal_to']
         self.fraction_random = self.fraction_random_anneal_from
-        self.fraction_random_scheduler = LinearSchedule(schedule_timesteps=self.fraction_random_anneal_episodes, initial_p=self.fraction_random_anneal_from, final_p=self.fraction_random_anneal_to)
+        self.fraction_random_scheduler = LinearSchedule(schedule_timesteps=self.fraction_random_anneal_episodes,\
+            initial_p=self.fraction_random_anneal_from, final_p=self.fraction_random_anneal_to)
 
         self.dagger_memory = memory.DaggerReplayMemory(self.config['dagger']['replay']['replay_memory_capacity'])
         self.dagger_update_per_k_game_steps = self.config['dagger']['replay']['update_per_k_game_steps']
@@ -290,12 +297,14 @@ class BaseAgent:
         return self.get_word_input_from_ids(word_id_list)
 
     def get_word_input_from_ids(self, word_id_list):
-        input_word = pad_sequences(word_id_list, maxlen=max_len(word_id_list) + 3, dtype='int32')  # 3 --> see layer.DepthwiseSeparableConv.padding
+        input_word = pad_sequences(word_id_list, maxlen=max_len(word_id_list) + 3, dtype='int32')  
+        # 3 --> see layer.DepthwiseSeparableConv.padding
         input_word = to_pt(input_word, self.use_cuda)
         return input_word
 
     def get_action_candidate_representations(self, action_candidate_list, use_model="online"):
-        # in case there are too many candidates in certain data point, we compute their candidate representations by small batches
+        # in case there are too many candidates in certain data point, 
+        # we compute their candidate representations by small batches
         batch_size = len(action_candidate_list)
         max_num_candidate = max_len(action_candidate_list)
         res_representations = torch.zeros(batch_size, max_num_candidate, self.online_net.block_hidden_dim)
@@ -313,19 +322,23 @@ class BaseAgent:
         tmp_batch_size = 64
         n_tmp_batches = (len(squeezed_candidate_list) + tmp_batch_size - 1) // tmp_batch_size
         for tmp_batch_id in range(n_tmp_batches):
-            tmp_batch_cand = squeezed_candidate_list[tmp_batch_id * tmp_batch_size: (tmp_batch_id + 1) * tmp_batch_size]  # tmp_batch of candidates
+            tmp_batch_cand = squeezed_candidate_list[tmp_batch_id * tmp_batch_size: (tmp_batch_id + 1) * tmp_batch_size]  
+            # tmp_batch of candidates
             tmp_batch_from = from_which_original_batch[tmp_batch_id * tmp_batch_size: (tmp_batch_id + 1) * tmp_batch_size]
 
-            tmp_batch_cand_representation_sequence, tmp_batch_cand_mask = self.encode_text(tmp_batch_cand, use_model=use_model)  # tmp_batch x num_word x hid, tmp_batch x num_word
+            tmp_batch_cand_representation_sequence, tmp_batch_cand_mask = self.encode_text(tmp_batch_cand, use_model=use_model)  
+            # tmp_batch x num_word x hid, tmp_batch x num_word
 
             # masked mean the num_word dimension
             _mask = torch.sum(tmp_batch_cand_mask, -1)  # batch
-            tmp_batch_cand_representation = torch.sum(tmp_batch_cand_representation_sequence, -2)  # batch x hid
+            tmp_batch_cand_representation = torch.sum(tmp_batch_cand_representation_sequence, -2)  
+            # batch x hid
             tmp = torch.eq(_mask, 0).float()
             if tmp_batch_cand_representation.is_cuda:
                 tmp = tmp.cuda()
             _mask = _mask + tmp
-            tmp_batch_cand_representation = tmp_batch_cand_representation / _mask.unsqueeze(-1)  # batch x hid
+            tmp_batch_cand_representation = tmp_batch_cand_representation / _mask.unsqueeze(-1)  
+            # batch x hid
             tmp_batch_cand_mask = tmp_batch_cand_mask.byte().any(-1).float()  # batch
 
             for i in range(len(tmp_batch_from)):
@@ -379,7 +392,9 @@ class BaseAgent:
             obs = preproc(obs)
             # sort objects
             if "you see" in obs:
-                # -= Welcome to TextWorld, ALFRED! =- You are in the middle of a room. Looking quickly around you, you see a armchair 2, a diningtable 1, a diningtable 2, a coffeetable 1, a armchair 1, a tvstand 1, a sidetable 2, a garbagecan 1, a sidetable 1, a sofa 1, a drawer 1, and a drawer 2.
+                # -= Welcome to TextWorld, ALFRED! =- You are in the middle of a room. Looking quickly around you, 
+                # you see a armchair 2, a diningtable 1, a diningtable 2, a coffeetable 1, a armchair 1, a tvstand 1, 
+                # a sidetable 2, a garbagecan 1, a sidetable 1, a sofa 1, a drawer 1, and a drawer 2.
                 before_you_see, after_you_see = obs.split("you see", 1)
                 before_you_see, after_you_see = before_you_see.strip(), after_you_see.strip()
                 before_you_see = " ".join([before_you_see, "you see"])
@@ -426,26 +441,42 @@ class BaseAgent:
         obs_enc_seq, obs_mask = self.encode_text(observation_strings, use_model=use_model)
         return obs_enc_seq, obs_mask
 
-    def action_scoring(self, action_candidate_list, h_obs, obs_mask, h_td, td_mask, previous_dynamics, use_model=None):
+    def action_scoring(self, action_candidate_list, h_obs, obs_mask,\
+        h_td, td_mask, previous_dynamics, use_model=None):
         model = self.choose_model(use_model)
-        average_action_candidate_representations, action_candidate_mask = self.get_action_candidate_representations(action_candidate_list, use_model=use_model)  # batch x num_cand x hid, batch x num_cand
-        aggregated_obs_representation = model.aggretate_information(h_obs, obs_mask, h_td, td_mask)  # batch x obs_length x hid
+        average_action_candidate_representations, action_candidate_mask =\
+            self.get_action_candidate_representations(action_candidate_list, use_model=use_model)  
+            # batch x num_cand x hid, batch x num_cand
+        aggregated_obs_representation = model.aggretate_information(h_obs,\
+            obs_mask, h_td, td_mask)  
+        # batch x obs_length x hid
 
         if self.recurrent:
-            averaged_representation = model.masked_mean(aggregated_obs_representation, obs_mask)  # batch x hid
-            current_dynamics = model.rnncell(averaged_representation, previous_dynamics) if previous_dynamics is not None else model.rnncell(averaged_representation)
+            averaged_representation = model.masked_mean(aggregated_obs_representation,\
+                obs_mask)  
+            # batch x hid
+            current_dynamics = model.rnncell(averaged_representation,\
+                previous_dynamics) if previous_dynamics is not None else model.rnncell(averaged_representation)
         else:
             current_dynamics = None
 
-        action_scores, action_masks = model.score_actions(average_action_candidate_representations, action_candidate_mask,
-                                                          aggregated_obs_representation, obs_mask, current_dynamics)  # batch x num_actions
+        action_scores, action_masks = model.score_actions(average_action_candidate_representations,\
+            action_candidate_mask, aggregated_obs_representation,\
+                obs_mask, current_dynamics) 
+        # batch x num_actions
         return action_scores, action_masks, current_dynamics
 
-    def beam_search_candidate_scoring(self, action_candidate_list, aggregated_obs_representation, obs_mask, current_dynamics, use_model=None):
+    def beam_search_candidate_scoring(self, action_candidate_list,\
+        aggregated_obs_representation, obs_mask, current_dynamics, use_model=None):
         model = self.choose_model(use_model)
-        average_action_candidate_representations, action_candidate_mask = self.get_action_candidate_representations(action_candidate_list, use_model=use_model)  # batch x num_cand x hid, batch x num_cand
+        average_action_candidate_representations, action_candidate_mask =\
+            self.get_action_candidate_representations(action_candidate_list, use_model=use_model)
+        # batch x num_cand x hid, batch x num_cand
 
-        action_scores, action_masks = model.score_actions(average_action_candidate_representations, action_candidate_mask,
-                                                          aggregated_obs_representation, obs_mask, current_dynamics, fix_shared_components=True)  # batch x num_actions
+        action_scores, action_masks =\
+            model.score_actions(average_action_candidate_representations,\
+                action_candidate_mask, aggregated_obs_representation,\
+                    obs_mask, current_dynamics, fix_shared_components=True) 
+            # batch x num_actions
         return action_scores, action_masks
 

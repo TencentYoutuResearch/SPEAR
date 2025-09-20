@@ -25,14 +25,9 @@ FaaS service provided by public cloud, eg: volcengine.com.
 """
 logger = logging.getLogger(__name__)
 
-# reward_model_url = "https://ms-zgsm2lrf-100034032793-sw.gw.ap-shanghai.ti.tencentcs.com/ms-zgsm2lrf/v1"  ## 外网调用地址
-# reward_model_url = "http://172.17.0.215/ms-zgsm2lrf/v1"  ## 内网调用地址
-# reward_model_name = "qwen2.5-7B-Instruct"
-
-# reward_model_url = "https://ms-lls6ssmj-100034032793-sw.gw.ap-shanghai.ti.tencentcs.com/ms-lls6ssmj/v1"  ## 外网调用地址
-reward_model_url = "http://172.17.0.215/ms-lls6ssmj/v1" ## 内网调用地址
+reward_model_url = "openAI_API_URL"
 global reward_model_name
-reward_model_name = "Qwen3-8B-Instruct"
+reward_model_name = "openAI_model_name"
 global client
 client = OpenAI(base_url=reward_model_url, api_key="xxx", timeout=60)
 

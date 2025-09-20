@@ -41,7 +41,8 @@ def process_goal(state):
 
 
 def data_collator(batch):
-    state_input_ids, state_attention_mask, action_input_ids, action_attention_mask, sizes, labels, images = [], [], [], [], [], [], []
+    state_input_ids, state_attention_mask, action_input_ids,\
+        action_attention_mask, sizes, labels, images = [], [], [], [], [], [], []
     for sample in batch:
         state_input_ids.append(sample['state_input_ids'])
         state_attention_mask.append(sample['state_attention_mask'])
@@ -73,8 +74,10 @@ def bart_predict(input):
 def bert_predict(obs, info, softmax=True):
     valid_acts = info['valid']
     assert valid_acts[0].startswith('click[')
-    state_encodings = bert_tokenizer(process_str(obs), max_length=512, truncation=True, padding='max_length')
-    action_encodings = bert_tokenizer(list(map(process_str, valid_acts)), max_length=512, truncation=True,  padding='max_length')
+    state_encodings = bert_tokenizer(process_str(obs), max_length=512,\
+        truncation=True, padding='max_length')
+    action_encodings = bert_tokenizer(list(map(process_str, valid_acts)), max_length=512,\
+        truncation=True,  padding='max_length')
     batch = {
         'state_input_ids': state_encodings['input_ids'],
         'state_attention_mask': state_encodings['attention_mask'],
@@ -115,7 +118,10 @@ def get_return_value(env, asin, options, search_terms, page_num, product):
 
     # Create HTML to show link to product
     html = """<!DOCTYPE html><html><head><title>Chosen Product</title></head><body>"""
-    html += f"""Product Image:<img src="{product["MainImage"]}" height="50px" /><br>""" if len(product["MainImage"]) > 0 else ""
+    if len(product["MainImage"]) > 0:
+        html += f"""Product Image:<img src="{product["MainImage"]}" height="50px" /><br>"""
+    else:
+        html += ""
     html += f"""Link to Product:
         <a href="{asin_url}" style="color:blue;text-decoration:underline;" target="_blank">{asin_url}</a>
         </body></html>"""
@@ -300,16 +306,29 @@ gr.Interface(
         gr.outputs.HTML()
     ],
     examples=[
-        ["I want to find a gold floor lamp with a glass shade and a nickel finish that i can use for my living room, and price lower than 270.00 dollars", "Amazon"],
-        ["I need some cute heart-shaped glittery cupcake picks as a gift to bring to a baby shower", "Amazon"],
-        ["I want to buy ballet shoes which have rubber sole in grey suede color and a size of 6", "Amazon"],
-        ["I would like a 7 piece king comforter set decorated with flowers and is machine washable", "Amazon"],
-        ["I'm trying to find white bluetooth speakers that are not only water resistant but also come with stereo sound", "eBay"],
-        ["find me the soy free 3.5 ounce 4-pack of dang thai rice chips, and make sure they are the aged cheddar flavor.  i also need the ones in the resealable bags", "eBay"],
-        ["I am looking for a milk chocolate of 1 pound size in a single pack for valentine day", "eBay"],
-        ["I'm looking for a mini pc intel core desktop computer which supports with windows 11", "eBay"]
+        ["""I want to find a gold floor lamp with a glass shade and
+        a nickel finish that i can use for my living room, and price lower than 270.00 dollars""",\
+        "Amazon"],
+        ["""I need some cute heart-shaped glittery cupcake picks
+        as a gift to bring to a baby shower""", "Amazon"],
+        ["""I want to buy ballet shoes which have rubber sole
+        in grey suede color and a size of 6""", "Amazon"],
+        ["""I would like a 7 piece king comforter set decorated with flowers
+        and is machine washable""", "Amazon"],
+        ["""I'm trying to find white bluetooth speakers that are not only water resistant
+        but also come with stereo sound""", "eBay"],
+        ["""find me the soy free 3.5 ounce 4-pack of dang thai rice chips,
+        and make sure they are the aged cheddar flavor.
+        i also need the ones in the resealable bags""",\
+        "eBay"],
+        ["""I am looking for a milk chocolate of 1 pound size 
+        in a single pack for valentine day""", "eBay"],
+        ["""I'm looking for a mini pc intel core desktop computer 
+        which supports with windows 11""", "eBay"]
     ],
     title="WebShop",
-    article="<p style='padding-top:15px;text-align:center;'>To learn more about this project, check out the <a href='https://webshop-pnlp.github.io/' target='_blank'>project page</a>!</p>",
-    description="<p style='text-align:center;'>Sim-to-real transfer of agent trained on WebShop to search a desired product on Amazon from any natural language query!</p>",
+    article="""<p style='padding-top:15px;text-align:center;'>To learn more about this project,
+    check out the <a href='https://webshop-pnlp.github.io/' target='_blank'>project page</a>!</p>""",
+    description="""<p style='text-align:center;'>Sim-to-real transfer of agent 
+    trained on WebShop to search a desired product on Amazon from any natural language query!</p>""",
 ).launch(inline=False)

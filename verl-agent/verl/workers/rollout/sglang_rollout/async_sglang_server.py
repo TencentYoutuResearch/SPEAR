@@ -39,7 +39,10 @@ class AsyncSglangServer(AsyncServerBase):
 
     async def init_engine(self):
         all_actors = ray.util.list_named_actors(all_namespaces=True)
-        matched_actors = [actor for actor in all_actors if actor.get("name", None).startswith(self.wg_prefix + "WorkerDict_")]
+        matched_actors = []
+        for actor in all_actors:
+            if actor.get("name", None).startswith(self.wg_prefix + "WorkerDict_"):
+                matched_actors.append(actor)
 
         # TODO support multi node
         for matched_actor in matched_actors:
@@ -61,7 +64,8 @@ class AsyncSglangServer(AsyncServerBase):
         for output in outputs:
             if output is not None:
                 return JSONResponse(output)
-        raise RuntimeError("AsyncSglangServer No output from workers self._dp_rank: {self._dp_rank}, self._tp_size: {self._tp_size}, self.workers: {self.workers}")
+        raise RuntimeError("""AsyncSglangServer No output from workers self._dp_rank: {self._dp_rank},
+        self._tp_size: {self._tp_size}, self.workers: {self.workers}""")
 
     async def wake_up(self):
         for worker in self.workers:

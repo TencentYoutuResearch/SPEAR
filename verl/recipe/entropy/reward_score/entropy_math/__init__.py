@@ -33,7 +33,8 @@ from sympy.parsing.latex import parse_latex
 from sympy.parsing.sympy_parser import parse_expr
 
 """
-This code is adapted from: Dr. GRPO (https://github.com/sail-sg/understand-r1-zero/blob/main/understand_r1_zero/math_grader.py).
+This code is adapted from: Dr. GRPO 
+(https://github.com/sail-sg/understand-r1-zero/blob/main/understand_r1_zero/math_grader.py).
 """
 
 

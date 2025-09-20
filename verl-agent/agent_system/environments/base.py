@@ -83,7 +83,7 @@ class EnvironmentManagerBase:
         next_observations = {
             'text': None, # Implement this if needed
             'image': next_obs,
-            'anchor': None # For GiGPO only. anchor observation without any histories, hint, etc. Implement this if needed
+            'anchor': None # For GiGPO only.
         }
         # add action_valid to infos
         for i, info in enumerate(infos):

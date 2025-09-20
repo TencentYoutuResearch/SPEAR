@@ -131,13 +131,15 @@ class AlfredThorEnv(object):
                                                 pretrained_model=self.mask_rcnn,
                                                 load_receps=load_receps, debug=debug,
                                                 goal_desc_human_anns_prob=self.goal_desc_human_anns_prob,
-                                                save_detections_to_disk=self.env.save_frames_to_disk, save_detections_path=self.env.save_frames_path)
+                                                save_detections_to_disk=self.env.save_frames_to_disk,\
+                                                save_detections_path=self.env.save_frames_path)
             elif self.controller_type == 'mrcnn_astar':
                 self.controller = MaskRCNNAStarAgent(self.env, self.traj_data, self.traj_root,
                                                      pretrained_model=self.mask_rcnn,
                                                      load_receps=load_receps, debug=debug,
                                                      goal_desc_human_anns_prob=self.goal_desc_human_anns_prob,
-                                                     save_detections_to_disk=self.env.save_frames_to_disk, save_detections_path=self.env.save_frames_path)
+                                                     save_detections_to_disk=self.env.save_frames_to_disk,\
+                                                     save_detections_path=self.env.save_frames_path)
             else:
                 raise NotImplementedError()
 
@@ -285,12 +287,20 @@ class AlfredThorEnv(object):
         self.num_games = len(self.json_file_list)
 
         if self.train_eval == "train":
-            num_train_games = self.config['dataset']['num_train_games'] if self.config['dataset']['num_train_games'] > 0 else len(self.json_file_list)
+            if self.config['dataset']['num_train_games'] > 0:
+                num_train_games = self.config['dataset']['num_train_games']
+            else:
+                num_train_games = len(self.json_file_list)
+
             self.json_file_list = self.json_file_list[:num_train_games]
             self.num_games = len(self.json_file_list)
             print("Training with %d games" % (len(self.json_file_list)))
         else:
-            num_eval_games = self.config['dataset']['num_eval_games'] if self.config['dataset']['num_eval_games'] > 0 else len(self.json_file_list)
+            if self.config['dataset']['num_eval_games'] > 0:
+                num_eval_games = self.config['dataset']['num_eval_games']
+            else:
+                num_eval_games = len(self.json_file_list)
+
             self.json_file_list = self.json_file_list[:num_eval_games]
             self.num_games = len(self.json_file_list)
             print("Evaluating with %d games" % (len(self.json_file_list)))

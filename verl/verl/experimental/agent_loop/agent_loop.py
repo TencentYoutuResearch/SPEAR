@@ -289,9 +289,11 @@ class AgentLoopWorker:
 
         tools_kwargs = batch.non_tensor_batch["tools_kwargs"]
         assert(len(raw_prompts) == len(tools_kwargs))
-        for agent_name, messages, trajectory, tools_kwarg in zip(agent_names, raw_prompts, trajectory_info, tools_kwargs, strict=True):
+        for agent_name, messages, trajectory, tools_kwarg in zip(agent_names, raw_prompts,\
+            trajectory_info, tools_kwargs, strict=True):
             tasks.append(
-                asyncio.create_task(self._run_agent_loop(agent_name, messages.tolist(), sampling_params, trajectory, tools_kwarg))
+                asyncio.create_task(self._run_agent_loop(agent_name, messages.tolist(),\
+                    sampling_params, trajectory, tools_kwarg))
             )
         outputs = await asyncio.gather(*tasks)
 
@@ -391,7 +393,9 @@ class AgentLoopWorker:
         num_turns = np.array([input.num_turns for input in inputs], dtype=np.int32)
         messages = np.array([input.messages for input in inputs])
         metrics = np.array([input.metrics.model_dump() for input in inputs])
-        return DataProto(batch=batch, non_tensor_batch={"__num_turns__": num_turns, "messages": messages}, meta_info={"metrics": metrics})
+        return DataProto(batch=batch,\
+            non_tensor_batch={"__num_turns__": num_turns, "messages": messages},\
+                meta_info={"metrics": metrics})
 
 
 async def get_trajectory_info(step, index, validate):

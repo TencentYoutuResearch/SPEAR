@@ -78,7 +78,8 @@ class AlfredExpert(textworld.core.Wrapper):
                 if not self.prev_command:
                     self._handcoded_expert.observe(self.state["feedback"])
                 else:
-                    handcoded_expert_next_action = self._handcoded_expert.act(self.state, 0, self.state["won"], self.prev_command)
+                    handcoded_expert_next_action = self._handcoded_expert.act(self.state,\
+                        0, self.state["won"], self.prev_command)
                     if handcoded_expert_next_action in self.state["admissible_commands"]:
                         self.state["extra.expert_plan"] = [handcoded_expert_next_action]
             except HandCodedAgentTimeout:
@@ -91,7 +92,8 @@ class AlfredExpert(textworld.core.Wrapper):
     def load(self, gamefile):
         super().load(gamefile)
         self.gamefile = gamefile
-        self.request_infos.policy_commands = self.request_infos.policy_commands or (self.expert_type == AlfredExpertType.PLANNER)
+        self.request_infos.policy_commands = (self.request_infos.policy_commands or \
+            (self.expert_type == AlfredExpertType.PLANNER))
         self.request_infos.facts = self.request_infos.facts or (self.expert_type == AlfredExpertType.HANDCODED)
         self._handcoded_expert = HandCodedTWAgent(max_steps=200)
 
@@ -196,12 +198,18 @@ class AlfredTWEnv(object):
         self.num_games = len(self.game_files)
 
         if self.train_eval == "train":
-            num_train_games = self.config['dataset']['num_train_games'] if self.config['dataset']['num_train_games'] > 0 else len(self.game_files)
+            if self.config['dataset']['num_train_games'] > 0:
+                num_train_games = self.config['dataset']['num_train_games']
+            else:
+                num_train_games = len(self.game_files)
             self.game_files = self.game_files[:num_train_games]
             self.num_games = len(self.game_files)
             print("Training with %d games" % (len(self.game_files)))
         else:
-            num_eval_games = self.config['dataset']['num_eval_games'] if self.config['dataset']['num_eval_games'] > 0 else len(self.game_files)
+            if self.config['dataset']['num_eval_games'] > 0:
+                num_eval_games = self.config['dataset']['num_eval_games']
+            else:
+                num_eval_games = len(self.game_files)
             self.game_files = self.game_files[:num_eval_games]
             self.num_games = len(self.game_files)
             print("Evaluating with %d games" % (len(self.game_files)))
