@@ -383,6 +383,12 @@ bash recipe/csal/run_qwen2-32b_csal.sh
 
 We follow the installation instructions in ``verl-agent``[documentation](https://github.com/langfengQ/verl-agent?tab=readme-ov-file#install-supported-environments) to install the nessary environment.
 
+Unzip the environments:
+```
+cd verl-agent/agent_system/
+tar -xvf environments.tar
+```
+
 > Due to potential package version conflicts, we recommend setting independent conda environments for different agent environments.
 
 #### ALFWorld
