@@ -1140,12 +1140,14 @@ class RayPPOTrainer:
     def reward_model_compute(self, timing_raw, batch, metrics):
         with marked_timer("reward", timing_raw, color="yellow"):
             # compute reward model score
+            reward_tensor = None
             if self.use_rm:
                 reward_tensor = self.rm_wg.compute_rm_score(batch)
                 batch = batch.union(reward_tensor)
 
             if self.config.reward_model.launch_reward_fn_async:
                 future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn, max_response_len=self.config.data.max_response_length)
+                reward_extra_infos_dict = None
             else:
                 reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn, max_response_len=self.config.data.max_response_length)
                 # some post-processing to filter out easily failed samples
@@ -1270,7 +1272,6 @@ class RayPPOTrainer:
 
     def compute_advantage(self, timing_raw, batch, metrics,\
         future_reward, reward_tensor, reward_extra_infos_dict):
-
         with marked_timer("adv", timing_raw, color="brown"):
             # we combine with rule-based rm
             reward_extra_infos_dict: dict[str, list]

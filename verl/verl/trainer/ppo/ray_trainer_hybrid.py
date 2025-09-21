@@ -595,6 +595,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
     def reward_model_compute(self, timing_raw, batch, metrics):
         with marked_timer("reward", timing_raw, color="yellow"):
             # compute reward model score
+            reward_tensor = None
             if self.use_rm:
                 reward_tensor = self.rm_wg.compute_rm_score(batch)
                 batch = batch.union(reward_tensor)
@@ -602,7 +603,6 @@ class RayPPOSFTTrainer(RayPPOTrainer):
             if self.config.reward_model.launch_reward_fn_async:
                 future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn, max_response_len=self.config.data.max_response_length)
                 reward_extra_infos_dict = None
-
             else:
                 future_reward = None
                 reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn, max_response_len=self.config.data.max_response_length)
