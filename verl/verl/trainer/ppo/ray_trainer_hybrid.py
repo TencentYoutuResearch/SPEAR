@@ -231,50 +231,8 @@ class TrajectoryBufferBatch:
         else:
             return False
 
-    def get_buffer(self):
-        def nearest_lower_power_of_2(n):
-            # 只抽取小于等于该数的幂级数
-            if n <= 1:
-                return 0
-            return 1 << (n.bit_length() - 1)
 
-        def largest_ratio_32(n):
-            if n <= 32:
-                return 0
-            return 32 * (n // 32)
-
-
-        assert (len(self.trajectory_buffer) >= 1)
-        # [batch, reward_tensor, reward_extra_infos_dict, global_step]
-        step_list = []
-        for traj_pair in self.trajectory_buffer:
-            step_global = traj_pair[-1]
-            step_list += [step_global] * len(traj_pair[1])
-        step_maximum = max(step_list)
-        # 整个step的最大值就是最新一轮的step的batch
-        batch_list = [traj_pair[0] for traj_pair in self.trajectory_buffer]
-        batch_concat = DataProto.concat(batch_list)
-        reward_tensor_list = [traj_pair[1] for traj_pair in self.trajectory_buffer]
-        reward_tensor_concat = torch.cat(reward_tensor_list, dim=0)
-        reward_extra_infos_dict_list = [traj_pair[2] for traj_pair in self.trajectory_buffer]
-        reward_extra_info_dict_concat = defaultdict(list)
-        print("len(step_list)", len(step_list), "len(reward_tensor_concat)", len(reward_tensor_concat))
-        assert(len(step_list) == len(reward_tensor_concat))
-
-        for reward_extra_infos_dict in reward_extra_infos_dict_list:
-            for key, value in reward_extra_infos_dict.items():
-                if not (key in reward_extra_info_dict_concat):
-                    reward_extra_info_dict_concat[key] = value
-                    continue
-                if isinstance(value, np.ndarray):
-                    reward_extra_info_dict_concat[key] = np.concatenate([reward_extra_info_dict_concat[key], value], axis=0)
-                elif isinstance(value, list):
-                    reward_extra_info_dict_concat[key] = reward_extra_info_dict_concat[key] + value
-                elif isinstance(value, tuple):
-                    reward_extra_info_dict_concat[key] = tuple(list(reward_extra_info_dict_concat[key]) + list(value))
-                else:
-                    reward_extra_info_dict_concat[key] = value
-
+    def maintain_reward_statistics(self, step_maximum, step_list):
         ## 维护所有历史step压平后的50分位数reward & std
         reward_mean_history_flatten = []
         reward_std_history_flatten = []
@@ -307,10 +265,21 @@ class TrajectoryBufferBatch:
             custom_reward_mean_list.append(max(reward_mean_maximum, reward_mean_history_step[reward_step]))
             custom_reward_std_list.append(max(reward_std_maximum, reward_std_history_step[reward_step]))
 
+        print(f"""🐹 计算step-wise reward batch mean percentile {reward_mean_history_step}
+        with current:{reward_mean_maximum_step}/p50:{reward_mean_50p}/maximum:{reward_mean_maximum}""")
+        print(f"""🐹 计算step-wise reward batch std percentile {reward_std_history_step}
+        with current:{reward_std_maximum_step}/p50:{reward_std_50p}/maximum:{reward_std_maximum}""")        
+        return reward_mean_history_flatten, reward_std_history_flatten,\
+            reward_mean_history_step, reward_std_history_step, reward_mean_maximum_step,\
+                reward_std_maximum_step, reward_mean_maximum, reward_std_maximum,\
+                    reward_mean_95p, reward_std_95p, reward_mean_50p, reward_std_50p,\
+                        custom_reward_mean_list, custom_reward_std_list
+
+
+    def prepare_for_selection(self, batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
+        reward_mean_50p, reward_std_50p):
         if self.weight_decay_trajectory_replay <= 0 or self.weight_decay_trajectory_replay > 1:
             # here we use the recomputed reward for new advantages
-            print(f"🐹 计算step-wise reward batch mean percentile {reward_mean_history_step} with current:{reward_mean_maximum_step}/p50:{reward_mean_50p}/maximum:{reward_mean_maximum}")
-            print(f"🐹 计算step-wise reward batch std percentile {reward_std_history_step} with current:{reward_std_maximum_step}/p50:{reward_std_50p}/maximum:{reward_std_maximum}")
             # 重新计算后仅保留正样本
             batch_concat.batch["token_level_scores"] = reward_tensor_concat
             batch_concat.batch["token_level_rewards"] = reward_tensor_concat
@@ -362,6 +331,63 @@ class TrajectoryBufferBatch:
         else:
             # here we apply advantage weight decay to the original advantages
             batch_concat.batch["advantages"] *= self.weight_decay_trajectory_replay
+        return batch_concat
+
+
+    def get_buffer(self):
+        def nearest_lower_power_of_2(n):
+            # 只抽取小于等于该数的幂级数
+            if n <= 1:
+                return 0
+            return 1 << (n.bit_length() - 1)
+
+        def largest_ratio_32(n):
+            if n <= 32:
+                return 0
+            return 32 * (n // 32)
+
+        assert (len(self.trajectory_buffer) >= 1)
+        # [batch, reward_tensor, reward_extra_infos_dict, global_step]
+        step_list = []
+        for traj_pair in self.trajectory_buffer:
+            step_global = traj_pair[-1]
+            step_list += [step_global] * len(traj_pair[1])
+        step_maximum = max(step_list)
+        # 整个step的最大值就是最新一轮的step的batch
+        batch_list = [traj_pair[0] for traj_pair in self.trajectory_buffer]
+        batch_concat = DataProto.concat(batch_list)
+        reward_tensor_list = [traj_pair[1] for traj_pair in self.trajectory_buffer]
+        reward_tensor_concat = torch.cat(reward_tensor_list, dim=0)
+        reward_extra_infos_dict_list = [traj_pair[2] for traj_pair in self.trajectory_buffer]
+        reward_extra_info_dict_concat = defaultdict(list)
+        print("len(step_list)", len(step_list), "len(reward_tensor_concat)", len(reward_tensor_concat))
+        assert(len(step_list) == len(reward_tensor_concat))
+
+        for reward_extra_infos_dict in reward_extra_infos_dict_list:
+            for key, value in reward_extra_infos_dict.items():
+                if not (key in reward_extra_info_dict_concat):
+                    reward_extra_info_dict_concat[key] = value
+                    continue
+                if isinstance(value, np.ndarray):
+                    reward_extra_info_dict_concat[key] = np.concatenate([reward_extra_info_dict_concat[key], value], axis=0)
+                elif isinstance(value, list):
+                    reward_extra_info_dict_concat[key] = reward_extra_info_dict_concat[key] + value
+                elif isinstance(value, tuple):
+                    reward_extra_info_dict_concat[key] = tuple(list(reward_extra_info_dict_concat[key]) + list(value))
+                else:
+                    reward_extra_info_dict_concat[key] = value
+
+        # compute the statistics
+        reward_mean_history_flatten, reward_std_history_flatten,\
+                    reward_mean_history_step, reward_std_history_step, reward_mean_maximum_step,\
+                        reward_std_maximum_step, reward_mean_maximum, reward_std_maximum,\
+                            reward_mean_95p, reward_std_95p, reward_mean_50p, reward_std_50p,\
+                                custom_reward_mean_list, custom_reward_std_list = \
+                                    self.maintain_reward_statistics(step_maximum, step_list)
+
+        # prepare for selection
+        batch_concat = self.prepare_for_selection(batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
+            reward_mean_50p, reward_std_50p)
 
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
         # here we only use the 2**N samples as trajectory buffer
@@ -374,7 +400,6 @@ class TrajectoryBufferBatch:
         idx = torch.randperm(len_batch)[:len_batch_valid]
         mask[idx] = True
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
-        
         batch_concat.batch = batch_concat.batch[mask]
         reward_tensor_concat = reward_tensor_concat[mask]
         assert (len(batch_concat.batch) == len_batch_valid)
