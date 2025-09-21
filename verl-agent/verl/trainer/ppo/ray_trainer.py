@@ -945,6 +945,7 @@ class RayPPOTrainer:
 
         return metric_dict
 
+
     def init_workers(self):
         """Initialize distributed training workers using Ray backend.
 
@@ -1028,6 +1029,7 @@ class RayPPOTrainer:
                 worker_group=self.actor_rollout_wg,
             )
 
+
     def _save_checkpoint(self):
         # path: given_path + `/global_step_{global_steps}` + `/actor`
         local_global_step_folder = os.path.join(self.config.trainer.default_local_dir, f"global_step_{self.global_steps}")
@@ -1059,6 +1061,7 @@ class RayPPOTrainer:
         local_latest_checkpointed_iteration = os.path.join(self.config.trainer.default_local_dir, "latest_checkpointed_iteration.txt")
         with open(local_latest_checkpointed_iteration, "w") as f:
             f.write(str(self.global_steps))
+
 
     def _load_checkpoint(self):
         if self.config.trainer.resume_mode == "disable":
