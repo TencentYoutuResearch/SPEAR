@@ -22,7 +22,7 @@ N_GPUS=2
 ROOT_PATH=${1:-$PWD}
 MODEL_PATH=model/Qwen/Qwen2.5-1.5B-Instruct
 PROJECT_NAME="verl_agent_webshop"
-EXP_NAME="gigpo_qwen2.5_1.5b_sal"
+EXP_NAME="grpo_qwen2.5_1.5b_spear"
 LOCAL_DIR=${ROOT_PATH}/checkpoint/${PROJECT_NAME}/${EXP_NAME}
 ROLLOUT_DIR=${LOCAL_DIR}/rollout
 VALIDATION_DIR=${LOCAL_DIR}/validation
@@ -30,10 +30,6 @@ mkdir -p $LOCAL_DIR
 mkdir -p $ROLLOUT_DIR
 mkdir -p $VALIDATION_DIR
 
-# =============== GiGPO settings ===============
-gigpo_mode="mean_std_norm" # "mean_norm" or "mean_std_norm"
-gigpo_gamma=0.95
-gigpo_step_advantage_w=1.0
 
 # =============== self-imitation learning settings ===============
 enable_trajectory_replay=True
@@ -93,7 +89,7 @@ python3 -m examples.data_preprocess.prepare \
 
 
 python3 -m verl.trainer.main_ppo \
-    algorithm.adv_estimator=gigpo \
+    algorithm.adv_estimator=grpo \
     data.train_files=$ROOT_PATH/data/verl-agent/text/train.parquet \
     data.val_files=$ROOT_PATH/data/verl-agent/text/test.parquet \
     data.train_batch_size=$train_data_size \
@@ -153,9 +149,6 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=${use_kl_in_reward} \
     algorithm.use_toolcall_reward=${use_toolcall_reward} \
     algorithm.max_toolcall_steps=${max_toolcall_steps} \
-    algorithm.gamma=${gigpo_gamma} \
-    algorithm.gigpo.step_advantage_w=${gigpo_step_advantage_w} \
-    algorithm.gigpo.mode=${gigpo_mode} \
     env.env_name=Webshop \
     env.resources_per_worker.num_cpus=$num_cpus_per_env_worker \
     env.seed=0 \
@@ -177,5 +170,3 @@ python3 -m verl.trainer.main_ppo \
     # actor_rollout_ref.rollout.val_kwargs.n=3
     
     
-# $@
-

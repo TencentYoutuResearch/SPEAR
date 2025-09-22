@@ -34,14 +34,14 @@ n_resp_per_prompt_val=32
 
 # =============== log settings ===============
 
-experiment_name=qwen2.5-32b
+experiment_name=qwen3-32b_drbot
 project_name=dapo_math_17k
 
 
 # =============== path settings ===============
 ROOT_PATH=${1:-$PWD}
 
-model_path=checkpoints/retool_sft/qwen-2.5-32b-instruct/global_step_372_merge
+model_path=checkpoints/retool_sft/qwen-3-32b-instruct/global_step_372_merge
 dapo_math_17k=${ROOT_PATH}/datasets/BytedTsinghua-SIA/DAPO-Math-17k
 aime_2024=${ROOT_PATH}/datasets/Maxwell-Jia/AIME_2024
 aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
@@ -49,7 +49,7 @@ aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
 train_files="['$dapo_math_17k']"
 test_files="['$aime_2024','$aime_2025']"
 
-tool_config_path=${ROOT_PATH}/recipe/csal/sandbox_fusion_tool_config.yaml
+tool_config_path=${ROOT_PATH}/recipe/spear/sandbox_fusion_tool_config.yaml
 
 default_local_dir=$ROOT_PATH/checkpoints/$project_name/$experiment_name
 mkdir -p ${default_local_dir}
@@ -89,18 +89,18 @@ use_kl_loss=False
 kl_loss_coef=0.0
 
 clip_ratio_low=0.2
-clip_ratio_high=0.2
+clip_ratio_high=0.28
 
-norm_adv_by_std_in_grpo=True
+norm_adv_by_std_in_grpo=False
 
-loss_agg_mode="token-mean"
+loss_agg_mode="seq-mean-token-sum-norm"
 
-filter_overlong_responses=False
-filter_incomplete_responses=False
-filter_repetitive_responses=False
-filter_unreadable_responses=False
+filter_overlong_responses=True
+filter_incomplete_responses=True
+filter_repetitive_responses=True
+filter_unreadable_responses=True
 
-rollout_filter_ratio=1.0
+rollout_filter_ratio=0.75
 rollout_filter_type="std"
 
 
@@ -108,8 +108,7 @@ rollout_filter_type="std"
 offload=True
 actor_max_token_len_per_gpu=$(( (max_prompt_length + max_response_length) * 1 ))
 log_prob_max_token_len_per_gpu=$(( actor_max_token_len_per_gpu * 4 ))
-val_before_train=False
-
+val_before_train=True
 
 
 
@@ -126,11 +125,11 @@ python3 -m verl.trainer.main_ppo \
     data.max_length=$max_token_length \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
-    data.custom_cls.path=${ROOT_PATH}/recipe/csal/retool.py \
+    data.custom_cls.path=${ROOT_PATH}/recipe/spear/retool.py \
     data.custom_cls.name=CustomRLHFDataset \
     reward_model.reward_manager=agentConcurrent \
-    custom_reward_function.path=${ROOT_PATH}/recipe/csal/reward.py \
-    custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay \
+    custom_reward_function.path=${ROOT_PATH}/recipe/spear/reward.py \
+    custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay_qwen3 \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \

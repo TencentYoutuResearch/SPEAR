@@ -1214,7 +1214,7 @@ class RayPPOTrainer:
         return timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward
 
     
-    def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics)
+    def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics):
         # recompute old_log_probs
         with marked_timer("old_log_prob", timing_raw, color="blue"):
             old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)

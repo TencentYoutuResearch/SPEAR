@@ -125,12 +125,12 @@ def process(row: dict, *, tools: str):
 
 
 if __name__ == "__main__":
-    tools_config_file = "recipe/retool/sandbox_fusion_tool_config.yaml"
+    tools_config_file = "recipe/spear/sandbox_fusion_tool_config.yaml"
     tools_config = OmegaConf.load(tools_config_file)
     tool_schema = OmegaConf.to_container(tools_config["tools"][0]["tool_schema"])
     tools = json.dumps([tool_schema])
 
     data = datasets.load_dataset("JoeYing/ReTool-SFT")["train"]
     data = data.map(process, fn_kwargs={"tools": tools})
-    save_path = os.path.expanduser("dataset/ReTool-SFT/data/train-00000-of-00001.parquet")
+    save_path = os.path.expanduser("datasets/ReTool-SFT/data/train-00000-of-00001.parquet")
     data.to_parquet(save_path)

@@ -83,11 +83,11 @@ def default_compute_score_enforce_toolcall_posneg_decay(data_source, solution_st
                 if message.role == "assistant" and (message.tool_calls is not None):
                     res_toolcall += 0.1
     
-    if res_toolcall == 0:
-        print("tools", tools, "messages", messages)
-        print(f"⚠️🔧 warning: the assistant message does not contain any tool calls")
-    else:
-        print(f"✅🔧 check tool calls OK")
+    # if res_toolcall == 0:
+    #     print("tools", tools, "messages", messages)
+    #     print(f"⚠️🔧 warning: the assistant message does not contain any tool calls")
+    # else:
+    #     print(f"✅🔧 check tool calls OK")
 
     res_toolcall = min(res_toolcall, 1.0)   # number of toolcall maximum 1.0 reward
     assert(global_steps >= 0)
@@ -137,11 +137,11 @@ def default_compute_score_enforce_toolcall_posneg_decay_qwen3(data_source, solut
                 if message.role == "assistant" and (message.tool_calls is not None):
                     res_toolcall += 0.1
     
-    if res_toolcall == 0:
-        print("tools", tools, "messages", messages)
-        print(f"⚠️🔧 warning: the assistant message does not contain any tool calls")
-    else:
-        print(f"✅🔧 check tool calls OK")
+    # if res_toolcall == 0:
+    #     print("tools", tools, "messages", messages)
+    #     print(f"⚠️🔧 warning: the assistant message does not contain any tool calls")
+    # else:
+    #     print(f"✅🔧 check tool calls OK")
 
     res_toolcall = min(res_toolcall, 1.0)   # number of toolcall maximum 1.0 reward
     assert(global_steps >= 0)

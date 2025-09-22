@@ -8,12 +8,12 @@ num_cpus_per_env_worker=0.1 # The CPU resource allocated for each environment wo
 export HF_DATASETS_DISABLE_PROGRESS_BARS=1
 
 
-train_data_size=4
+train_data_size=32
 val_data_size=128
 group_size=8
-ppo_mini_batch_size=128
-ppo_micro_batch_size_per_gpu=1
-log_prob_micro_batch_size_per_gpu=1
+ppo_mini_batch_size=256
+ppo_micro_batch_size_per_gpu=4
+log_prob_micro_batch_size_per_gpu=4
 
 N_NODES=1
 N_GPUS=2
@@ -21,8 +21,8 @@ N_GPUS=2
 
 ROOT_PATH=${1:-$PWD}
 MODEL_PATH=model/Qwen/Qwen2.5-1.5B-Instruct
-PROJECT_NAME="verl_agent_alfworld"
-EXP_NAME="grpo_qwen2.5_1.5b-sal"
+PROJECT_NAME="verl_agent_webshop"
+EXP_NAME="gigpo_qwen2.5_1.5b_spear"
 LOCAL_DIR=${ROOT_PATH}/checkpoint/${PROJECT_NAME}/${EXP_NAME}
 ROLLOUT_DIR=${LOCAL_DIR}/rollout
 VALIDATION_DIR=${LOCAL_DIR}/validation
@@ -30,6 +30,10 @@ mkdir -p $LOCAL_DIR
 mkdir -p $ROLLOUT_DIR
 mkdir -p $VALIDATION_DIR
 
+# =============== GiGPO settings ===============
+gigpo_mode="mean_std_norm" # "mean_norm" or "mean_std_norm"
+gigpo_gamma=0.95
+gigpo_step_advantage_w=1.0
 
 # =============== self-imitation learning settings ===============
 enable_trajectory_replay=True
@@ -37,7 +41,7 @@ TRAIN_BUFFERSIZE=2048
 advantage_threshold=1
 tolerate_steps=5
 replay_loss_coef=1
-max_replay_loss_ascending_steps=100
+max_replay_loss_ascending_steps=200
 
 loss_mode="clip_cov"
 clip_cov_ratio_replay=0.02 
@@ -88,20 +92,13 @@ python3 -m examples.data_preprocess.prepare \
     --val_data_size $val_data_size
 
 
-
-
-
-
-
-
-
 python3 -m verl.trainer.main_ppo \
-    algorithm.adv_estimator=grpo \
+    algorithm.adv_estimator=gigpo \
     data.train_files=$ROOT_PATH/data/verl-agent/text/train.parquet \
     data.val_files=$ROOT_PATH/data/verl-agent/text/test.parquet \
     data.train_batch_size=$train_data_size \
     data.val_batch_size=$val_data_size \
-    data.max_prompt_length=2048 \
+    data.max_prompt_length=4096 \
     data.max_response_length=512 \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
@@ -156,7 +153,10 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=${use_kl_in_reward} \
     algorithm.use_toolcall_reward=${use_toolcall_reward} \
     algorithm.max_toolcall_steps=${max_toolcall_steps} \
-    env.env_name=alfworld/AlfredTWEnv \
+    algorithm.gamma=${gigpo_gamma} \
+    algorithm.gigpo.step_advantage_w=${gigpo_step_advantage_w} \
+    algorithm.gigpo.mode=${gigpo_mode} \
+    env.env_name=Webshop \
     env.resources_per_worker.num_cpus=$num_cpus_per_env_worker \
     env.seed=0 \
     env.max_steps=${max_steps} \
@@ -172,7 +172,7 @@ python3 -m verl.trainer.main_ppo \
     trainer.nnodes=${N_NODES} \
     trainer.save_freq=10 \
     trainer.test_freq=5 \
-    trainer.total_epochs=200 \
+    trainer.total_epochs=350 \
     trainer.val_before_train=False
     # actor_rollout_ref.rollout.val_kwargs.n=3
     

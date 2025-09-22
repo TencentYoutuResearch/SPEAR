@@ -8,12 +8,12 @@ master_port=12345
 node_rank=0
 
 project_name="retool_sft"
-experiment_name=qwen-3-32b-instruct
+experiment_name=qwen-2.5-32b-instruct
 ROOT_PATH=${1:-$PWD}
 
-TRAIN_DATA=$ROOT_PATH/dataset/ReTool-SFT/data/train-00000-of-00001.parquet
-EVAL_DATA=$ROOT_PATH/dataset/ReTool-SFT/data/train-00000-of-00001.parquet
-MODEL_PATH=$ROOT_PATH/model/Qwen3-32B-Instruct
+TRAIN_DATA=$ROOT_PATH/datasets/ReTool-SFT/data/train-00000-of-00001.parquet
+EVAL_DATA=$ROOT_PATH/datasets/ReTool-SFT/data/train-00000-of-00001.parquet
+MODEL_PATH=$ROOT_PATH/model/Qwen2.5-32B-Instruct
 SAVE_PATH=$ROOT_PATH/checkpoints/$project_name/$experiment_name
 echo $SAVE_PATH
 

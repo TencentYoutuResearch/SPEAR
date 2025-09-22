@@ -34,14 +34,14 @@ n_resp_per_prompt_val=32
 
 # =============== log settings ===============
 
-experiment_name=qwen2.5-32b_drbot
+experiment_name=qwen3-32b_spear
 project_name=dapo_math_17k
 
 
 # =============== path settings ===============
 ROOT_PATH=${1:-$PWD}
 
-model_path=checkpoints/retool_sft/qwen-2.5-32b-instruct/global_step_372_merge
+model_path=checkpoints/retool_sft/qwen-3-32b-instruct/global_step_372_merge
 dapo_math_17k=${ROOT_PATH}/datasets/BytedTsinghua-SIA/DAPO-Math-17k
 aime_2024=${ROOT_PATH}/datasets/Maxwell-Jia/AIME_2024
 aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
@@ -49,7 +49,7 @@ aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
 train_files="['$dapo_math_17k']"
 test_files="['$aime_2024','$aime_2025']"
 
-tool_config_path=${ROOT_PATH}/recipe/csal/sandbox_fusion_tool_config.yaml
+tool_config_path=${ROOT_PATH}/recipe/spear/sandbox_fusion_tool_config.yaml
 
 default_local_dir=$ROOT_PATH/checkpoints/$project_name/$experiment_name
 mkdir -p ${default_local_dir}
@@ -57,14 +57,14 @@ mkdir -p ${default_local_dir}
 
 
 # =============== self-imitation learning settings ===============
-enable_trajectory_replay=False
+enable_trajectory_replay=True
 trajectory_buffer_size=2048
 advantage_threshold=1
 trajectory_tolerate_steps=5
 replay_loss_coef=1
 max_replay_loss_ascending_steps=300
 
-loss_mode="vanilla"
+loss_mode="clip_cov"
 clip_cov_ratio_replay=0.02 
 clip_cov_lb_replay=1 
 clip_cov_ub_replay=40.0
@@ -77,7 +77,7 @@ baseline_buffer_size=10240
 
 
 # =============== intrinsic reward settings ===============
-use_toolcall_reward="none"
+use_toolcall_reward="cosine"
 max_toolcall_steps=200
 
 
@@ -111,7 +111,6 @@ log_prob_max_token_len_per_gpu=$(( actor_max_token_len_per_gpu * 4 ))
 val_before_train=True
 
 
-
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     algorithm.use_kl_in_reward=$use_kl_in_reward \
@@ -125,11 +124,11 @@ python3 -m verl.trainer.main_ppo \
     data.max_length=$max_token_length \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
-    data.custom_cls.path=${ROOT_PATH}/recipe/csal/retool.py \
+    data.custom_cls.path=${ROOT_PATH}/recipe/spear/retool.py \
     data.custom_cls.name=CustomRLHFDataset \
     reward_model.reward_manager=agentConcurrent \
-    custom_reward_function.path=${ROOT_PATH}/recipe/csal/reward.py \
-    custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay \
+    custom_reward_function.path=${ROOT_PATH}/recipe/spear/reward.py \
+    custom_reward_function.name=default_compute_score_enforce_toolcall_posneg_decay_qwen3 \
     actor_rollout_ref.model.path=$model_path \
     actor_rollout_ref.model.use_remove_padding=True \
     actor_rollout_ref.model.enable_gradient_checkpointing=True \

@@ -322,8 +322,8 @@ class TrajectoryBufferBatch:
         reward_mean_50p, reward_std_50p):
         if self.weight_decay_trajectory_replay <= 0 or self.weight_decay_trajectory_replay > 1:
             # here we use the recomputed reward for new advantages
-            assert(len(custom_reward_mean_list) == len(step_list))
-            assert(len(custom_reward_std_list) == len(step_list))
+            # assert(len(custom_reward_mean_list) == len(step_list))
+            # assert(len(custom_reward_std_list) == len(step_list))
             # 重新计算后仅保留正样本
             batch_concat.batch["token_level_scores"] = reward_tensor_concat
             batch_concat.batch["token_level_rewards"] = reward_tensor_concat
@@ -963,8 +963,11 @@ class RayPPOSFTTrainer(RayPPOTrainer):
 
                         if self.config.reward_model.launch_reward_fn_async:
                             future_reward = compute_reward_async.remote(batch, self.config, self.tokenizer, max_response_len=self.config.data.max_response_length)
+                            reward_tensor = None
+                            reward_extra_infos_dict = None
                         else:
                             reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn, max_response_len=self.config.data.max_response_length)
+                            future_reward=None
                             # some post-processing to filter out easily failed samples
                             if "is_incomplete" in reward_extra_infos_dict and self.config.algorithm.filter_incomplete_responses:
                                 is_incomplete_list = reward_extra_infos_dict["is_incomplete"]
@@ -1031,8 +1034,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                     timing_raw, batch, metrics = self.recompute_old_log_prob_ref_critic(timing_raw, batch, metrics)
 
                     # advantage
-                    timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict =\
-                        self.compute_advantage(timing_raw, batch, metrics, future_reward,\
+                    timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict = self.compute_advantage(timing_raw, batch, metrics, future_reward,\
                             reward_tensor, reward_extra_infos_dict)
 
 

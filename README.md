@@ -12,7 +12,7 @@
   &nbsp;
 </p>
 
-CSAL is a curriculum-based self-imitation learning (SIL) framework for training agentic LLMs on long-horizon, sparse-reward tasks. It balances exploration and exploitation by first leveraging auxiliary tool-use rewards to encourage broad skill-level exploration, and later strengthening self-imitation to exploit successful trajectories from replayed experiences. This adaptive curriculum stabilizes training and improves efficiency while maintaining well-controlled entropy.
+SPEAR is a curriculum-based self-imitation learning (SIL) framework for training agentic LLMs on long-horizon, sparse-reward tasks. It balances exploration and exploitation by first leveraging auxiliary tool-use rewards to encourage broad skill-level exploration, and later strengthening self-imitation to exploit successful trajectories from replayed experiences. This adaptive curriculum stabilizes training and improves efficiency while maintaining well-controlled entropy.
 
 
 
@@ -42,13 +42,13 @@ Results using Qwen2.5-1.5B-Instruct on ALFWorld and WebShop:
 | Method        | ALFWorld    | WebShop(SR) |
 | :------------ | ----------- | ----------- |
 | GRPO          | 72.8        | 56.8        |
-| +CSAL(ours)   | 88.9(+16.1) | 77.5(+20.7) |
+| +SPEAR(ours)   | 88.9(+16.1) | 77.5(+20.7) |
 | Dr.BoT(GRPO)  | 79.1        | 62.9        |
-| +CSAL(ours)   | 87.7(+8.6)  | 76.8(+13.9) |
+| +SPEAR(ours)   | 87.7(+8.6)  | 76.8(+13.9) |
 | GiGPO         | 86.1        | 67.4        |
-| +CSAL(ours)   | 91.2(+5.1)  | 79.3(+11.8) |
+| +SPEAR(ours)   | 91.2(+5.1)  | 79.3(+11.8) |
 | Dr.BoT(GiGPO) | 90.6        | 68.8        |
-| +CSAL(ours)   | 93.2(+2.6)  | 81.1(+81.1) |
+| +SPEAR(ours)   | 93.2(+2.6)  | 81.1(+81.1) |
 
 Results using Qwen2.5-32B-Instruct and Qwen3-32B-Instruct on AIME24 and AIME25:
 
@@ -57,9 +57,9 @@ Results using Qwen2.5-32B-Instruct and Qwen3-32B-Instruct on AIME24 and AIME25:
 | PPO          | Qwen2.5-32B-Instruct | -      | 55.0   |
 | GRPO         | Qwen2.5-32B-Instruct | -      | 60.0   |
 | Dr.BoT(GRPO) | Qwen2.5-32B-Instruct | 64.7   | 54.0   |
-| +CSAL(ours)  | Qwen2.5-32B-Instruct | 66.3(+1.6)   | 60.1(+6.1)   |
+| +SPEAR(ours)  | Qwen2.5-32B-Instruct | 66.3(+1.6)   | 60.1(+6.1)   |
 | Dr.BoT(GRPO) | Qwen3-32B-Instruct   | 82.5   | 77.3   |
-| +CSAL(ours)  | Qwen3-32B-Instruct   | 85.6(+3.1)   | 80.5(+3.2)   |
+| +SPEAR(ours)  | Qwen3-32B-Instruct   | 85.6(+3.1)   | 80.5(+3.2)   |
 
 
 
@@ -338,12 +338,12 @@ pip install --no-deps -e .
 ### 2. Preparing data and cold-start model
 1. Preparing data:
 ```bash
-python3 recipe/csal/sft_preprocess.py
+python3 recipe/spear/sft_preprocess.py
 ```
 
 2. Getting the cold-start model:
 ```bash
-bash recipe/csal/run_qwen2-32b_sft.sh
+bash recipe/spear/run_qwen2-32b_sft.sh
 ```
 
 3. Transform to HuggingFace format:
@@ -361,19 +361,19 @@ python -m verl.model_merger merge --backend fsdp \
 Training with GRPO baseline:
 
 ```bash
-bash recipe/csal/run_qwen2-32b.sh
+bash recipe/spear/run_qwen2-32b.sh
 ```
 
 Training with Dr.BoT:
 
 ```bash
-bash recipe/csal/run_qwen2-32b_drbot.sh
+bash recipe/spear/run_qwen2-32b_drbot.sh
 ```
 
-Training with CSAL:
+Training with SPEAR:
 
 ```bash
-bash recipe/csal/run_qwen2-32b_csal.sh
+bash recipe/spear/run_qwen2-32b_spear.sh
 ```
 
 
@@ -401,7 +401,7 @@ conda create -n verl-agent-alfworld python==3.12 -y
 conda activate verl-agent-alfworld
 pip3 install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
 pip3 install flash-attn==2.7.4.post1 --no-build-isolation 
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 pip3 install -e . 
 pip3 install vllm==0.8.5 
 
@@ -473,12 +473,12 @@ Training with GRPO:
 # ALFWorld
 bash examples/grpo_trainer/run_alfworld.sh # GRPO baseline
 bash examples/grpo_trainer/run_alfworld_drbot.sh # Dr.BoT
-bash examples/grpo_trainer/run_alfworld_csal.sh # CSAL
+bash examples/grpo_trainer/run_alfworld_spear.sh # SPEAR
 
 # WebShop
 bash examples/grpo_trainer/run_webshop.sh # GRPO baseline
 bash examples/grpo_trainer/run_webshop_drbot.sh # Dr.BoT
-bash examples/grpo_trainer/run_webshop_csal.sh # CSAL
+bash examples/grpo_trainer/run_webshop_spear.sh # SPEAR
 ```
 
 Training with GiGPO:
@@ -487,12 +487,12 @@ Training with GiGPO:
 # ALFWorld
 bash examples/gigpo_trainer/run_alfworld.sh # GRPO baseline
 bash examples/gigpo_trainer/run_alfworld_drbot.sh # Dr.BoT
-bash examples/gigpo_trainer/run_alfworld_csal.sh # CSAL
+bash examples/gigpo_trainer/run_alfworld_spear.sh # SPEAR
 
 # WebShop
 bash examples/gigpo_trainer/run_webshop.sh # GRPO baseline
 bash examples/gigpo_trainer/run_webshop_drbot.sh # Dr.BoT
-bash examples/gigpo_trainer/run_webshop_csal.sh # CSAL
+bash examples/gigpo_trainer/run_webshop_spear.sh # SPEAR
 ```
 
 ## Acknowledgement

@@ -1,7 +1,7 @@
 tools:
-  - class_name: "recipe.retool.retool.CustomSandboxFusionTool"
+  - class_name: "recipe.spear.retool.CustomSandboxFusionTool"
     config:
-      sandbox_fusion_url: "http://10.206.0.184:8080/run_code"
+      sandbox_fusion_url: 'http://10.101.38.0:80/run_code'
       num_workers: 128
       enable_global_rate_limit: true
       rate_limit: 128

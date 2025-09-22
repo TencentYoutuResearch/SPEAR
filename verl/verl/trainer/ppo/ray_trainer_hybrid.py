@@ -331,7 +331,7 @@ class TrajectoryBufferBatch:
         else:
             # here we apply advantage weight decay to the original advantages
             batch_concat.batch["advantages"] *= self.weight_decay_trajectory_replay
-        return batch_concat
+        return batch_concat, reward_tensor_concat, reward_extra_info_dict_concat
 
 
     def get_buffer(self):
@@ -386,7 +386,7 @@ class TrajectoryBufferBatch:
                                     self.maintain_reward_statistics(step_maximum, step_list)
 
         # prepare for selection
-        batch_concat = self.prepare_for_selection(batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
+        batch_concat, reward_tensor_concat, reward_extra_info_dict_concat = self.prepare_for_selection(batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
             reward_mean_50p, reward_std_50p)
 
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
@@ -670,7 +670,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
         return timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward
 
     
-    def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics)
+    def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics):
         # recompute old_log_probs
         with marked_timer("old_log_prob", timing_raw, color="blue"):
             old_log_prob = self.actor_rollout_wg.compute_log_prob(batch)

@@ -1,7 +1,7 @@
 set -x
 
 # =============== env and training settings ===============
-max_steps=15
+max_steps=50
 ENGINE=vllm
 export VLLM_ATTENTION_BACKEND=XFORMERS
 num_cpus_per_env_worker=0.1 # The CPU resource allocated for each environment worker. If you want to use less CPU resources, you can decrease this value.
@@ -11,9 +11,9 @@ export HF_DATASETS_DISABLE_PROGRESS_BARS=1
 train_data_size=32
 val_data_size=128
 group_size=8
-ppo_mini_batch_size=256
-ppo_micro_batch_size_per_gpu=4
-log_prob_micro_batch_size_per_gpu=4
+ppo_mini_batch_size=1024
+ppo_micro_batch_size_per_gpu=8
+log_prob_micro_batch_size_per_gpu=8
 
 N_NODES=1
 N_GPUS=2
@@ -21,8 +21,8 @@ N_GPUS=2
 
 ROOT_PATH=${1:-$PWD}
 MODEL_PATH=model/Qwen/Qwen2.5-1.5B-Instruct
-PROJECT_NAME="verl_agent_webshop"
-EXP_NAME="grpo_qwen2.5_1.5b_sal"
+PROJECT_NAME="verl_agent_alfworld"
+EXP_NAME="grpo_qwen2.5_1.5b-spear"
 LOCAL_DIR=${ROOT_PATH}/checkpoint/${PROJECT_NAME}/${EXP_NAME}
 ROLLOUT_DIR=${LOCAL_DIR}/rollout
 VALIDATION_DIR=${LOCAL_DIR}/validation
@@ -37,7 +37,7 @@ TRAIN_BUFFERSIZE=2048
 advantage_threshold=1
 tolerate_steps=5
 replay_loss_coef=1
-max_replay_loss_ascending_steps=200
+max_replay_loss_ascending_steps=100
 
 loss_mode="clip_cov"
 clip_cov_ratio_replay=0.02 
@@ -88,13 +88,20 @@ python3 -m examples.data_preprocess.prepare \
     --val_data_size $val_data_size
 
 
+
+
+
+
+
+
+
 python3 -m verl.trainer.main_ppo \
     algorithm.adv_estimator=grpo \
     data.train_files=$ROOT_PATH/data/verl-agent/text/train.parquet \
     data.val_files=$ROOT_PATH/data/verl-agent/text/test.parquet \
     data.train_batch_size=$train_data_size \
     data.val_batch_size=$val_data_size \
-    data.max_prompt_length=4096 \
+    data.max_prompt_length=2048 \
     data.max_response_length=512 \
     data.filter_overlong_prompts=True \
     data.truncation='error' \
@@ -149,7 +156,7 @@ python3 -m verl.trainer.main_ppo \
     algorithm.use_kl_in_reward=${use_kl_in_reward} \
     algorithm.use_toolcall_reward=${use_toolcall_reward} \
     algorithm.max_toolcall_steps=${max_toolcall_steps} \
-    env.env_name=Webshop \
+    env.env_name=alfworld/AlfredTWEnv \
     env.resources_per_worker.num_cpus=$num_cpus_per_env_worker \
     env.seed=0 \
     env.max_steps=${max_steps} \
@@ -165,8 +172,10 @@ python3 -m verl.trainer.main_ppo \
     trainer.nnodes=${N_NODES} \
     trainer.save_freq=10 \
     trainer.test_freq=5 \
-    trainer.total_epochs=350 \
+    trainer.total_epochs=200 \
     trainer.val_before_train=False
     # actor_rollout_ref.rollout.val_kwargs.n=3
     
     
+# $@
+
