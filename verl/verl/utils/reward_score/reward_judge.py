@@ -32,7 +32,7 @@ global client
 client = OpenAI(base_url=reward_model_url, api_key="xxx", timeout=60)
 
 
-EVALUATION_PROMPT="""You are a teacher grading a quiz.
+EVALUATION_PROMPT = """You are a teacher grading a quiz.
 You are given a question, the student's answer, and the true answer, and are asked to score the student answer as either CORRECT or INCORRECT.
 
 Example Format:
@@ -49,18 +49,18 @@ TRUE ANSWER: {answer}
 GRADE:"""
 
 
-
 def compute_score(solution_str, ground_truth, user_query, timeout=10):
-    """Compute the reward score for questions with reference responses
-    """
+    """Compute the reward score for questions with reference responses"""
     solution = deepcopy(solution_str)
     if "Final Answer:" in solution:
-        solution = solution[solution.rfind("Final Answer:")+len("Final Answer:"):]
+        solution = solution[solution.rfind("Final Answer:") + len("Final Answer:") :]
 
     else:
         return 0.0, "Invalid response format (missing 'Final Answer: <your final answer>')"
 
-    prompt = EVALUATION_PROMPT.replace("{query}", user_query).replace("{result}", solution).replace("{answer}", ground_truth)
+    prompt = (
+        EVALUATION_PROMPT.replace("{query}", user_query).replace("{result}", solution).replace("{answer}", ground_truth)
+    )
     global client
     global reward_model_name
     score = 0.0
@@ -68,24 +68,20 @@ def compute_score(solution_str, ground_truth, user_query, timeout=10):
         num_retry = 0
         while num_retry < 10:
             try:
-                messages = [
-                    {"role":"user", "content":prompt}
-                ]
+                messages = [{"role": "user", "content": prompt}]
                 generation_kwargs = {
-                    "max_tokens":16,
-                    "temperature":0,
-                    "stream":False,
+                    "max_tokens": 16,
+                    "temperature": 0,
+                    "stream": False,
                 }
                 response = client.with_options(timeout=timeout).chat.completions.create(
-                                            model=reward_model_name,
-                                            messages=messages,
-                                            **generation_kwargs
-                                            )
+                    model=reward_model_name, messages=messages, **generation_kwargs
+                )
 
                 response = response.to_dict()
                 assert "choices" in response
                 result = response["choices"][0]["message"]["content"]
-                assert (result is not None)
+                assert result is not None
                 result = str(result)
                 if "CORRECT" in result.upper():
                     score = 1.0
@@ -109,7 +105,6 @@ def compute_score(solution_str, ground_truth, user_query, timeout=10):
 
 
 if __name__ == "__main__":
-
     user_query = "Who is the current chair of the VALSE常务AC委员会（LACC）?"
     ground_truth = "白翔（华中科技大学）"
     # solution_str = "白翔老师"

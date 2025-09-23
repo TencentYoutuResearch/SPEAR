@@ -766,7 +766,9 @@ class FSDPSFTTrainer:
 def run_sft(config):
     device_name = get_device_name()
     local_rank, rank, world_size = initialize_global_process_group()
-    print("Running SFT on device:", device_name, "with rank:", rank, "and world size:", world_size)   # Running SFT on device: cuda with rank: 0 and world size: 2
+    print(
+        "Running SFT on device:", device_name, "with rank:", rank, "and world size:", world_size
+    )  # Running SFT on device: cuda with rank: 0 and world size: 2
     device_mesh = init_device_mesh(device_type=device_name, mesh_shape=(world_size,), mesh_dim_names=("fsdp",))
     dp_size = world_size // config.ulysses_sequence_parallel_size
     ulysses_device_mesh = init_device_mesh(

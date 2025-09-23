@@ -1,4 +1,4 @@
-""" 
+"""
 Basic client for MCP server. See [examples] for usage.
 
 - [x] add _start() before any action to avoid manual call async function when initialization
@@ -6,6 +6,7 @@ Basic client for MCP server. See [examples] for usage.
 
 updated: @2025-06-13
 """
+
 import logging
 from contextlib import AsyncExitStack
 from datetime import timedelta
@@ -25,11 +26,12 @@ logger.addHandler(handler)
 
 class BrowserToolkitClient:
     """Browser toolkit client with async context manager support for automatic start/stop.
-    
+
     Usage:
         async with BrowserToolkitClient(mcp_url) as client:
             result = await client.call_tool("tool_name", {"arg": "value"})
     """
+
     session: ClientSession | None = None
     session_id: str | None = None
     _exit_stack: AsyncExitStack | None = None
@@ -45,14 +47,12 @@ class BrowserToolkitClient:
         (read_stream, write_stream, get_session_id) = await self._exit_stack.enter_async_context(
             streamablehttp_client(
                 url=self.mcp_url,
-                timeout=timedelta(seconds=60*5),
-                sse_read_timeout=timedelta(seconds=60*5),
+                timeout=timedelta(seconds=60 * 5),
+                sse_read_timeout=timedelta(seconds=60 * 5),
                 terminate_on_close=True,
             )
         )
-        self.session = await self._exit_stack.enter_async_context(
-            ClientSession(read_stream, write_stream)
-        )
+        self.session = await self._exit_stack.enter_async_context(ClientSession(read_stream, write_stream))
         await self.session.initialize()
         # NOTE: session_id is initialized after session initialization!
         self.session_id = get_session_id()
@@ -73,7 +73,9 @@ class BrowserToolkitClient:
         await self._start()
         return await self.session.list_tools()
 
-    async def call_tool(self, name: str, arguments: dict[str, Any] | None = None, read_timeout_seconds: timedelta | None = None) -> types.CallToolResult:
+    async def call_tool(
+        self, name: str, arguments: dict[str, Any] | None = None, read_timeout_seconds: timedelta | None = None
+    ) -> types.CallToolResult:
         await self._start()
         res = await self.session.call_tool(name, arguments, read_timeout_seconds)
         if res.isError:
@@ -93,4 +95,3 @@ class BrowserToolkitClient:
             await self._stop()
         except Exception as e:
             logger.error(f"[{self.session_id}] Error in __aexit__: {e}")
-

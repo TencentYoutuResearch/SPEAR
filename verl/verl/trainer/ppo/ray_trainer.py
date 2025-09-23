@@ -658,7 +658,9 @@ class RayPPOTrainer:
                 batch_keys=batch_keys_to_pop,
                 non_tensor_batch_keys=non_tensor_batch_keys_to_pop,
             )
-            test_gen_batch.non_tensor_batch["global_steps"] = np.array(["val_" + str(self.global_steps) for _ in range(len(test_gen_batch.non_tensor_batch["raw_prompt_ids"]))])
+            test_gen_batch.non_tensor_batch["global_steps"] = np.array(
+                ["val_" + str(self.global_steps) for _ in range(len(test_gen_batch.non_tensor_batch["raw_prompt_ids"]))]
+            )
             test_gen_batch.meta_info = {
                 "eos_token_id": self.tokenizer.eos_token_id,
                 "pad_token_id": self.tokenizer.pad_token_id,
@@ -691,13 +693,17 @@ class RayPPOTrainer:
             # input_ids = test_batch.batch["input_ids"]
             input_ids = test_output_gen_batch.batch["prompts"]
             # TODO: Can we keep special tokens except for padding tokens?
-            input_ids_wo_padding = [[token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in input_ids]
+            input_ids_wo_padding = [
+                [token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in input_ids
+            ]
             input_texts = [self.tokenizer.decode(ids, skip_special_tokens=False) for ids in input_ids_wo_padding]
             sample_inputs.extend(input_texts)
 
             # Store generated outputs
             output_ids = test_output_gen_batch.batch["responses"]
-            output_ids_wo_padding = [[token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in output_ids]
+            output_ids_wo_padding = [
+                [token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in output_ids
+            ]
             output_texts = [self.tokenizer.decode(ids, skip_special_tokens=False) for ids in output_ids_wo_padding]
             sample_outputs.extend(output_texts)
 
@@ -713,8 +719,10 @@ class RayPPOTrainer:
             reward_tensor = result["reward_tensor"]
             scores = reward_tensor.sum(-1).cpu().tolist()
             sample_scores.extend(scores)
-            ground_truths = [reward_model["ground_truth"] for reward_model in test_batch.non_tensor_batch["reward_model"]]
-            assert(len(scores) == len(ground_truths))
+            ground_truths = [
+                reward_model["ground_truth"] for reward_model in test_batch.non_tensor_batch["reward_model"]
+            ]
+            assert len(scores) == len(ground_truths)
             sample_groundtruth.extend(ground_truths)
             reward_extra_infos_dict["reward"].extend(scores)
             print(f"len reward_extra_infos_dict['reward']: {len(reward_extra_infos_dict['reward'])}")
@@ -731,7 +739,7 @@ class RayPPOTrainer:
 
         self._maybe_log_val_generations(inputs=sample_inputs, outputs=sample_outputs, scores=sample_scores)
 
-        assert(len(sample_groundtruth) == len(sample_scores))
+        assert len(sample_groundtruth) == len(sample_scores)
         # dump generations
         val_data_dir = self.config.trainer.get("validation_data_dir", None)
         if val_data_dir:
@@ -873,13 +881,13 @@ class RayPPOTrainer:
         self.async_rollout_mode = False
         if self.config.actor_rollout_ref.rollout.mode == "async":
             from verl.experimental.agent_loop import AgentLoopManager
+
             print(">>> Using the async agent loop manager")
             self.async_rollout_mode = True
             self.async_rollout_manager = AgentLoopManager(
                 config=self.config,
                 worker_group=self.actor_rollout_wg,
             )
-
 
     def _filter_rollout(self, batch, reward_tensor, reward_extra_infos_dict):
         """filter rollout based on in-group max - in-group mean. We want those groups to have high-quality rollouts that deviates significantly from the mean"""
@@ -894,14 +902,28 @@ class RayPPOTrainer:
         in_group_max = rm_scores.max(dim=-1).values
         in_group_mean = rm_scores.mean(dim=-1)
         if rollout_filter_ratio == 1:
-            return batch, {"rollout/in_group_std": in_group_std.mean(), "rollout/in_group_max": in_group_max.mean(), "rollout/in_group_mean": in_group_mean.mean(), "rollout/chosen_in_group_std": in_group_std.mean(), "rollout/chosen_in_group_max": in_group_max.mean(), "rollout/chosen_in_group_mean": in_group_mean.mean()}, reward_tensor, reward_extra_infos_dict
+            return (
+                batch,
+                {
+                    "rollout/in_group_std": in_group_std.mean(),
+                    "rollout/in_group_max": in_group_max.mean(),
+                    "rollout/in_group_mean": in_group_mean.mean(),
+                    "rollout/chosen_in_group_std": in_group_std.mean(),
+                    "rollout/chosen_in_group_max": in_group_max.mean(),
+                    "rollout/chosen_in_group_mean": in_group_mean.mean(),
+                },
+                reward_tensor,
+                reward_extra_infos_dict,
+            )
 
         if self.config.actor_rollout_ref.rollout.rollout_filter_type == "std_rev":
             top_groups = (-in_group_std).topk(int(rollout_filter_ratio * num_groups)).indices
         elif self.config.actor_rollout_ref.rollout.rollout_filter_type == "std":
             top_groups = in_group_std.topk(int(rollout_filter_ratio * num_groups)).indices
         else:
-            raise ValueError(f"Invalid rollout filter type: {self.config.actor_rollout_ref.rollout.rollout_filter_type}")
+            raise ValueError(
+                f"Invalid rollout filter type: {self.config.actor_rollout_ref.rollout.rollout_filter_type}"
+            )
 
         mask = torch.zeros(num_groups, dtype=torch.bool)
         mask[top_groups] = True
@@ -936,10 +958,9 @@ class RayPPOTrainer:
             "rollout/in_group_mean": in_group_mean.mean(),
             "rollout/chosen_in_group_std": in_group_std[top_groups].mean(),
             "rollout/chosen_in_group_max": in_group_max[top_groups].mean(),
-            "rollout/chosen_in_group_mean": in_group_mean[top_groups].mean()
+            "rollout/chosen_in_group_mean": in_group_mean[top_groups].mean(),
         }
         return batch, metrics_update, reward_tensor, reward_extra_infos_dict
-
 
     def _save_checkpoint(self):
         from verl.utils.fs import local_mkdir_safe
@@ -999,7 +1020,6 @@ class RayPPOTrainer:
         with open(local_latest_checkpointed_iteration, "w") as f:
             f.write(str(self.global_steps))
 
-
     def _load_checkpoint(self):
         if self.config.trainer.resume_mode == "disable":
             return 0
@@ -1057,7 +1077,6 @@ class RayPPOTrainer:
         else:
             print(f"Warning: No dataloader state found at {dataloader_local_path}, will start from scratch")
 
-
     def _start_profiling(self, do_profile: bool) -> None:
         """Start profiling for all worker groups if profiling is enabled."""
         if do_profile:
@@ -1069,7 +1088,6 @@ class RayPPOTrainer:
             if self.use_rm:
                 self.rm_wg.start_profile()
 
-
     def _stop_profiling(self, do_profile: bool) -> None:
         """Stop profiling for all worker groups if profiling is enabled."""
         if do_profile:
@@ -1080,7 +1098,6 @@ class RayPPOTrainer:
                 self.critic_wg.stop_profile()
             if self.use_rm:
                 self.rm_wg.stop_profile()
-
 
     def _balance_batch(self, batch: DataProto, metrics, logging_prefix="global_seqlen"):
         """Reorder the data on single controller such that each dp rank gets similar total tokens"""
@@ -1098,7 +1115,6 @@ class RayPPOTrainer:
             seqlen_list=global_seqlen_lst, partitions=global_partition_lst, prefix=logging_prefix
         )
         metrics.update(global_balance_stats)
-
 
     def generate_batch(self, timing_raw, gen_batch, batch):
         # generate a batch
@@ -1128,14 +1144,11 @@ class RayPPOTrainer:
 
                 del gen_baseline_batch, gen_baseline_output
 
-        batch.non_tensor_batch["uid"] = np.array(
-            [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
-        )
+        batch.non_tensor_batch["uid"] = np.array([str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object)
         # repeat to align with repeated responses in rollout
         batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
         batch = batch.union(gen_batch_output)
         return timing_raw, batch, gen_batch_output
-
 
     def reward_model_compute(self, timing_raw, batch, metrics):
         with marked_timer("reward", timing_raw, color="yellow"):
@@ -1146,17 +1159,21 @@ class RayPPOTrainer:
                 batch = batch.union(reward_tensor)
 
             if self.config.reward_model.launch_reward_fn_async:
-                future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn, max_response_len=self.config.data.max_response_length)
+                future_reward = compute_reward_async.remote(
+                    data=batch, reward_fn=self.reward_fn, max_response_len=self.config.data.max_response_length
+                )
                 reward_extra_infos_dict = None
             else:
-                reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn, max_response_len=self.config.data.max_response_length)
+                reward_tensor, reward_extra_infos_dict = compute_reward(
+                    batch, self.reward_fn, max_response_len=self.config.data.max_response_length
+                )
                 # some post-processing to filter out easily failed samples
                 if "is_incomplete" in reward_extra_infos_dict and self.config.algorithm.filter_incomplete_responses:
                     is_incomplete_list = reward_extra_infos_dict["is_incomplete"]
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_incomplete_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Incomplete Responses from Loss")
                     metrics.update(
@@ -1170,7 +1187,7 @@ class RayPPOTrainer:
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_overlong_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Overlong Responses from Loss")
                     metrics.update(
@@ -1184,7 +1201,7 @@ class RayPPOTrainer:
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_repetitive_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Repetitive Responses from Loss")
                     metrics.update(
@@ -1198,7 +1215,7 @@ class RayPPOTrainer:
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_unreadable_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Unreadable BPE Token strs from Loss")
                     metrics.update(
@@ -1208,11 +1225,12 @@ class RayPPOTrainer:
                     )
 
                 # here we check if we should filter out low variance groups
-                batch, metrics_update, reward_tensor, reward_extra_infos_dict = self._filter_rollout(batch, reward_tensor, reward_extra_infos_dict)
+                batch, metrics_update, reward_tensor, reward_extra_infos_dict = self._filter_rollout(
+                    batch, reward_tensor, reward_extra_infos_dict
+                )
                 metrics.update(metrics_update)
 
         return timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward
-
 
     def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics):
         # recompute old_log_probs
@@ -1251,7 +1269,6 @@ class RayPPOTrainer:
                     }
                 )
 
-
         if self.use_reference_policy:
             # compute reference log_prob
             with marked_timer("ref", timing_raw, color="olive"):
@@ -1269,9 +1286,7 @@ class RayPPOTrainer:
 
         return timing_raw, batch, metrics
 
-
-    def compute_advantage(self, timing_raw, batch, metrics,\
-        future_reward, reward_tensor, reward_extra_infos_dict):
+    def compute_advantage(self, timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict):
         with marked_timer("adv", timing_raw, color="brown"):
             # we combine with rule-based rm
             reward_extra_infos_dict: dict[str, list]
@@ -1307,9 +1322,7 @@ class RayPPOTrainer:
                 config=self.config.algorithm,
             )
 
-        return timing_raw, batch, metrics,\
-            future_reward, reward_tensor, reward_extra_infos_dict
-
+        return timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict
 
     def critic_warmup(self, timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict):
         if self.config.trainer.critic_warmup <= self.global_steps:
@@ -1321,21 +1334,28 @@ class RayPPOTrainer:
             metrics.update(actor_output_metrics)
         return timing_raw, batch, batch_replay, metrics
 
-
     def log_rollout(self, timing_raw, batch, reward_extra_infos_dict):
         rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
         if rollout_data_dir:
             with marked_timer("dump_rollout_generations", timing_raw, color="green"):
                 # print(batch.batch.keys())
-                inputs_ids_wo_padding = [[token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in batch.batch["prompts"]]
-                outputs_ids_wo_padding = [[token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in batch.batch["responses"]]
+                inputs_ids_wo_padding = [
+                    [token_id for token_id in ids if token_id != self.tokenizer.pad_token_id]
+                    for ids in batch.batch["prompts"]
+                ]
+                outputs_ids_wo_padding = [
+                    [token_id for token_id in ids if token_id != self.tokenizer.pad_token_id]
+                    for ids in batch.batch["responses"]
+                ]
                 inputs = self.tokenizer.batch_decode(inputs_ids_wo_padding, skip_special_tokens=False)
                 outputs = self.tokenizer.batch_decode(outputs_ids_wo_padding, skip_special_tokens=False)
                 # inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=False)
                 # outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=False)
                 scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
-                ground_truths = [reward_model["ground_truth"] for reward_model in batch.non_tensor_batch["reward_model"]]
-                assert(len(ground_truths) == len(inputs))
+                ground_truths = [
+                    reward_model["ground_truth"] for reward_model in batch.non_tensor_batch["reward_model"]
+                ]
+                assert len(ground_truths) == len(inputs)
                 self._dump_generations(
                     inputs=inputs,
                     outputs=outputs,
@@ -1346,7 +1366,6 @@ class RayPPOTrainer:
                 )
         return timing_raw, batch
 
-
     def validation_stepwise(self, timing_raw, metrics):
         with marked_timer("testing", timing_raw, color="green"):
             val_metrics: dict = self._validate()
@@ -1356,7 +1375,7 @@ class RayPPOTrainer:
             if val_data_dir:
                 val_jsonl_path = os.path.join(val_data_dir, f"validation_metrics_step-{val_steps}.jsonl")
                 val_metrics_save = {}
-                for k,v in val_metrics.items():
+                for k, v in val_metrics.items():
                     val_metrics_save[k] = float(v)
                 with open(val_jsonl_path, "w") as fw:
                     fw.write(json.dumps(val_metrics_save, ensure_ascii=False, indent=4))
@@ -1364,7 +1383,6 @@ class RayPPOTrainer:
                 last_val_metrics = val_metrics
         metrics.update(val_metrics)
         return timing_raw, metrics
-
 
     def fit_each_batch(self, logger, last_val_metrics, progress_bar, epoch, batch_dict):
         metrics = {}
@@ -1430,13 +1448,17 @@ class RayPPOTrainer:
             batch.meta_info["max_toolcall_steps"] = self.config.algorithm.max_toolcall_steps
 
             # compute reward model score
-            timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward = self.reward_model_compute(timing_raw, batch, metrics)
+            timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward = (
+                self.reward_model_compute(timing_raw, batch, metrics)
+            )
 
             # compute old log probability reference critic
             timing_raw, batch, metrics = self.recompute_old_log_prob_ref_critic(timing_raw, batch, metrics)
 
             # compute the advantage
-            timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict = self.compute_advantage(timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict)
+            timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict = self.compute_advantage(
+                timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict
+            )
 
             # update critic
             if self.use_critic:
@@ -1446,7 +1468,9 @@ class RayPPOTrainer:
                 metrics.update(critic_output_metrics)
 
             # implement critic warmup
-            timing_raw, batch, batch_replay, metrics = self.critic_warmup(timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict)
+            timing_raw, batch, batch_replay, metrics = self.critic_warmup(
+                timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict
+            )
 
             # Log rollout generations if enabled
             timing_raw, batch = self.log_rollout(timing_raw, batch, reward_extra_infos_dict)
@@ -1474,9 +1498,7 @@ class RayPPOTrainer:
             # 3. The current step number is a multiple of the save frequency.
             # 4. The ESI(Elastic Server Instance)/training plan is close to expiration.
             if self.config.trainer.save_freq > 0 and (
-                is_last_step
-                or self.global_steps % self.config.trainer.save_freq == 0
-                or esi_close_to_expiration
+                is_last_step or self.global_steps % self.config.trainer.save_freq == 0 or esi_close_to_expiration
             ):
                 if esi_close_to_expiration:
                     print("Force saving checkpoint: ESI instance expiration approaching.")
@@ -1525,12 +1547,10 @@ class RayPPOTrainer:
             self.train_dataset.on_batch_end(batch=batch)
         return
 
-
     def fit_each_epoch(self, logger, last_val_metrics, progress_bar, epoch):
         for batch_dict in self.train_dataloader:
             self.fit_each_batch(logger, last_val_metrics, progress_bar, epoch, batch_dict)
         return
-
 
     def fit(self):
         """
@@ -1579,7 +1599,6 @@ class RayPPOTrainer:
                 print("No training, just quit with val_only!")
                 return
 
-
         # add tqdm
         progress_bar = tqdm(total=self.total_training_steps, initial=self.global_steps, desc="Training Progress")
 
@@ -1593,13 +1612,13 @@ class RayPPOTrainer:
 
         return
 
-
     def convert_messages_format(self, messages):
         def str2json(s_in):
             s = deepcopy(s_in)
             while isinstance(s, str):
                 s = json.loads(s)
             return s
+
         save_list = []
         for message in messages:
             save_msg = []
@@ -1610,12 +1629,12 @@ class RayPPOTrainer:
                 save_dict["tools"] = message["tools"]
             else:
                 print("YOU MUST SAVE TOOLS FOR MESSAGES")
-                assert (1==0)
+                assert 1 == 0
             # prompt_input_ids_list = message["generation_prompt_ids_list"]
             # prompt_input_str_list = self.tokenizer.batch_decode(prompt_input_ids_list, skip_special_tokens=False)
             # save_dict["prompt_input_ids_list"] = json.dumps(prompt_input_ids_list, ensure_ascii=False)
             # save_dict["prompt_input_str_list"] = json.dumps(prompt_input_str_list, ensure_ascii=False)
-            for msg in message['messages']:
+            for msg in message["messages"]:
                 if type(msg) is dict:
                     if "tool_calls" in msg:
                         tool_calls = []
@@ -1633,16 +1652,12 @@ class RayPPOTrainer:
                                     "function": {
                                         "name": tool_call.name,
                                         "arguments": arguments_str,
-                                    }
+                                    },
                                 }
                             )
                     else:
                         tool_calls = None
-                    save_msg.append({
-                        "role": msg["role"],
-                        "content": msg["content"],
-                        "tool_calls": tool_calls
-                    })
+                    save_msg.append({"role": msg["role"], "content": msg["content"], "tool_calls": tool_calls})
 
                 else:
                     if msg.tool_calls:
@@ -1660,22 +1675,17 @@ class RayPPOTrainer:
                                     "function": {
                                         "name": tool_call.function.name,
                                         "arguments": arguments_str,
-                                    }
+                                    },
                                 }
                             )
                     else:
                         tool_calls = msg.tool_calls
 
-                    save_msg.append({
-                        "role": msg.role,
-                        "content": msg.content,
-                        "tool_calls": tool_calls
-                    })
+                    save_msg.append({"role": msg.role, "content": msg.content, "tool_calls": tool_calls})
 
             save_dict["messages"] = list(save_msg)
             save_list.append(save_dict)
         return save_list
-
 
     def save_messages_to_json(self, gen_batch_output, is_train=True):
         # if True:
@@ -1683,10 +1693,13 @@ class RayPPOTrainer:
             """Save messages to JSON file with step number in filename"""
             messages = gen_batch_output.non_tensor_batch["messages"]
             rollout_jsons_root = "outputs/rollout_jsons"
-            rollout_jsons_path = os.path.join(rollout_jsons_root, self.config.trainer.project_name, self.config.trainer.experiment_name)
+            rollout_jsons_path = os.path.join(
+                rollout_jsons_root, self.config.trainer.project_name, self.config.trainer.experiment_name
+            )
             os.makedirs(rollout_jsons_path, exist_ok=True)
             # Generate timestamp and ensure directory exists
             import datetime
+
             time_stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             # Create filename with both step and timestamp
             if is_train:
@@ -1699,13 +1712,11 @@ class RayPPOTrainer:
             full_path = os.path.join(rollout_jsons_path, filename)
             # Serialize messages with proper field names
             save_list = self.convert_messages_format(messages)
-            with open(full_path, 'w', encoding='utf-8') as f:
+            with open(full_path, "w", encoding="utf-8") as f:
                 for save_item in save_list:
-                    f.write(json.dumps(save_item, ensure_ascii=False)+"\n")
+                    f.write(json.dumps(save_item, ensure_ascii=False) + "\n")
 
         except Exception as e:
             print(f"failed to save messages: {e}")
 
         return
-
-

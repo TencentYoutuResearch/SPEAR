@@ -393,8 +393,9 @@ class AsyncDoubleBufferGroupOffloadHandler(SynchronizedGroupOffloadHandler):
             self.offloaded_group_count = 0
 
 
-def get_activation_offload_context(num_layers: int = 1,\
-    model_layers: int = 1, tensor_need_offloading_checker=(lambda t: True)):
+def get_activation_offload_context(
+    num_layers: int = 1, model_layers: int = 1, tensor_need_offloading_checker=(lambda t: True)
+):
     cpu_offload_handler = AsyncDoubleBufferGroupOffloadHandler(
         num_offload_group=num_layers,
         num_model_group=model_layers,

@@ -203,7 +203,9 @@ class MegatronCheckpointManager(BaseCheckpointManager):
             model_path = get_model_checkpoint_path(local_path)
             ckpt_name = self.get_checkpoint_name(model_path, return_base_dir=False)
             state_dicts = torch.load(os.path.join(ckpt_name), weights_only=False)
-            assert len(state_dicts) == len(self.model), f"state_dicts length: {len(state_dicts)} mismatch with model length: {len(self.model)}"
+            assert len(state_dicts) == len(self.model), (
+                f"state_dicts length: {len(state_dicts)} mismatch with model length: {len(self.model)}"
+            )
             for vpp_rank, (state_dict, model) in enumerate(zip(state_dicts, self.model, strict=False)):
                 model.load_state_dict(state_dict)
             print(f"Loaded sharded model checkpoint from {model_path}")
@@ -218,14 +220,21 @@ class MegatronCheckpointManager(BaseCheckpointManager):
             try:
                 os.remove(local_path) if is_non_local(local_path) else None
             except Exception as e:
-                print(f"[rank-{self.rank}]: remove local resume ckpt file after loading failed, exception {e} will be ignored")
+                print(
+                    f"[rank-{self.rank}]: remove local resume ckpt file after loading failed, exception {e} will be ignored"
+                )
 
     def save_checkpoint(self, local_path: str, hdfs_path: str = None, global_step: int = 0, max_ckpt_to_keep=None):
         # record the previous global step
         self.previous_global_step = global_step
 
         # remove previous local_path
-        if max_ckpt_to_keep and isinstance(max_ckpt_to_keep, int) and max_ckpt_to_keep > 0 and len(self.previous_saved_paths) >= max_ckpt_to_keep:
+        if (
+            max_ckpt_to_keep
+            and isinstance(max_ckpt_to_keep, int)
+            and max_ckpt_to_keep > 0
+            and len(self.previous_saved_paths) >= max_ckpt_to_keep
+        ):
             keep_start = len(self.previous_saved_paths) - max_ckpt_to_keep + 1
             self.remove_previous_save_local_path(self.previous_saved_paths[:keep_start])
             self.previous_saved_paths = self.previous_saved_paths[keep_start:]
@@ -290,7 +299,9 @@ class MegatronCheckpointManager(BaseCheckpointManager):
                     if "mistral7b-rm" in self.config.model.path:
                         from transformers import MistralForSequenceClassification
 
-                        model = MistralForSequenceClassification.from_pretrained(self.config.model.path)  # use score head instead of lm_head
+                        model = MistralForSequenceClassification.from_pretrained(
+                            self.config.model.path
+                        )  # use score head instead of lm_head
                         state_dict["score.weight"] = state_dict["score.weight"]
                     else:
                         from transformers import AutoModelForCausalLM

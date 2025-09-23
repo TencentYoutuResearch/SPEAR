@@ -18,6 +18,7 @@ FSDP PPO Trainer with Ray-based single controller.
 This trainer supports model-agonistic model initialization with huggingface
 Note that this hybrid mode means the online rollout trajectories are added into SFT training
 """
+
 import json
 import os
 import uuid
@@ -62,6 +63,7 @@ class TrajectoryBuffer:
     """
     存储所有轨迹 并动态删除老轨迹
     """
+
     def __init__(self, tokenizer, buffer_size=2048, tolerate_steps=10, threshold=1.0):
         self.tokenizer = tokenizer
         self.buffer_size = buffer_size
@@ -78,7 +80,9 @@ class TrajectoryBuffer:
     def remove_old(self):
         if len(self.trajectory_buffer):
             step_latest = self.trajectory_buffer[-1][-1]
-            self.trajectory_buffer = [item for item in self.trajectory_buffer if abs(item[-1]-step_latest)<=self.tolerate_steps]
+            self.trajectory_buffer = [
+                item for item in self.trajectory_buffer if abs(item[-1] - step_latest) <= self.tolerate_steps
+            ]
 
     def is_full_capacity(self):
         if self.get_buffer_size() >= self.buffer_size:
@@ -97,7 +101,9 @@ class TrajectoryBuffer:
     def update_batch(self, batch_messages, batch_scores, batch_response_masks, global_step):
         cur_batch_valid = []
         count_by_prompt = {}
-        for batch_message, batch_score, batch_response_mask in zip(batch_messages, batch_scores, batch_response_masks, strict=False):
+        for batch_message, batch_score, batch_response_mask in zip(
+            batch_messages, batch_scores, batch_response_masks, strict=False
+        ):
             # 使用advantage来判断是否大于阈值
             if batch_score < self.threshold:
                 continue
@@ -115,8 +121,8 @@ class TrajectoryBuffer:
                 for message in messages:
                     if "tool_calls" in message and message["tool_calls"] is not None:
                         has_tool_call = True
-                    assert("role" in message)
-                    assert("content" in message)
+                    assert "role" in message
+                    assert "content" in message
             except Exception as e:
                 print("Found errors in messages", e)
                 print(f"❌ dame Messages:\n\n{messages}")
@@ -138,13 +144,21 @@ class TrajectoryBuffer:
         return len(self.trajectory_buffer)
 
 
-
 class TrajectoryBufferBatch:
     """
     存储所有轨迹包括计算好的所有内容; 按照batch处理; 并动态删除老轨迹
     """
-    def __init__(self, tokenizer, buffer_size=2048, baseline_buffer_size=10240, tolerate_steps=10, weight_decay_trajectory_replay=0.9,\
-        adv_estimator=AdvantageEstimator.GRPO, norm_adv_by_std_in_grpo=False):
+
+    def __init__(
+        self,
+        tokenizer,
+        buffer_size=2048,
+        baseline_buffer_size=10240,
+        tolerate_steps=10,
+        weight_decay_trajectory_replay=0.9,
+        adv_estimator=AdvantageEstimator.GRPO,
+        norm_adv_by_std_in_grpo=False,
+    ):
         self.tokenizer = tokenizer
         self.buffer_size = buffer_size
         self.baseline_buffer_size = baseline_buffer_size
@@ -160,7 +174,9 @@ class TrajectoryBufferBatch:
     def remove_old(self):
         if len(self.trajectory_buffer):
             step_latest = self.trajectory_buffer[-1][-1]
-            self.trajectory_buffer = [item for item in self.trajectory_buffer if abs(item[-1]-step_latest)<=self.tolerate_steps]
+            self.trajectory_buffer = [
+                item for item in self.trajectory_buffer if abs(item[-1] - step_latest) <= self.tolerate_steps
+            ]
         return
 
     def is_full_capacity(self):
@@ -169,7 +185,6 @@ class TrajectoryBufferBatch:
             return True
         else:
             return False
-
 
     def maintain_reward_statistics(self, step_maximum, step_list):
         ## 维护所有历史step压平后的50分位数reward & std
@@ -208,15 +223,26 @@ class TrajectoryBufferBatch:
         with current:{reward_mean_maximum_step}/p50:{reward_mean_50p}/maximum:{reward_mean_maximum}""")
         print(f"""🐹 计算step-wise reward batch std percentile {reward_std_history_step}
         with current:{reward_std_maximum_step}/p50:{reward_std_50p}/maximum:{reward_std_maximum}""")
-        return reward_mean_history_flatten, reward_std_history_flatten,\
-            reward_mean_history_step, reward_std_history_step, reward_mean_maximum_step,\
-                reward_std_maximum_step, reward_mean_maximum, reward_std_maximum,\
-                    reward_mean_95p, reward_std_95p, reward_mean_50p, reward_std_50p,\
-                        custom_reward_mean_list, custom_reward_std_list
+        return (
+            reward_mean_history_flatten,
+            reward_std_history_flatten,
+            reward_mean_history_step,
+            reward_std_history_step,
+            reward_mean_maximum_step,
+            reward_std_maximum_step,
+            reward_mean_maximum,
+            reward_std_maximum,
+            reward_mean_95p,
+            reward_std_95p,
+            reward_mean_50p,
+            reward_std_50p,
+            custom_reward_mean_list,
+            custom_reward_std_list,
+        )
 
-
-    def prepare_for_selection(self, batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
-        reward_mean_50p, reward_std_50p):
+    def prepare_for_selection(
+        self, batch_concat, reward_tensor_concat, reward_extra_info_dict_concat, reward_mean_50p, reward_std_50p
+    ):
         if self.weight_decay_trajectory_replay <= 0 or self.weight_decay_trajectory_replay > 1:
             # here we use the recomputed reward for new advantages
             # 重新计算后仅保留正样本
@@ -231,17 +257,19 @@ class TrajectoryBufferBatch:
                 response_mask=batch_concat.batch["response_mask"],
                 index=batch_concat.non_tensor_batch["uid"],
                 norm_adv_by_std_in_grpo=self.norm_adv_by_std_in_grpo,
-                custom_reward_mean_std={"mean": reward_mean_50p, "std": reward_std_50p}
+                custom_reward_mean_std={"mean": reward_mean_50p, "std": reward_std_50p},
                 # custom_reward_mean_std={"mean": custom_reward_mean_list, "std": custom_reward_std_list}
             )
             batch_concat.batch["advantages"] = advantages
             batch_concat.batch["returns"] = returns
             advantages_len = advantages.size(0)
-            mask = (batch_concat.batch["advantages"].mean(-1) > 0)
+            mask = batch_concat.batch["advantages"].mean(-1) > 0
             batch_concat.batch = batch_concat.batch[mask]
             reward_tensor_concat = reward_tensor_concat[mask]
             advantages_len_filter = batch_concat.batch.size(0)
-            print(f"👹 Now recalculating the advantage size={advantages_len} and filter out those negative ones size={advantages_len_filter}")
+            print(
+                f"👹 Now recalculating the advantage size={advantages_len} and filter out those negative ones size={advantages_len_filter}"
+            )
 
             for key, value in batch_concat.non_tensor_batch.items():
                 if isinstance(value, np.ndarray):
@@ -272,7 +300,6 @@ class TrajectoryBufferBatch:
             batch_concat.batch["advantages"] *= self.weight_decay_trajectory_replay
         return batch_concat, reward_tensor_concat, reward_extra_info_dict_concat
 
-
     def get_buffer(self):
         def nearest_lower_power_of_2(n):
             # 只抽取小于等于该数的幂级数
@@ -285,7 +312,7 @@ class TrajectoryBufferBatch:
                 return 0
             return 32 * (n // 32)
 
-        assert (len(self.trajectory_buffer) >= 1)
+        assert len(self.trajectory_buffer) >= 1
         # [batch, reward_tensor, reward_extra_infos_dict, global_step]
         step_list = []
         for traj_pair in self.trajectory_buffer:
@@ -300,7 +327,7 @@ class TrajectoryBufferBatch:
         reward_extra_infos_dict_list = [traj_pair[2] for traj_pair in self.trajectory_buffer]
         reward_extra_info_dict_concat = defaultdict(list)
         print("len(step_list)", len(step_list), "len(reward_tensor_concat)", len(reward_tensor_concat))
-        assert(len(step_list) == len(reward_tensor_concat))
+        assert len(step_list) == len(reward_tensor_concat)
 
         for reward_extra_infos_dict in reward_extra_infos_dict_list:
             for key, value in reward_extra_infos_dict.items():
@@ -308,7 +335,9 @@ class TrajectoryBufferBatch:
                     reward_extra_info_dict_concat[key] = value
                     continue
                 if isinstance(value, np.ndarray):
-                    reward_extra_info_dict_concat[key] = np.concatenate([reward_extra_info_dict_concat[key], value], axis=0)
+                    reward_extra_info_dict_concat[key] = np.concatenate(
+                        [reward_extra_info_dict_concat[key], value], axis=0
+                    )
                 elif isinstance(value, list):
                     reward_extra_info_dict_concat[key] = reward_extra_info_dict_concat[key] + value
                 elif isinstance(value, tuple):
@@ -317,16 +346,27 @@ class TrajectoryBufferBatch:
                     reward_extra_info_dict_concat[key] = value
 
         # compute the statistics
-        reward_mean_history_flatten, reward_std_history_flatten,\
-                    reward_mean_history_step, reward_std_history_step, reward_mean_maximum_step,\
-                        reward_std_maximum_step, reward_mean_maximum, reward_std_maximum,\
-                            reward_mean_95p, reward_std_95p, reward_mean_50p, reward_std_50p,\
-                                custom_reward_mean_list, custom_reward_std_list = \
-                                    self.maintain_reward_statistics(step_maximum, step_list)
+        (
+            reward_mean_history_flatten,
+            reward_std_history_flatten,
+            reward_mean_history_step,
+            reward_std_history_step,
+            reward_mean_maximum_step,
+            reward_std_maximum_step,
+            reward_mean_maximum,
+            reward_std_maximum,
+            reward_mean_95p,
+            reward_std_95p,
+            reward_mean_50p,
+            reward_std_50p,
+            custom_reward_mean_list,
+            custom_reward_std_list,
+        ) = self.maintain_reward_statistics(step_maximum, step_list)
 
         # prepare for selection
-        batch_concat, reward_tensor_concat, reward_extra_info_dict_concat = self.prepare_for_selection(batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
-            reward_mean_50p, reward_std_50p)
+        batch_concat, reward_tensor_concat, reward_extra_info_dict_concat = self.prepare_for_selection(
+            batch_concat, reward_tensor_concat, reward_extra_info_dict_concat, reward_mean_50p, reward_std_50p
+        )
 
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
         # here we only use the 2**N samples as trajectory buffer
@@ -334,15 +374,15 @@ class TrajectoryBufferBatch:
         len_batch_valid = nearest_lower_power_of_2(len_batch)
         len_batch_valid = min(len_batch_valid, self.buffer_size)
         print("After Adv calculation in TrajectoryBuffer", f"{len_batch=}", f"{len_batch_valid=}")
-        assert(len_batch_valid <= len_batch)
+        assert len_batch_valid <= len_batch
         mask = torch.zeros(len_batch, dtype=torch.bool)
         idx = torch.randperm(len_batch)[:len_batch_valid]
         mask[idx] = True
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
         batch_concat.batch = batch_concat.batch[mask]
         reward_tensor_concat = reward_tensor_concat[mask]
-        assert (len(batch_concat.batch) == len_batch_valid)
-        assert (len(reward_tensor_concat) == len_batch_valid)
+        assert len(batch_concat.batch) == len_batch_valid
+        assert len(reward_tensor_concat) == len_batch_valid
         for key, value in batch_concat.non_tensor_batch.items():
             if isinstance(value, np.ndarray):
                 batch_concat.non_tensor_batch[key] = value[mask]
@@ -373,12 +413,12 @@ class TrajectoryBufferBatch:
         batch_concat.meta_info["reward_std_50p"] = reward_std_50p
         return batch_concat
 
-
     def reset_buffer(self):
         self.trajectory_buffer = []
 
-
-    def update_batch(self, batch_messages, data, data_reward_tensor, data_reward_extra_infos_dict, group_size, global_step):
+    def update_batch(
+        self, batch_messages, data, data_reward_tensor, data_reward_extra_infos_dict, group_size, global_step
+    ):
         # 直接存储DataProto中advantage 正确的部分
         """
         data.batch is TensorDict with keys [\'advantages\', \'attention_mask\', \'input_ids\', \'old_log_probs\',
@@ -407,7 +447,7 @@ class TrajectoryBufferBatch:
         #     return
 
         # 筛选出advantage > 0的样本
-        mask = (batch.batch["advantages"].mean(-1) > 0)
+        mask = batch.batch["advantages"].mean(-1) > 0
         # 筛选出工具调用的样本
         for batch_message_idx, batch_message in enumerate(batch_messages):
             # 必须要包含工具调用
@@ -417,8 +457,8 @@ class TrajectoryBufferBatch:
                 for message in messages:
                     if "tool_calls" in message and message["tool_calls"] is not None:
                         has_tool_call = True
-                    assert("role" in message)
-                    assert("content" in message)
+                    assert "role" in message
+                    assert "content" in message
             except Exception as e:
                 print("Found errors in messages", e)
                 print(f"❌ dame Messages:\n\n{messages}")
@@ -460,7 +500,6 @@ class TrajectoryBufferBatch:
         self.trajectory_buffer.append([batch, reward_tensor, reward_extra_infos_dict, global_step])
         return
 
-
     def get_buffer_size(self):
         num_buffer = 0
         if self.weight_decay_trajectory_replay <= 0 or self.weight_decay_trajectory_replay > 1:
@@ -475,9 +514,9 @@ class TrajectoryBufferBatch:
                 _, reward_tensor, _, _ = traj_pair
                 reward_tensor_sum = reward_tensor.sum(dim=-1)
                 if reward_mean_50p is None:
-                    reward_tensor_sum_pos = (reward_tensor_sum > reward_tensor_sum.mean())
+                    reward_tensor_sum_pos = reward_tensor_sum > reward_tensor_sum.mean()
                 else:
-                    reward_tensor_sum_pos = (reward_tensor_sum > reward_mean_50p)
+                    reward_tensor_sum_pos = reward_tensor_sum > reward_mean_50p
                 num_buffer += reward_tensor_sum_pos.sum()
         else:
             for traj_pair in self.trajectory_buffer:
@@ -486,12 +525,10 @@ class TrajectoryBufferBatch:
         return num_buffer
 
 
-
 class RayPPOSFTTrainer(RayPPOTrainer):
     """
     Note that this trainer runs on the driver process on a single CPU/GPU node.
     """
-
 
     def generate_batch(self, timing_raw, gen_batch, batch):
         # generate a batch
@@ -521,15 +558,12 @@ class RayPPOSFTTrainer(RayPPOTrainer):
 
                 del gen_baseline_batch, gen_baseline_output
 
-        batch.non_tensor_batch["uid"] = np.array(
-            [str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object
-        )
+        batch.non_tensor_batch["uid"] = np.array([str(uuid.uuid4()) for _ in range(len(batch.batch))], dtype=object)
         # repeat to align with repeated responses in rollout
         batch = batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
         batch = batch.union(gen_batch_output)
 
         return timing_raw, batch, gen_batch_output
-
 
     def reward_model_compute(self, timing_raw, batch, metrics):
         with marked_timer("reward", timing_raw, color="yellow"):
@@ -540,18 +574,22 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 batch = batch.union(reward_tensor)
 
             if self.config.reward_model.launch_reward_fn_async:
-                future_reward = compute_reward_async.remote(data=batch, reward_fn=self.reward_fn, max_response_len=self.config.data.max_response_length)
+                future_reward = compute_reward_async.remote(
+                    data=batch, reward_fn=self.reward_fn, max_response_len=self.config.data.max_response_length
+                )
                 reward_extra_infos_dict = None
             else:
                 future_reward = None
-                reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn, max_response_len=self.config.data.max_response_length)
+                reward_tensor, reward_extra_infos_dict = compute_reward(
+                    batch, self.reward_fn, max_response_len=self.config.data.max_response_length
+                )
                 # some post-processing to filter out easily failed samples
                 if "is_incomplete" in reward_extra_infos_dict and self.config.algorithm.filter_incomplete_responses:
                     is_incomplete_list = reward_extra_infos_dict["is_incomplete"]
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_incomplete_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Incomplete Responses from Loss")
                     metrics.update(
@@ -565,7 +603,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_overlong_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Overlong Responses from Loss")
                     metrics.update(
@@ -579,7 +617,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_repetitive_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Repetitive Responses from Loss")
                     metrics.update(
@@ -593,7 +631,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                     response_masks = deepcopy(batch.batch["response_mask"])
                     mask = torch.tensor(is_unreadable_list, dtype=torch.bool, device=response_masks.device)
                     mask_len = len(torch.nonzero(mask))
-                    response_masks[mask] = 0   # 1 for llm generated tokens; 0 for tool observations
+                    response_masks[mask] = 0  # 1 for llm generated tokens; 0 for tool observations
                     batch.batch["response_mask"] = response_masks
                     print(f"🔧 >>>>> Filter Out {mask_len} Unreadable BPE Token strs from Loss")
                     metrics.update(
@@ -603,11 +641,12 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                     )
 
                 # here we check if we should filter out low variance groups
-                batch, metrics_update, reward_tensor, reward_extra_infos_dict = self._filter_rollout(batch, reward_tensor, reward_extra_infos_dict)
+                batch, metrics_update, reward_tensor, reward_extra_infos_dict = self._filter_rollout(
+                    batch, reward_tensor, reward_extra_infos_dict
+                )
                 metrics.update(metrics_update)
 
         return timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward
-
 
     def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics):
         # recompute old_log_probs
@@ -663,10 +702,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
 
         return timing_raw, batch, metrics
 
-
-    def compute_advantage(self, timing_raw, batch, metrics,\
-        future_reward, reward_tensor, reward_extra_infos_dict):
-
+    def compute_advantage(self, timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict):
         with marked_timer("adv", timing_raw, color="brown"):
             # we combine with rule-based rm
             reward_extra_infos_dict: dict[str, list]
@@ -701,9 +737,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 config=self.config.algorithm,
             )
 
-        return timing_raw, batch, metrics,\
-            future_reward, reward_tensor, reward_extra_infos_dict
-
+        return timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict
 
     def critic_warmup(self, timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict):
         if self.config.trainer.critic_warmup <= self.global_steps:
@@ -728,16 +762,22 @@ class RayPPOSFTTrainer(RayPPOTrainer):
         scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
         messages = self.convert_messages_format(batch.non_tensor_batch["messages"])
         response_mask_list = batch.batch["response_mask"].sum(-1).cpu().tolist()
-        assert(len(scores) == len(messages))
-        assert(len(scores) == len(response_mask_list))
+        assert len(scores) == len(messages)
+        assert len(scores) == len(response_mask_list)
 
         if self.trajectory_buffer_replay is not None:
             # remove non-latest
             self.trajectory_buffer_replay.remove_old()
             # add in new messages
             # 所有的其他内容应该都在batch里
-            self.trajectory_buffer_replay.update_batch(messages, batch, reward_tensor, reward_extra_infos_dict,\
-                self.config.actor_rollout_ref.rollout.n, self.global_steps)
+            self.trajectory_buffer_replay.update_batch(
+                messages,
+                batch,
+                reward_tensor,
+                reward_extra_infos_dict,
+                self.config.actor_rollout_ref.rollout.n,
+                self.global_steps,
+            )
             self.trajectory_buffer_replay_buffersize = self.trajectory_buffer_replay.get_buffer_size()
             print(">>> 📚 Current trajectory replay buffer size: ", self.trajectory_buffer_replay_buffersize)
             metrics.update(
@@ -747,21 +787,28 @@ class RayPPOSFTTrainer(RayPPOTrainer):
             )
         return timing_raw, batch, batch_replay, metrics
 
-
     def log_rollout(self, timing_raw, batch, reward_extra_infos_dict):
         rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
         if rollout_data_dir:
             with marked_timer("dump_rollout_generations", timing_raw, color="green"):
                 # print(batch.batch.keys())
-                inputs_ids_wo_padding = [[token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in batch.batch["prompts"]]
-                outputs_ids_wo_padding = [[token_id for token_id in ids if token_id != self.tokenizer.pad_token_id] for ids in batch.batch["responses"]]
+                inputs_ids_wo_padding = [
+                    [token_id for token_id in ids if token_id != self.tokenizer.pad_token_id]
+                    for ids in batch.batch["prompts"]
+                ]
+                outputs_ids_wo_padding = [
+                    [token_id for token_id in ids if token_id != self.tokenizer.pad_token_id]
+                    for ids in batch.batch["responses"]
+                ]
                 inputs = self.tokenizer.batch_decode(inputs_ids_wo_padding, skip_special_tokens=False)
                 outputs = self.tokenizer.batch_decode(outputs_ids_wo_padding, skip_special_tokens=False)
                 # inputs = self.tokenizer.batch_decode(batch.batch["prompts"], skip_special_tokens=False)
                 # outputs = self.tokenizer.batch_decode(batch.batch["responses"], skip_special_tokens=False)
                 scores = batch.batch["token_level_scores"].sum(-1).cpu().tolist()
-                ground_truths = [reward_model["ground_truth"] for reward_model in batch.non_tensor_batch["reward_model"]]
-                assert(len(ground_truths) == len(inputs))
+                ground_truths = [
+                    reward_model["ground_truth"] for reward_model in batch.non_tensor_batch["reward_model"]
+                ]
+                assert len(ground_truths) == len(inputs)
                 self._dump_generations(
                     inputs=inputs,
                     outputs=outputs,
@@ -772,7 +819,6 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 )
         return timing_raw, batch
 
-
     def validation_stepwise(self, timing_raw, metrics):
         with marked_timer("testing", timing_raw, color="green"):
             val_metrics: dict = self._validate()
@@ -782,7 +828,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
             if val_data_dir:
                 val_jsonl_path = os.path.join(val_data_dir, f"validation_metrics_step-{val_steps}.jsonl")
                 val_metrics_save = {}
-                for k,v in val_metrics.items():
+                for k, v in val_metrics.items():
                     val_metrics_save[k] = float(v)
                 with open(val_jsonl_path, "w") as fw:
                     fw.write(json.dumps(val_metrics_save, ensure_ascii=False, indent=4))
@@ -790,7 +836,6 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 last_val_metrics = val_metrics
         metrics.update(val_metrics)
         return timing_raw, metrics
-
 
     def fit_each_batch(self, logger, last_val_metrics, progress_bar, epoch, batch_dict):
         metrics = {}
@@ -828,15 +873,12 @@ class RayPPOSFTTrainer(RayPPOTrainer):
 
         # pass global_steps to trace
         gen_batch.meta_info["global_steps"] = self.global_steps
-        gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n,\
-            interleave=True)
+        gen_batch = gen_batch.repeat(repeat_times=self.config.actor_rollout_ref.rollout.n, interleave=True)
 
         is_last_step = self.global_steps >= self.total_training_steps
         with marked_timer("step", timing_raw):
-
             # Generate Batch
-            timing_raw, batch, gen_batch_output = self.generate_batch(timing_raw,\
-                gen_batch, batch)
+            timing_raw, batch, gen_batch_output = self.generate_batch(timing_raw, gen_batch, batch)
             # Write out Message
             self.save_messages_to_json(gen_batch_output)
 
@@ -857,18 +899,17 @@ class RayPPOSFTTrainer(RayPPOTrainer):
             batch.meta_info["max_toolcall_steps"] = self.config.algorithm.max_toolcall_steps
 
             # compute reward model score
-            timing_raw, batch, metrics, reward_tensor,\
-                reward_extra_infos_dict, future_reward = self.reward_model_compute(timing_raw,\
-                    batch, metrics)
+            timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward = (
+                self.reward_model_compute(timing_raw, batch, metrics)
+            )
 
             # compute old log probs and reference and critic values
-            timing_raw, batch, metrics = self.recompute_old_log_prob_ref_critic(timing_raw,\
-                batch, metrics)
+            timing_raw, batch, metrics = self.recompute_old_log_prob_ref_critic(timing_raw, batch, metrics)
 
             # compute advantage
-            timing_raw, batch, metrics, future_reward,\
-                reward_tensor, reward_extra_infos_dict = self.compute_advantage(timing_raw,\
-                    batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict)
+            timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict = self.compute_advantage(
+                timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict
+            )
 
             # update critic
             if self.use_critic:
@@ -878,8 +919,9 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 metrics.update(critic_output_metrics)
 
             # implement critic warmup
-            timing_raw, batch, batch_replay, metrics = self.critic_warmup(timing_raw, batch, metrics,\
-                reward_tensor, reward_extra_infos_dict)
+            timing_raw, batch, batch_replay, metrics = self.critic_warmup(
+                timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict
+            )
 
             # Log rollout generations if enabled
             timing_raw, batch = self.log_rollout(timing_raw, batch, reward_extra_infos_dict)
@@ -907,9 +949,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
             # 3. The current step number is a multiple of the save frequency.
             # 4. The ESI(Elastic Server Instance)/training plan is close to expiration.
             if self.config.trainer.save_freq > 0 and (
-                is_last_step
-                or self.global_steps % self.config.trainer.save_freq == 0
-                or esi_close_to_expiration
+                is_last_step or self.global_steps % self.config.trainer.save_freq == 0 or esi_close_to_expiration
             ):
                 if esi_close_to_expiration:
                     print("Force saving checkpoint: ESI instance expiration approaching.")
@@ -958,12 +998,10 @@ class RayPPOSFTTrainer(RayPPOTrainer):
             self.train_dataset.on_batch_end(batch=batch)
         return
 
-
     def fit_each_epoch(self, logger, last_val_metrics, progress_bar, epoch):
         for batch_dict in self.train_dataloader:
             self.fit_each_batch(logger, last_val_metrics, progress_bar, epoch, batch_dict)
         return
-
 
     def fit(self):
         """
@@ -1021,13 +1059,14 @@ class RayPPOSFTTrainer(RayPPOTrainer):
 
         if self.config.actor_rollout_ref.actor.enable_trajectory_replay:
             self.trajectory_buffer_replay = TrajectoryBufferBatch(
-                tokenizer=self.tokenizer,\
-                    tolerate_steps=self.config.actor_rollout_ref.actor.trajectory_tolerate_steps,\
-                        buffer_size=self.config.actor_rollout_ref.actor.trajectory_buffer_size,\
-                            baseline_buffer_size=self.config.actor_rollout_ref.actor.baseline_buffer_size,\
-                                weight_decay_trajectory_replay=self.config.actor_rollout_ref.actor.weight_decay_trajectory_replay,\
-                                    adv_estimator=self.config.algorithm.adv_estimator,\
-                                        norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True))
+                tokenizer=self.tokenizer,
+                tolerate_steps=self.config.actor_rollout_ref.actor.trajectory_tolerate_steps,
+                buffer_size=self.config.actor_rollout_ref.actor.trajectory_buffer_size,
+                baseline_buffer_size=self.config.actor_rollout_ref.actor.baseline_buffer_size,
+                weight_decay_trajectory_replay=self.config.actor_rollout_ref.actor.weight_decay_trajectory_replay,
+                adv_estimator=self.config.algorithm.adv_estimator,
+                norm_adv_by_std_in_grpo=self.config.algorithm.get("norm_adv_by_std_in_grpo", True),
+            )
         else:
             self.trajectory_buffer_replay = None
 

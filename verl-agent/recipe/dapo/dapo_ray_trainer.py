@@ -16,8 +16,6 @@ FSDP PPO Trainer with Ray-based single controller.
 This trainer supports model-agonistic model initialization with huggingface
 """
 
-
-
 from verl.trainer.ppo.ray_trainer import RayPPOTrainer
 
 

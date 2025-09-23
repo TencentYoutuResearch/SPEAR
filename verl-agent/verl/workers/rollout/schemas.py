@@ -164,10 +164,18 @@ class AsyncRolloutRequest(BaseModel):
             self.position_ids += _position_ids
         else:
             raise ValueError(f"Unsupported format: {format}")
-        assert len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask), f"""Request {self.request_id} has different length of {len(self.input_ids)=}, 
+        assert (
+            len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask)
+        ), f"""Request {self.request_id} has different length of {len(self.input_ids)=}, 
             {len(self.attention_mask)=}, {len(self.position_ids)=}, {len(self.loss_mask)=}"""
 
-    def add_tool_response_message(self, tokenizer: PreTrainedTokenizer, content: str, last_tool: bool, format: Literal["chatml", "qwen"] = "chatml") -> None:
+    def add_tool_response_message(
+        self,
+        tokenizer: PreTrainedTokenizer,
+        content: str,
+        last_tool: bool,
+        format: Literal["chatml", "qwen"] = "chatml",
+    ) -> None:
         """Currently, we only support chatml format."""
         msg = Message(role="tool", content=content)
         self.messages.append(msg)
@@ -182,16 +190,23 @@ class AsyncRolloutRequest(BaseModel):
             prefix_resp_token_ids = tokenizer.encode(prefix_resp, add_special_tokens=False)
             suffix_resp = self.format_config[format].get("tool_response_suffix_msg", "")
             suffix_resp_token_ids = tokenizer.encode(suffix_resp, add_special_tokens=False)
-            full_suffix_token_ids = suffix_resp_token_ids + (suffix_token_ids if last_tool or not merge_tool_responses else [])
+            full_suffix_token_ids = suffix_resp_token_ids + (
+                suffix_token_ids if last_tool or not merge_tool_responses else []
+            )
             content_token_ids = tokenizer.encode(content, add_special_tokens=False)
-            if self.input_ids[-len(prefix_token_ids) :] == prefix_token_ids or self.input_ids[-len(suffix_resp_token_ids) :] == suffix_resp_token_ids:
+            if (
+                self.input_ids[-len(prefix_token_ids) :] == prefix_token_ids
+                or self.input_ids[-len(suffix_resp_token_ids) :] == suffix_resp_token_ids
+            ):
                 append_token_ids = prefix_resp_token_ids + content_token_ids + full_suffix_token_ids
             elif self.input_ids[-len(prefix_resp_token_ids) :] == prefix_resp_token_ids:
                 append_token_ids = content_token_ids + full_suffix_token_ids
             elif self.input_ids[-len(suffix_token_ids) :] == suffix_token_ids:
                 append_token_ids = prefix_token_ids + prefix_resp_token_ids + content_token_ids + full_suffix_token_ids
             else:
-                raise ValueError(f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-len(prefix_token_ids) :])}")
+                raise ValueError(
+                    f"Unsupported end of message format: {tokenizer.decode(self.input_ids[-len(prefix_token_ids) :])}"
+                )
             self.input_ids += append_token_ids
             _attention_mask = [1] * len(append_token_ids)
             self.attention_mask += _attention_mask
@@ -202,7 +217,9 @@ class AsyncRolloutRequest(BaseModel):
             self.position_ids += _position_ids
         else:
             raise ValueError(f"Unsupported format: {format}")
-        assert len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask), f"""Request {self.request_id} has different length of {len(self.input_ids)=}, 
+        assert (
+            len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask)
+        ), f"""Request {self.request_id} has different length of {len(self.input_ids)=}, 
             {len(self.attention_mask)=}, {len(self.position_ids)=}, {len(self.loss_mask)=}"""
 
     def update_metrics(self, metrics: Any, tool_id: str) -> None:
@@ -229,7 +246,9 @@ class AsyncRolloutRequest(BaseModel):
         else:
             raise ValueError(f"Unsupported finalize finish reason type: {finish_reason_type}")
         self.truncate_output_ids(tokenizer)
-        assert len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask), f"""Request {self.request_id} has different length of {len(self.input_ids)=}, 
+        assert (
+            len(self.input_ids) == len(self.attention_mask) == len(self.position_ids) == len(self.loss_mask)
+        ), f"""Request {self.request_id} has different length of {len(self.input_ids)=}, 
             {len(self.attention_mask)=}, {len(self.position_ids)=}, {len(self.loss_mask)=}"""
 
     def truncate_output_ids(self, tokenizer: PreTrainedTokenizer) -> None:

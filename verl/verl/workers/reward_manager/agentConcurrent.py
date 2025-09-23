@@ -28,10 +28,9 @@ from verl.workers.reward_manager import register
 def has_repeated_ngrams(words, n=20, threshold=10):
     # words = text.split()
     words = [str(item) for item in words]
-    ngrams = [' '.join(words[i:i+n]) for i in range(len(words)-n+1)]
+    ngrams = [" ".join(words[i : i + n]) for i in range(len(words) - n + 1)]
     counts = Counter(ngrams)
     return any(count >= threshold for count in counts.values())
-
 
 
 def get_file_path(download_dir):
@@ -69,8 +68,9 @@ def get_file_path(download_dir):
 class AgentConcurrentRewardManager:
     """The reward manager."""
 
-    def __init__(self, tokenizer, num_examine, compute_score=None,\
-        reward_fn_key="data_source", **reward_kwargs) -> None:
+    def __init__(
+        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", **reward_kwargs
+    ) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or _default_compute_score
@@ -83,13 +83,13 @@ class AgentConcurrentRewardManager:
         """
         prompt_ids = data_item.batch["prompts"]
         if "messages" in data_item.non_tensor_batch["messages"]:
-            messages = data_item.non_tensor_batch["messages"]['messages']
+            messages = data_item.non_tensor_batch["messages"]["messages"]
         else:
             messages = []
         if "tools_available" in data_item.non_tensor_batch["messages"]:
-            tools = data_item.non_tensor_batch["messages"]['tools_available']
+            tools = data_item.non_tensor_batch["messages"]["tools_available"]
         elif "tools" in data_item.non_tensor_batch["messages"]:
-            tools = data_item.non_tensor_batch["messages"]['tools']
+            tools = data_item.non_tensor_batch["messages"]["tools"]
         else:
             tools = None
 
@@ -149,9 +149,20 @@ class AgentConcurrentRewardManager:
         )
         if data_source in ["web_donwload"]:
             print(f"🌏 Download score: {score}, 🗂️ Download_dir: {download_dir}")
-        return i, score, valid_response_length, valid_response_ids, data_source,\
-            prompt_str, response_str, ground_truth, extra_info, user_query, download_dir, file_path
-
+        return (
+            i,
+            score,
+            valid_response_length,
+            valid_response_ids,
+            data_source,
+            prompt_str,
+            response_str,
+            ground_truth,
+            extra_info,
+            user_query,
+            download_dir,
+            file_path,
+        )
 
     def __call__(self, data: DataProto, return_dict=False, max_response_len=16384):
         """We will expand this function gradually based on the available datasets"""
@@ -175,15 +186,48 @@ class AgentConcurrentRewardManager:
         with ThreadPoolExecutor(max_workers=30) as executor:
             futures = {executor.submit(self.process_data_item, data[i], i): i for i in range(len(data))}
             for future in tqdm(as_completed(futures), total=len(futures)):
-                i, score, valid_response_length, valid_response_ids, data_source, prompt_str,\
-                    response_str,ground_truth, extra_info, user_query, download_dir, file_path = future.result()
-                results_all_by_idx[i] = (score, valid_response_length, valid_response_ids,\
-                    data_source, prompt_str, response_str,\
-                        ground_truth, extra_info, user_query, download_dir, file_path)
+                (
+                    i,
+                    score,
+                    valid_response_length,
+                    valid_response_ids,
+                    data_source,
+                    prompt_str,
+                    response_str,
+                    ground_truth,
+                    extra_info,
+                    user_query,
+                    download_dir,
+                    file_path,
+                ) = future.result()
+                results_all_by_idx[i] = (
+                    score,
+                    valid_response_length,
+                    valid_response_ids,
+                    data_source,
+                    prompt_str,
+                    response_str,
+                    ground_truth,
+                    extra_info,
+                    user_query,
+                    download_dir,
+                    file_path,
+                )
 
         for i in range(len(data)):
-            score, valid_response_length, valid_response_ids, data_source, prompt_str, response_str,\
-                ground_truth, extra_info, user_query, download_dir, file_path = results_all_by_idx[i]
+            (
+                score,
+                valid_response_length,
+                valid_response_ids,
+                data_source,
+                prompt_str,
+                response_str,
+                ground_truth,
+                extra_info,
+                user_query,
+                download_dir,
+                file_path,
+            ) = results_all_by_idx[i]
             is_incomplete = 0
             is_overlong = 0
             if valid_response_length >= max_response_len:

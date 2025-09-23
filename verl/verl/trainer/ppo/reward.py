@@ -180,4 +180,3 @@ def compute_reward_async(data: DataProto, config=None, tokenizer=None, reward_fn
         )
 
     return compute_reward(data, reward_fn, max_response_len=max_response_len)
-

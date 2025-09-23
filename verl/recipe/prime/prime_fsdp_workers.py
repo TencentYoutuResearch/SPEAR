@@ -56,6 +56,7 @@ class PRIMERewardModelWorker(Worker):
 
         if not torch.distributed.is_initialized():
             import datetime
+
             torch.distributed.init_process_group(backend="nccl", timeout=datetime.timedelta(seconds=7200))
         self.config = config
 

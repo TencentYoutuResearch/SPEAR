@@ -225,7 +225,10 @@ class McoreToHFWeightConverterDpskv3(McoreToHFWeightConverterBase):
             "mlp.linear_fc2.weight": "mlp.down_proj.weight",
             "mlp.shared_experts.linear_fc2.weight": "mlp.shared_experts.down_proj.weight",
             "mlp.linear_fc1.weight": ["mlp.gate_proj.weight", "mlp.up_proj.weight"],
-            "mlp.shared_experts.linear_fc1.weight": ["mlp.shared_experts.gate_proj.weight", "mlp.shared_experts.up_proj.weight"],
+            "mlp.shared_experts.linear_fc1.weight": [
+                "mlp.shared_experts.gate_proj.weight",
+                "mlp.shared_experts.up_proj.weight",
+            ],
             "pre_mlp_layernorm.weight": "post_attention_layernorm.weight",
             "mlp.router.weight": "mlp.gate.weight",
             "mlp.router.expert_bias": "mlp.gate.e_score_correction_bias",

@@ -17,9 +17,6 @@ import re
 _SOLUTION_CLIP_CHARS = 300
 
 
-
-
-
 def extract_solution(solution_str, method="strict"):
     assert method in ["strict", "flexible"]
 

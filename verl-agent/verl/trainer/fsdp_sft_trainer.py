@@ -83,7 +83,15 @@ def extract_step(path):
 
 
 class FSDPSFTTrainer:
-    def __init__(self, config, device_mesh: DeviceMesh, ulysses_device_mesh: DeviceMesh, tokenizer, train_dataset: Dataset, val_dataset: Dataset):
+    def __init__(
+        self,
+        config,
+        device_mesh: DeviceMesh,
+        ulysses_device_mesh: DeviceMesh,
+        tokenizer,
+        train_dataset: Dataset,
+        val_dataset: Dataset,
+    ):
         self.config = config
         self.device_mesh = device_mesh
         self.ulysses_device_mesh = ulysses_device_mesh
@@ -116,7 +124,9 @@ class FSDPSFTTrainer:
         if self.device_mesh.get_rank() == 0:
             print(f"Normalize batch size by dp {dp_size}")
 
-        assert self.config.data.train_batch_size % dp_size == 0, f"Global batch size {self.config.data.train_batch_size} is not divisible by dp size {dp_size}"
+        assert self.config.data.train_batch_size % dp_size == 0, (
+            f"Global batch size {self.config.data.train_batch_size} is not divisible by dp size {dp_size}"
+        )
 
         self.config.data.train_batch_size //= dp_size
 
@@ -143,7 +153,9 @@ class FSDPSFTTrainer:
         if self.device_mesh.get_rank() == 0:
             print(f"Using FSDP rank {rank} and size {world_size} for data distribution")
 
-        self.train_sampler = DistributedSampler(self.train_dataset, shuffle=True, num_replicas=world_size, rank=rank, drop_last=True)
+        self.train_sampler = DistributedSampler(
+            self.train_dataset, shuffle=True, num_replicas=world_size, rank=rank, drop_last=True
+        )
         self.train_dataloader = DataLoader(
             dataset=self.train_dataset,
             batch_size=config.data.train_batch_size,
@@ -153,7 +165,9 @@ class FSDPSFTTrainer:
             drop_last=True,
         )
 
-        self.val_sampler = DistributedSampler(self.val_dataset, shuffle=False, num_replicas=world_size, rank=rank, drop_last=True)
+        self.val_sampler = DistributedSampler(
+            self.val_dataset, shuffle=False, num_replicas=world_size, rank=rank, drop_last=True
+        )
         self.val_dataloader = DataLoader(
             dataset=self.val_dataset,
             batch_size=config.data.micro_batch_size_per_gpu,
@@ -185,7 +199,9 @@ class FSDPSFTTrainer:
             assert self.use_remove_padding, "Sequence parallel is only supported when remove_padding is enabled"
 
         # This may be very large
-        init_context = get_init_weight_context_manager(use_meta_tensor=not config.tie_word_embeddings, mesh=self.device_mesh)
+        init_context = get_init_weight_context_manager(
+            use_meta_tensor=not config.tie_word_embeddings, mesh=self.device_mesh
+        )
 
         with init_context():
             self.model: PreTrainedModel = AutoModelForCausalLM.from_pretrained(
@@ -224,7 +240,9 @@ class FSDPSFTTrainer:
 
         log_gpu_memory_usage("After model allocation", logger=logger)
 
-        mixed_precision = MixedPrecision(param_dtype=torch.bfloat16, reduce_dtype=torch.float32, buffer_dtype=torch.float32)
+        mixed_precision = MixedPrecision(
+            param_dtype=torch.bfloat16, reduce_dtype=torch.float32, buffer_dtype=torch.float32
+        )
 
         auto_wrap_policy = get_fsdp_wrap_policy(
             self.model,
@@ -256,8 +274,9 @@ class FSDPSFTTrainer:
             )
         elif fsdp_strategy == "fsdp2":
             assert CPUOffloadPolicy is not None, "PyTorch version >= 2.4 is required for using fully_shard API (FSDP2)"
-            mp_policy = MixedPrecisionPolicy(param_dtype=torch.bfloat16, reduce_dtype=torch.float32,
-                                             cast_forward_inputs=True)
+            mp_policy = MixedPrecisionPolicy(
+                param_dtype=torch.bfloat16, reduce_dtype=torch.float32, cast_forward_inputs=True
+            )
 
             fsdp_kwargs = {
                 "mesh": self.device_mesh,
@@ -287,14 +306,20 @@ class FSDPSFTTrainer:
         self.total_steps = self.steps_per_epoch * self.config.trainer.total_epochs
 
         if self.device_mesh.get_rank() == 0:
-            print(f"Number of steps/epoch {self.steps_per_epoch}, number of epochs {self.config.trainer.total_epochs}, total number of steps {self.total_steps}")
+            print(
+                f"Number of steps/epoch {self.steps_per_epoch}, number of epochs {self.config.trainer.total_epochs}, total number of steps {self.total_steps}"
+            )
 
         num_warmup_steps = int(self.total_steps * self.config.optim.warmup_steps_ratio)
 
         if not hasattr(self.config.optim, "lr_scheduler") or self.config.optim.lr_scheduler == "cosine":
-            self.lr_scheduler = get_cosine_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=self.total_steps)
+            self.lr_scheduler = get_cosine_schedule_with_warmup(
+                optimizer=self.optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=self.total_steps
+            )
         elif self.config.optim.lr_scheduler == "wsd":
-            self.lr_scheduler = get_wsd_schedule_with_warmup(optimizer=self.optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=self.total_steps)
+            self.lr_scheduler = get_wsd_schedule_with_warmup(
+                optimizer=self.optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=self.total_steps
+            )
         else:
             raise ValueError(f"Unknown lr scheduler: {self.config.optim.lr_scheduler}")
 
@@ -316,7 +341,9 @@ class FSDPSFTTrainer:
             if not use_sp:
                 # Standard forward pass without sequence parallel
                 labels = input_ids[:, 1:].contiguous()
-                output = self.fsdp_model(input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids, use_cache=False)
+                output = self.fsdp_model(
+                    input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids, use_cache=False
+                )
                 logits = output.logits
 
                 shift_logits = logits[..., :-1, :].contiguous()
@@ -337,17 +364,25 @@ class FSDPSFTTrainer:
 
                 batch_size, seqlen = input_ids.shape
                 # Remove padding
-                input_ids_rmpad, indices, *_ = unpad_input(input_ids.unsqueeze(-1), attention_mask)  # input_ids_rmpad (total_nnz, ...)
+                input_ids_rmpad, indices, *_ = unpad_input(
+                    input_ids.unsqueeze(-1), attention_mask
+                )  # input_ids_rmpad (total_nnz, ...)
                 input_ids_rmpad = input_ids_rmpad.transpose(0, 1)  # (1, total_nnz)
 
                 # Unpad position_ids to align rotary
-                position_ids_rmpad = index_first_axis(rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices).transpose(0, 1)
+                position_ids_rmpad = index_first_axis(
+                    rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices
+                ).transpose(0, 1)
 
                 # Pad and slice inputs for sequence parallelism
-                input_ids_rmpad_sliced, position_ids_rmpad_padded, pad_size = ulysses_pad_and_slice_inputs(input_ids_rmpad, position_ids_rmpad, sp_size=get_ulysses_sequence_parallel_world_size())
+                input_ids_rmpad_sliced, position_ids_rmpad_padded, pad_size = ulysses_pad_and_slice_inputs(
+                    input_ids_rmpad, position_ids_rmpad, sp_size=get_ulysses_sequence_parallel_world_size()
+                )
                 # For computing loss
                 input_ids_rmpad_rolled = torch.roll(input_ids_rmpad, shifts=-1, dims=1)  # (1, total_nnz)
-                input_ids_rmpad_rolled, _, _ = ulysses_pad_and_slice_inputs(input_ids_rmpad_rolled, None, get_ulysses_sequence_parallel_world_size())
+                input_ids_rmpad_rolled, _, _ = ulysses_pad_and_slice_inputs(
+                    input_ids_rmpad_rolled, None, get_ulysses_sequence_parallel_world_size()
+                )
                 input_ids_rmpad_rolled = input_ids_rmpad_rolled.squeeze(0)  # ((total_nnz / sp) + pad)
 
                 # Forward pass
@@ -366,7 +401,9 @@ class FSDPSFTTrainer:
                 loss = gather_outpus_and_unpad(loss, gather_dim=0, unpad_dim=0, padding_size=pad_size)
 
                 # This is the loss collected from all ulysses ranks
-                full_loss = pad_input(hidden_states=loss.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen)
+                full_loss = pad_input(
+                    hidden_states=loss.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen
+                )
                 full_loss = full_loss.squeeze(-1)[:, :-1]  # Remove last token's loss
                 full_loss = full_loss.reshape(-1)
                 loss_mask = loss_mask.to(full_loss.device)
@@ -402,9 +439,9 @@ class FSDPSFTTrainer:
             loss = self._compute_loss_and_backward(batch=micro_batch) / n_micro_batches
             step_loss += loss.item()
 
-        if self.config.model.strategy == 'fsdp':
+        if self.config.model.strategy == "fsdp":
             grad_norm = self.fsdp_model.clip_grad_norm_(max_norm=self.config.optim.clip_grad)
-        elif self.config.model.strategy == 'fsdp2':
+        elif self.config.model.strategy == "fsdp2":
             grad_norm = fsdp2_clip_grad_norm_(self.fsdp_model.parameters(), max_norm=self.config.optim.clip_grad)
         else:
             raise NotImplementedError(f"not implement {self.config.model.strategy}")
@@ -433,7 +470,7 @@ class FSDPSFTTrainer:
         elif is_npu_available:
             torch.distributed.all_reduce(step_loss)
             step_loss /= self.ulysses_device_mesh.size(0)
-        return {'train/loss': step_loss.detach().item(), 'train/lr(1e-3)': lr * 1e3}
+        return {"train/loss": step_loss.detach().item(), "train/lr(1e-3)": lr * 1e3}
 
     def validation_step(self, batch: TensorDict):
         self.fsdp_model.eval()
@@ -519,7 +556,7 @@ class FSDPSFTTrainer:
                 self.train_dataloader,
                 total=self.steps_per_epoch,
                 desc=f"Epoch {epoch + 1}/{self.config.trainer.total_epochs}",
-                disable=rank != 0
+                disable=rank != 0,
             ):
                 global_step += 1
                 data = TensorDict(data, batch_size=self.config.data.train_batch_size).to(self.device_name)
@@ -532,7 +569,9 @@ class FSDPSFTTrainer:
                     # Perform final validation
                     val_losses = []
                     for val_data in self.val_dataloader:
-                        val_data = TensorDict(val_data, batch_size=self.config.data.micro_batch_size_per_gpu).to(self.device_name)
+                        val_data = TensorDict(val_data, batch_size=self.config.data.micro_batch_size_per_gpu).to(
+                            self.device_name
+                        )
                         val_loss = self.validation_step(val_data)
                         val_losses.append(val_loss)
                     if rank == 0:
@@ -568,7 +607,11 @@ def main(config):
 
     device_mesh = init_device_mesh(device_type=device_name, mesh_shape=(world_size,), mesh_dim_names=("fsdp",))
     dp_size = world_size // config.ulysses_sequence_parallel_size
-    ulysses_device_mesh = init_device_mesh(device_type=device_name, mesh_shape=(dp_size, config.ulysses_sequence_parallel_size), mesh_dim_names=("dp", "sp"))
+    ulysses_device_mesh = init_device_mesh(
+        device_type=device_name,
+        mesh_shape=(dp_size, config.ulysses_sequence_parallel_size),
+        mesh_dim_names=("dp", "sp"),
+    )
     # build tokenizer and datasets first
     from verl.utils import hf_tokenizer
 
@@ -577,7 +620,14 @@ def main(config):
     train_dataset = create_sft_dataset(config.data.train_files, config.data, tokenizer)
     val_dataset = create_sft_dataset(config.data.val_files, config.data, tokenizer)
 
-    trainer = FSDPSFTTrainer(config=config, device_mesh=device_mesh, ulysses_device_mesh=ulysses_device_mesh, tokenizer=tokenizer, train_dataset=train_dataset, val_dataset=val_dataset)
+    trainer = FSDPSFTTrainer(
+        config=config,
+        device_mesh=device_mesh,
+        ulysses_device_mesh=ulysses_device_mesh,
+        tokenizer=tokenizer,
+        train_dataset=train_dataset,
+        val_dataset=val_dataset,
+    )
 
     trainer.fit()
 

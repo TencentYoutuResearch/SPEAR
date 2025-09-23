@@ -13,44 +13,37 @@ def build_env(env_name, env_num=1):
     if env_name == "alfworld":
         # Test AlfWorldEnvironmentManager
         from agent_system.environments.env_package.alfworld import alfworld_projection, build_alfworld_envs
-        alf_config_path = os.path.join(os.path.dirname(__file__), '../../agent_system/environments/env_package/alfworld/configs/config_tw.yaml')
+
+        alf_config_path = os.path.join(
+            os.path.dirname(__file__), "../../agent_system/environments/env_package/alfworld/configs/config_tw.yaml"
+        )
         envs = build_alfworld_envs(alf_config_path, seed=1, env_num=env_num, group_n=group_n, is_train=False)
-        env_manager = AlfWorldEnvironmentManager(envs, alfworld_projection, 'alfworld/AlfredThorEnv')
+        env_manager = AlfWorldEnvironmentManager(envs, alfworld_projection, "alfworld/AlfredThorEnv")
     else:
         raise ValueError(f"Unsupported environment name: {env_name}")
 
     return env_manager
 
+
 class Agent:
     def __init__(self, model_name="gpt-4o"):
         self.model_name = model_name
         self.client = OpenAI(
-            api_key=os.environ['OPENAI_API_KEY'],
+            api_key=os.environ["OPENAI_API_KEY"],
         )
 
     def get_action_from_gpt(self, obs):
         response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {
-                    "role": "user",
-                    "content": obs
-                }
-            ],
-            temperature=0.4,
-            n=1,
-            stop=None
+            model=self.model_name, messages=[{"role": "user", "content": obs}], temperature=0.4, n=1, stop=None
         )
         action = response.choices[0].message.content.strip()
         return action
 
-if __name__ == "__main__":
 
+if __name__ == "__main__":
     # -------- logging ----------
     os.makedirs("logs/alfworld", exist_ok=True)
-    log_fp = os.path.join(
-        "logs/alfworld", f"run_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
-    )
+    log_fp = os.path.join("logs/alfworld", f"run_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(message)s",
@@ -78,7 +71,7 @@ if __name__ == "__main__":
     agent = Agent()
 
     # Accumulated statistics
-    overall_success_rates = []         # Overall success per round
+    overall_success_rates = []  # Overall success per round
     task_success_history = defaultdict(list)  # Subtask success per round
 
     # ======================= Main Loop =======================
@@ -95,7 +88,9 @@ if __name__ == "__main__":
         task_total_cnt = defaultdict(int)
 
         for step_idx in range(max_steps):
-            logging.info(f"Step {step_idx}; Dones ({np.array(env_dones).sum().item()}/{env_num}); SR {overall_success_this_round.mean().item()}")
+            logging.info(
+                f"Step {step_idx}; Dones ({np.array(env_dones).sum().item()}/{env_num}); SR {overall_success_this_round.mean().item()}"
+            )
 
             # --- Assemble actions ---
             actions = []
@@ -148,29 +143,19 @@ if __name__ == "__main__":
             if task_total_cnt.get(task, 0) > 0:
                 rate = task_success_cnt[task] / task_total_cnt[task]
                 task_success_history[task].append(rate)
-                logging.info(
-                    f"    {task:<35s}: {rate:.4f} "
-                    f"({task_success_cnt[task]}/{task_total_cnt[task]})"
-                )
+                logging.info(f"    {task:<35s}: {rate:.4f} ({task_success_cnt[task]}/{task_total_cnt[task]})")
 
-        logging.info(
-            f"Test {test_idx} time elapsed: {time.time() - start_time:.2f}s\n"
-        )
+        logging.info(f"Test {test_idx} time elapsed: {time.time() - start_time:.2f}s\n")
 
     # ======================= Final Summary =======================
     logging.info("=============== Final Summary ===============")
+    logging.info(f"Total tests: {test_times} | Envs / test: {env_num} | Total envs: {env_num * test_times}")
     logging.info(
-        f"Total tests: {test_times} | Envs / test: {env_num} | Total envs: {env_num * test_times}"
-    )
-    logging.info(
-        f"Overall success avg ± std: "
-        f"{np.mean(overall_success_rates):.4f} ± {np.std(overall_success_rates):.4f}"
+        f"Overall success avg ± std: {np.mean(overall_success_rates):.4f} ± {np.std(overall_success_rates):.4f}"
     )
 
     for task in TASKS + ["other"]:
         if task_success_history.get(task):
             logging.info(
-                f"{task:<35s}: "
-                f"{np.mean(task_success_history[task]):.4f} ± "
-                f"{np.std(task_success_history[task]):.4f}"
+                f"{task:<35s}: {np.mean(task_success_history[task]):.4f} ± {np.std(task_success_history[task]):.4f}"
             )

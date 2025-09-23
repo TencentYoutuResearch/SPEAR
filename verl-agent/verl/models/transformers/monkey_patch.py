@@ -97,7 +97,9 @@ def _ulysses_flash_attention_forward(
         position_ids = torch.concat(position_ids_list, dim=-1)
 
     # (bsz, seq_len, n_head/n, head_dim)
-    attn_output = _flash_attention_forward(query_states, key_states, value_states, *args, position_ids=position_ids, **kwargs)
+    attn_output = _flash_attention_forward(
+        query_states, key_states, value_states, *args, position_ids=position_ids, **kwargs
+    )
 
     ########## AlltoAll for Ulysses ##########
     if ulysses_sp_size > 1:
@@ -120,7 +122,11 @@ def patch_vlm_for_ulysses_input_slicing(model_class: type):
 
             current_ulysses_sp_size = get_ulysses_sequence_parallel_world_size()
 
-            slice_now = inputs_embeds is not None and current_ulysses_sp_size > 1 and getattr(self, "_needs_initial_slice", True)
+            slice_now = (
+                inputs_embeds is not None
+                and current_ulysses_sp_size > 1
+                and getattr(self, "_needs_initial_slice", True)
+            )
             if slice_now:
                 call_kwargs["inputs_embeds"] = slice_input_tensor(inputs_embeds, dim=1, padding=False)
                 self._needs_initial_slice = False
@@ -150,9 +156,14 @@ def apply_monkey_patch(
     try:
         num_attention_heads, num_key_value_heads = model.config.num_attention_heads, model.config.num_key_value_heads
     except AttributeError:
-        num_attention_heads, num_key_value_heads = model.config.text_config.num_attention_heads, model.config.text_config.num_key_value_heads
+        num_attention_heads, num_key_value_heads = (
+            model.config.text_config.num_attention_heads,
+            model.config.text_config.num_key_value_heads,
+        )
 
-    assert num_attention_heads % ulysses_sp_size == 0, f"num_attention_heads {num_attention_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}"
+    assert num_attention_heads % ulysses_sp_size == 0, (
+        f"num_attention_heads {num_attention_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}"
+    )
     assert num_key_value_heads % ulysses_sp_size == 0 or ulysses_sp_size % num_key_value_heads == 0, (
         f"num_key_value_heads {num_key_value_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}or vise versa. Upon ulysses_sp_size % num_key_value_heads == 0,kv heads are repeated to ensure correctness."
     )
@@ -172,9 +183,11 @@ def apply_monkey_patch(
         if ulysses_sp_size > 1:
             if is_transformers_version_in_range(min_version="4.52.0"):
                 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLTextModel
+
                 patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLTextModel)
             else:
                 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2_5_VLModel
+
                 patch_vlm_for_ulysses_input_slicing(Qwen2_5_VLModel)
 
         if use_fused_kernels:
@@ -199,9 +212,11 @@ def apply_monkey_patch(
         if ulysses_sp_size > 1:
             if is_transformers_version_in_range(min_version="4.52.0"):
                 from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLTextModel
+
                 patch_vlm_for_ulysses_input_slicing(Qwen2VLTextModel)
             else:
                 from transformers.models.qwen2_vl.modeling_qwen2_vl import Qwen2VLModel
+
                 patch_vlm_for_ulysses_input_slicing(Qwen2VLModel)
 
         if use_fused_kernels:

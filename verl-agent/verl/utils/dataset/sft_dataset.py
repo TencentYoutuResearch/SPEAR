@@ -18,7 +18,6 @@ SFT dataset
 Each parquet file contains
 """
 
-
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
@@ -44,7 +43,7 @@ class SFTDataset(Dataset):
         response_dict_keys = config.get("response_dict_keys", None)
         max_length = config.get("max_length", 1024)
         truncation = config.get("truncation", "error")
-        use_shm = config.get('use_shm', False)
+        use_shm = config.get("use_shm", False)
 
         assert truncation in ["error", "left", "right"]
         self.truncation = truncation
@@ -145,7 +144,10 @@ class SFTDataset(Dataset):
         # padding to max length
         sequence_length = input_ids.shape[0]
         if sequence_length < self.max_length:
-            padded_input_ids = torch.ones(size=(self.max_length - sequence_length,), dtype=input_ids.dtype) * self.tokenizer.pad_token_id
+            padded_input_ids = (
+                torch.ones(size=(self.max_length - sequence_length,), dtype=input_ids.dtype)
+                * self.tokenizer.pad_token_id
+            )
             padded_attention_mask = torch.zeros(size=(self.max_length - sequence_length,), dtype=attention_mask.dtype)
 
             input_ids = torch.cat((input_ids, padded_input_ids))

@@ -25,8 +25,12 @@ from vllm.model_executor.models import ModelRegistry
 # NOTE(shengguangming): replace the origin weight loader function in the class
 def parallel_weight_loader(self, param: torch.Tensor, loaded_weight: torch.Tensor) -> None:
     """Parallel Linear weight loader."""
-    assert param.size() == loaded_weight.size(), f"the parameter size is not align with the loaded weight size, param size: {param.size()}, loaded_weight size: {loaded_weight.size()}"
-    assert param.data.dtype == loaded_weight.data.dtype, "if we want to shared weights, the data type should also be the same"
+    assert param.size() == loaded_weight.size(), (
+        f"the parameter size is not align with the loaded weight size, param size: {param.size()}, loaded_weight size: {loaded_weight.size()}"
+    )
+    assert param.data.dtype == loaded_weight.data.dtype, (
+        "if we want to shared weights, the data type should also be the same"
+    )
 
     param.data = loaded_weight.data
 
@@ -34,7 +38,9 @@ def parallel_weight_loader(self, param: torch.Tensor, loaded_weight: torch.Tenso
 def default_weight_loader(param: torch.Tensor, loaded_weight: torch.Tensor) -> None:
     """Default weight loader."""
     assert param.size() == loaded_weight.size()
-    assert param.data.dtype == loaded_weight.data.dtype, "if we want to shared weights, the data type should also be the same"
+    assert param.data.dtype == loaded_weight.data.dtype, (
+        "if we want to shared weights, the data type should also be the same"
+    )
 
     param.data = loaded_weight.data
 
@@ -233,7 +239,9 @@ def load_megatron_weights(actor_weights: Iterable, vllm_model: nn.Module):
 def _get_model_weight_loader(arch: str):
     if arch in __MODEL_MEGATRON_WEIGHT_LOADER_REGISTRY__:
         return __MODEL_MEGATRON_WEIGHT_LOADER_REGISTRY__[arch]
-    raise ValueError(f"Model architectures {arch} are not supported for now. Supported architectures: {ModelRegistry.get_supported_archs()}")
+    raise ValueError(
+        f"Model architectures {arch} are not supported for now. Supported architectures: {ModelRegistry.get_supported_archs()}"
+    )
 
 
 def update_megatron_weight_loader():

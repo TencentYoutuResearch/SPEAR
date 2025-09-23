@@ -124,4 +124,3 @@ class NaiveRewardManager:
             }
         else:
             return reward_tensor
-

@@ -332,8 +332,8 @@ class AsyncLLMServerManager:
         assert self.chat_scheduler is not None, "chat scheduler is not initialized."
 
         future = asyncio.run_coroutine_threadsafe(
-            self.chat_scheduler.generate_sequences(prompts, **sampling_params),\
-                self.chat_scheduler_loop)
+            self.chat_scheduler.generate_sequences(prompts, **sampling_params), self.chat_scheduler_loop
+        )
         return future.result()
 
 

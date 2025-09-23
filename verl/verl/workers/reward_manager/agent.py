@@ -27,10 +27,9 @@ from verl.workers.reward_manager import register
 def has_repeated_ngrams(words, n=20, threshold=10):
     # words = text.split()
     words = [str(item) for item in words]
-    ngrams = [' '.join(words[i:i+n]) for i in range(len(words)-n+1)]
+    ngrams = [" ".join(words[i : i + n]) for i in range(len(words) - n + 1)]
     counts = Counter(ngrams)
     return any(count >= threshold for count in counts.values())
-
 
 
 def get_file_path(download_dir):
@@ -68,8 +67,9 @@ def get_file_path(download_dir):
 class AgentRewardManager:
     """The reward manager."""
 
-    def __init__(self, tokenizer, num_examine, compute_score=None,\
-        reward_fn_key="data_source", **reward_kwargs) -> None:
+    def __init__(
+        self, tokenizer, num_examine, compute_score=None, reward_fn_key="data_source", **reward_kwargs
+    ) -> None:
         self.tokenizer = tokenizer
         self.num_examine = num_examine  # the number of batches of decoded responses to print to the console
         self.compute_score = compute_score or _default_compute_score
@@ -97,13 +97,13 @@ class AgentRewardManager:
             data_item = data[i]  # DataProtoItem
             prompt_ids = data_item.batch["prompts"]
             if "messages" in data_item.non_tensor_batch["messages"]:
-                messages = data_item.non_tensor_batch["messages"]['messages']
+                messages = data_item.non_tensor_batch["messages"]["messages"]
             else:
                 messages = []
             if "tools_available" in data_item.non_tensor_batch["messages"]:
-                tools = data_item.non_tensor_batch["messages"]['tools_available']
+                tools = data_item.non_tensor_batch["messages"]["tools_available"]
             elif "tools" in data_item.non_tensor_batch["messages"]:
-                tools = data_item.non_tensor_batch["messages"]['tools']
+                tools = data_item.non_tensor_batch["messages"]["tools"]
             else:
                 tools = None
 

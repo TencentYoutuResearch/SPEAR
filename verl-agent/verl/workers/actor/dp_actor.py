@@ -72,8 +72,9 @@ class DataParallelPPOActor(BasePPOActor):
         )
         self.device_name = get_device_name()
 
-
-    def _forward_micro_batch(self, micro_batch, temperature, calculate_entropy=False) -> tuple[torch.Tensor, torch.Tensor]:
+    def _forward_micro_batch(
+        self, micro_batch, temperature, calculate_entropy=False
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         """
         Returns:
             entropy: # (bs, response_len)
@@ -83,7 +84,9 @@ class DataParallelPPOActor(BasePPOActor):
         multi_modal_inputs = {}
         if "multi_modal_inputs" in micro_batch:
             for key in micro_batch["multi_modal_inputs"][0].keys():
-                multi_modal_inputs[key] = torch.cat([inputs[key] for inputs in micro_batch["multi_modal_inputs"]], dim=0)
+                multi_modal_inputs[key] = torch.cat(
+                    [inputs[key] for inputs in micro_batch["multi_modal_inputs"]], dim=0
+                )
 
         with torch.autocast(device_type=self.device_name, dtype=torch.bfloat16):
             input_ids = micro_batch["input_ids"]
@@ -95,14 +98,22 @@ class DataParallelPPOActor(BasePPOActor):
                 position_ids = position_ids.transpose(0, 1)  # (bsz, 3, seqlen) -> (3, bsz, seqlen)
 
             if self.use_remove_padding:
-                input_ids_rmpad, indices, *_ = unpad_input(input_ids.unsqueeze(-1), attention_mask)  # input_ids_rmpad (total_nnz, ...)
+                input_ids_rmpad, indices, *_ = unpad_input(
+                    input_ids.unsqueeze(-1), attention_mask
+                )  # input_ids_rmpad (total_nnz, ...)
                 input_ids_rmpad = input_ids_rmpad.transpose(0, 1)  # (1, total_nnz)
 
                 # unpad the position_ids to align the rotary
                 if position_ids.dim() == 3:
-                    position_ids_rmpad = index_first_axis(rearrange(position_ids, "c b s ... -> (b s) c ..."), indices).transpose(0, 1).unsqueeze(1)  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
+                    position_ids_rmpad = (
+                        index_first_axis(rearrange(position_ids, "c b s ... -> (b s) c ..."), indices)
+                        .transpose(0, 1)
+                        .unsqueeze(1)
+                    )  # (3, bsz, seqlen) -> (3, 1, bsz * seqlen)
                 else:
-                    position_ids_rmpad = index_first_axis(rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices).transpose(0, 1)
+                    position_ids_rmpad = index_first_axis(
+                        rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices
+                    ).transpose(0, 1)
 
                 # for compute the log_prob
                 input_ids_rmpad_rolled = torch.roll(input_ids_rmpad, shifts=-1, dims=1)  # (1, total_nnz)
@@ -296,7 +307,9 @@ class DataParallelPPOActor(BasePPOActor):
             if isinstance(micro_batch, DataProto):
                 micro_batch = {**micro_batch.batch, **micro_batch.non_tensor_batch}
             with torch.no_grad():
-                entropy, log_probs = self._forward_micro_batch(micro_batch, temperature=temperature, calculate_entropy=calculate_entropy)
+                entropy, log_probs = self._forward_micro_batch(
+                    micro_batch, temperature=temperature, calculate_entropy=calculate_entropy
+                )
             log_probs_lst.append(log_probs)
             if calculate_entropy:
                 entropy_lst.append(entropy)
@@ -364,14 +377,18 @@ class DataParallelPPOActor(BasePPOActor):
                 # split batch into micro_batches
                 mini_batch = data
                 if has_multi_modal_inputs:
-                    self.gradient_accumulation = self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+                    self.gradient_accumulation = (
+                        self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+                    )
                     num_micro_batches = mini_batch.batch.batch_size[0] // self.config.ppo_micro_batch_size_per_gpu
                     micro_batches = data.select(select_keys, non_tensor_select_keys).chunk(num_micro_batches)
                 elif self.config.use_dynamic_bsz:
                     max_token_len = self.config.ppo_max_token_len_per_gpu * self.ulysses_sequence_parallel_size
                     micro_batches, _ = rearrange_micro_batches(batch=mini_batch, max_token_len=max_token_len)
                 else:
-                    self.gradient_accumulation = self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+                    self.gradient_accumulation = (
+                        self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
+                    )
                     # split batch into micro_batches
                     micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
 
@@ -395,8 +412,12 @@ class DataParallelPPOActor(BasePPOActor):
                     advantages = data["advantages"]
 
                     clip_ratio = self.config.clip_ratio
-                    clip_ratio_low = self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio
-                    clip_ratio_high = self.config.clip_ratio_high if self.config.clip_ratio_high is not None else clip_ratio
+                    clip_ratio_low = (
+                        self.config.clip_ratio_low if self.config.clip_ratio_low is not None else clip_ratio
+                    )
+                    clip_ratio_high = (
+                        self.config.clip_ratio_high if self.config.clip_ratio_high is not None else clip_ratio
+                    )
                     clip_ratio_c = self.config.get("clip_ratio_c", 3.0)
                     entropy_coeff = self.config.entropy_coeff
                     loss_agg_mode = self.config.loss_agg_mode
@@ -405,7 +426,9 @@ class DataParallelPPOActor(BasePPOActor):
                     calculate_entropy = False
                     if entropy_coeff != 0:
                         calculate_entropy = True
-                    entropy, log_prob = self._forward_micro_batch(micro_batch=data, temperature=temperature, calculate_entropy=calculate_entropy)
+                    entropy, log_prob = self._forward_micro_batch(
+                        micro_batch=data, temperature=temperature, calculate_entropy=calculate_entropy
+                    )
 
                     loss_mode = self.config.policy_loss.get("loss_mode", "vanilla")
                     # vanilla -> verl.trainer.ppo.core_algos.compute_policy_loss_vanilla
@@ -445,7 +468,9 @@ class DataParallelPPOActor(BasePPOActor):
                     if self.config.use_kl_loss:
                         ref_log_prob = data["ref_log_prob"]
                         # compute kl loss
-                        kld = kl_penalty(logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type)
+                        kld = kl_penalty(
+                            logprob=log_prob, ref_logprob=ref_log_prob, kl_penalty=self.config.kl_loss_type
+                        )
                         kl_loss = agg_loss(loss_mat=kld, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
 
                         policy_loss = policy_loss + kl_loss * self.config.kl_loss_coef
@@ -471,7 +496,6 @@ class DataParallelPPOActor(BasePPOActor):
                 data = {"actor/grad_norm": grad_norm.detach().item()}
                 append_to_dict(metrics, data)
 
-
             ################ Start of the Newly Added Buffer Replay for Self-Imitation Learning PG Loss ################
             # add Trajectory advantage here
             if len(dataloader_replay):
@@ -489,8 +513,10 @@ class DataParallelPPOActor(BasePPOActor):
                     # import pdb;pdb.set_trace();
                     self.actor_optimizer.zero_grad()
                     for micro_batch_replay_idx, micro_batch_replay in enumerate(micro_batches_replay):
-                        print(f"🏋️ Update microbatch-replay loss with {micro_batch_replay_idx}-th trajectory replay of mini_batch with length=",\
-                            len(micro_batch_replay))
+                        print(
+                            f"🏋️ Update microbatch-replay loss with {micro_batch_replay_idx}-th trajectory replay of mini_batch with length=",
+                            len(micro_batch_replay),
+                        )
                         micro_batch_metrics = {}
                         model_inputs = {**micro_batch_replay.batch, **micro_batch_replay.non_tensor_batch}
                         # import pdb;pdb.set_trace();
@@ -534,7 +560,9 @@ class DataParallelPPOActor(BasePPOActor):
                         )
 
                         if entropy_coeff != 0:
-                            entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                            entropy_loss = agg_loss(
+                                loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode
+                            )
                             # compute policy loss
                             policy_loss = pg_loss - entropy_loss * entropy_coeff
                         else:
@@ -560,7 +588,11 @@ class DataParallelPPOActor(BasePPOActor):
 
                         max_replay_loss_steps = self.config.max_replay_loss_steps
                         if global_steps <= max_replay_loss_steps:
-                            loss *= self.config.replay_loss_coef * (-np.cos((global_steps / max_replay_loss_steps) * np.pi) + 1)/2
+                            loss *= (
+                                self.config.replay_loss_coef
+                                * (-np.cos((global_steps / max_replay_loss_steps) * np.pi) + 1)
+                                / 2
+                            )
                         else:
                             loss *= self.config.replay_loss_coef
                         loss.backward()

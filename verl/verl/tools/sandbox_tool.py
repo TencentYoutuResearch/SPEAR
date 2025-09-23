@@ -42,9 +42,11 @@ class PoolMode(Enum):
     ThreadMode = 1
     ProcessMode = 2
 
+
 import sys
 
 sys.set_int_max_str_digits(10000)
+
 
 @ray.remote(concurrency_groups={"acquire": 1, "release": 10})
 class TokenBucketWorker:
@@ -91,13 +93,18 @@ class ExecutionWorker:
                 logger.warning(f"Error when executing code: {e}")
 
 
-def init_execution_pool(num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode):
+def init_execution_pool(
+    num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode
+):
     if mode == PoolMode.ThreadMode:
-        return ray.remote(ExecutionWorker).options(max_concurrency=num_workers).remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+        return (
+            ray.remote(ExecutionWorker)
+            .options(max_concurrency=num_workers)
+            .remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+        )
     else:
         raise NotImplementedError("Process mode is not implemented yet")
         # return ray.util.multiprocessing.Pool(processes=num_workers)
-
 
 
 class SandBoxTool(BaseTool):
@@ -118,7 +125,12 @@ class SandBoxTool(BaseTool):
         self.default_timeout = config.get("default_timeout", 60)
         # self.default_language = config.get("default_language", "python")
         self.enable_global_rate_limit = config.get("enable_global_rate_limit", True)
-        self.execution_pool = init_execution_pool(num_workers=self.num_workers, enable_global_rate_limit=self.enable_global_rate_limit, rate_limit=self.rate_limit, mode=PoolMode.ThreadMode)
+        self.execution_pool = init_execution_pool(
+            num_workers=self.num_workers,
+            enable_global_rate_limit=self.enable_global_rate_limit,
+            rate_limit=self.rate_limit,
+            mode=PoolMode.ThreadMode,
+        )
         self.sandbox_fusion_url = config.get("sandbox_fusion_url", "")
         if self.sandbox_fusion_url == "":
             raise ValueError("sandbox_fusion_url is not set")
@@ -155,7 +167,9 @@ class SandBoxTool(BaseTool):
         }
         return instance_id
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], assistant_content="", time_limit=30, **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], assistant_content="", time_limit=30, **kwargs
+    ) -> tuple[str, float, dict]:
         # code = parameters.get("code", "")
         code = str(assistant_content)
         self._instance_dict[instance_id]["response"] = code
@@ -172,18 +186,22 @@ class SandBoxTool(BaseTool):
 
     def execute_code(self, instance_id, timeout=60, concurrent_semaphore=None, continuous=True, **kwargs) -> float:
         if self.sandbox_fusion_url:
-            res = compute_score_sandbox(self.sandbox_fusion_url, concurrent_semaphore,\
-                self._instance_dict[instance_id]["response"],\
-                self._instance_dict[instance_id]["ground_truth"],\
+            res = compute_score_sandbox(
+                self.sandbox_fusion_url,
+                concurrent_semaphore,
+                self._instance_dict[instance_id]["response"],
+                self._instance_dict[instance_id]["ground_truth"],
                 continuous=continuous,
-                timeout=timeout)
+                timeout=timeout,
+            )
 
         else:
             res = compute_score_prime(
                 self._instance_dict[instance_id]["response"],
-                self._instance_dict[instance_id]["ground_truth"],\
+                self._instance_dict[instance_id]["ground_truth"],
                 continuous=continuous,
-                timeout=timeout)
+                timeout=timeout,
+            )
 
         if isinstance(res, dict):
             return res, ""
@@ -198,4 +216,3 @@ class SandBoxTool(BaseTool):
 
     async def release(self, instance_id: str, **kwargs) -> None:
         del self._instance_dict[instance_id]
-

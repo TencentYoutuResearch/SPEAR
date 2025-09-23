@@ -18,7 +18,6 @@
 This trainer supports model-agonistic model initialization with huggingface
 """
 
-
 import ray
 from omegaconf import OmegaConf
 from torch.utils.data import Dataset, Sampler

@@ -45,16 +45,22 @@ class ExternalRayDistributedExecutor(Executor):
         assert self.vllm_config.instance_id is not None, "instance_id must be set for external ray actors."
 
         fields = self.vllm_config.instance_id.split(":")
-        assert len(fields) == 4, f"instance_id: {self.vllm_config.instance_id} must be in the format of <namespace>:<wg_prefix>:<vllm_dp_size>:<vllm_dp_rank>."
+        assert len(fields) == 4, (
+            f"instance_id: {self.vllm_config.instance_id} must be in the format of <namespace>:<wg_prefix>:<vllm_dp_size>:<vllm_dp_rank>."
+        )
         namespace, wg_prefix, vllm_dp_size, vllm_dp_rank = fields[0], fields[1], int(fields[2]), int(fields[3])
 
         # Make sure subprocess in same namespace as parent actor.
         # actor name format: {name_prefix}WorkerDict_{pg_idx}:{local_rank}
         ray.init(namespace=namespace)
-        actor_names = [actor_name for actor_name in ray.util.list_named_actors() if actor_name.startswith(f"{wg_prefix}WorkerDict")]
+        actor_names = [
+            actor_name for actor_name in ray.util.list_named_actors() if actor_name.startswith(f"{wg_prefix}WorkerDict")
+        ]
 
         vllm_tp_size = self.vllm_config.parallel_config.tensor_parallel_size
-        assert len(actor_names) == vllm_dp_size * vllm_tp_size, f"instance_id: {self.vllm_config.instance_id} has {len(actor_names)} actors, but vllm_dp_size: {vllm_dp_size} * vllm_tp_size: {vllm_tp_size} = {vllm_dp_size * vllm_tp_size} is expected."
+        assert len(actor_names) == vllm_dp_size * vllm_tp_size, (
+            f"instance_id: {self.vllm_config.instance_id} has {len(actor_names)} actors, but vllm_dp_size: {vllm_dp_size} * vllm_tp_size: {vllm_tp_size} = {vllm_dp_size * vllm_tp_size} is expected."
+        )
 
         def get_pg_index_and_local_rank(actor_name) -> tuple[int, int]:
             fields = actor_name.split(":")
@@ -95,7 +101,9 @@ class ExternalRayDistributedExecutor(Executor):
         del method
 
         # ~3ms overhead per schedule step due to SchedulerOutput/ModelRunnerOutput serialization/deserialization.
-        outputs = ray.get([worker.execute_method.remote(sent_method, *args, **(kwargs or {})) for worker in self.workers])
+        outputs = ray.get(
+            [worker.execute_method.remote(sent_method, *args, **(kwargs or {})) for worker in self.workers]
+        )
         return outputs
 
     def check_health(self):

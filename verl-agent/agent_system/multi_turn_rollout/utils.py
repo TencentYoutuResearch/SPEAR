@@ -25,7 +25,7 @@ from verl import DataProto
 def to_list_of_dict(batch: DataProto) -> list[dict]:
     tensors = batch.batch
     non_tensor = batch.non_tensor_batch
-    batch_size = len(tensors['input_ids'])
+    batch_size = len(tensors["input_ids"])
     save_list = []
     for bs in range(batch_size):
         save_dict = dict()
@@ -48,6 +48,7 @@ def torch_to_numpy(tensor, is_object=False):
     if is_object:
         tensor = tensor.astype(object)
     return tensor
+
 
 def numpy_to_torch(array, device):
     if isinstance(array, np.ndarray):
@@ -78,8 +79,8 @@ def process_image(image, max_pixels: int = 2048 * 2048, min_pixels: int = 256 * 
         width, height = int(image.width * resize_factor), int(image.height * resize_factor)
         image = image.resize((width, height))
 
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
+    if image.mode != "RGB":
+        image = image.convert("RGB")
 
     return image
 
@@ -107,7 +108,7 @@ def adjust_batch(config, data: DataProto, mode="copy") -> DataProto:
         keep_mask = np.ones(bs, dtype=bool)
         keep_mask[remove_indices] = False
 
-        keep_mask_tensor = torch.tensor(keep_mask, dtype=torch.bool, device=data.batch['input_ids'].device)
+        keep_mask_tensor = torch.tensor(keep_mask, dtype=torch.bool, device=data.batch["input_ids"].device)
         # Apply the mask to keep elements in their original order
         tensor_data = data.batch[keep_mask_tensor]
         non_tensor_data = {key: val[keep_mask] for key, val in data.non_tensor_batch.items()}
@@ -125,14 +126,15 @@ def adjust_batch(config, data: DataProto, mode="copy") -> DataProto:
     return adjusted_batch
 
 
-def filter_group_data(batch_list : list[dict],
-                        episode_rewards: np.ndarray,
-                        episode_lengths: np.ndarray,
-                        success: dict[str, np.ndarray],
-                        traj_uid: np.ndarray,
-                        config,
-                        last_try: bool = False,
-                        ):
+def filter_group_data(
+    batch_list: list[dict],
+    episode_rewards: np.ndarray,
+    episode_lengths: np.ndarray,
+    success: dict[str, np.ndarray],
+    traj_uid: np.ndarray,
+    config,
+    last_try: bool = False,
+):
     """
     Dynamic Sampling:
     Over-sample and filter out episode group in which all episodes have the same rewards.
@@ -155,7 +157,7 @@ def filter_group_data(batch_list : list[dict],
 
         # check if all group_traj_uid are the same
         for index in group_indices:
-            assert batch_list[index][0]['uid'] == batch_list[group_indices[0]][0]['uid']
+            assert batch_list[index][0]["uid"] == batch_list[group_indices[0]][0]["uid"]
 
         # Check if all rewards in the group are the same
         if not np.all(group_rewards == group_rewards[0]):
@@ -163,11 +165,7 @@ def filter_group_data(batch_list : list[dict],
             keep_indices = np.concatenate((keep_indices, group_indices))
 
     # Filter the batch_list, episode_rewards, episode_lengths, and success based on the keep_indices
-    success = {
-        key: value[keep_indices]
-        for key, value in success.items()
-        if len(value) == len(batch_list)
-    }
+    success = {key: value[keep_indices] for key, value in success.items() if len(value) == len(batch_list)}
     batch_list = [batch_list[i] for i in keep_indices]
     episode_rewards = episode_rewards[keep_indices]
     episode_lengths = episode_lengths[keep_indices]
@@ -175,4 +173,3 @@ def filter_group_data(batch_list : list[dict],
     traj_uid = traj_uid[keep_indices]
 
     return batch_list, episode_rewards, episode_lengths, success, traj_uid
-

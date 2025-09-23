@@ -84,7 +84,9 @@ class BaseModelInitializer(ABC):
         if post_process and value:
             from verl.models.llama.megatron.layers.parallel_linear import LinearForLastLayer
 
-            model.output_layer = LinearForLastLayer(input_size=self.tfconfig.hidden_size, output_size=1, config=self.tfconfig)
+            model.output_layer = LinearForLastLayer(
+                input_size=self.tfconfig.hidden_size, output_size=1, config=self.tfconfig
+            )
 
         return model
 

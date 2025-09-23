@@ -35,7 +35,9 @@ def init_config() -> DictConfig:
     model_path = "Qwen/Qwen2-7B-Instruct"
     config.actor_rollout_ref.model.path = model_path
     config.actor_rollout_ref.rollout.mode = "async"
-    config.actor_rollout_ref.rollout.chat_scheduler = "examples.ppo_trainer.naive_chat_scheduler.NaiveChatCompletionScheduler"
+    config.actor_rollout_ref.rollout.chat_scheduler = (
+        "examples.ppo_trainer.naive_chat_scheduler.NaiveChatCompletionScheduler"
+    )
     config.actor_rollout_ref.rollout.prompt_length = 4096
     config.actor_rollout_ref.rollout.response_length = 4096
 
@@ -98,7 +100,9 @@ def test_vllm_multi_turn(config):
         else:
             print("Done!")
 
-    messages = [{"role": "user", "content": "Let's play a role playing game. Your name is Bob, your favorite color is red."}]
+    messages = [
+        {"role": "user", "content": "Let's play a role playing game. Your name is Bob, your favorite color is red."}
+    ]
     async_rollout_manager.submit_chat_completions(
         callback=callback,
         callback_additional_info={"messages": messages, "round": 0},

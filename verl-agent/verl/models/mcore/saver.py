@@ -25,7 +25,9 @@ from torch.nn.parallel import DistributedDataParallel as torchDDP
 from verl.utils.megatron_utils import print_rank_0, unwrap_model
 
 
-def _megatron_calc_global_rank(tp_rank: int = 0, dp_rank: int = 0, pp_rank: int = 0, cp_rank: int = 0, ep_rank: int = 0):
+def _megatron_calc_global_rank(
+    tp_rank: int = 0, dp_rank: int = 0, pp_rank: int = 0, cp_rank: int = 0, ep_rank: int = 0
+):
     """Calculate global rank with support for CP/EP parallelism"""
 
     # Get parallel sizes for each dimension
@@ -37,7 +39,9 @@ def _megatron_calc_global_rank(tp_rank: int = 0, dp_rank: int = 0, pp_rank: int 
 
     # Verify total GPU count matches (must be consistent with parallel_state.py)
     total_size = tp_size * dp_size * pp_size * cp_size
-    assert total_size == torch.distributed.get_world_size(), f"{tp_size}x{dp_size}x{pp_size}x{cp_size} != {torch.distributed.get_world_size()}"
+    assert total_size == torch.distributed.get_world_size(), (
+        f"{tp_size}x{dp_size}x{pp_size}x{cp_size} != {torch.distributed.get_world_size()}"
+    )
 
     # Core calculation logic (corresponds to RankGenerator order parameter)
     # Assumes default order is "tp-cp-ep-dp-pp"
@@ -62,7 +66,9 @@ def _megatron_calc_layer_map(config):
 
     for pp_rank_idx in range(pp_size):
         for virtual_pp_rank_idx in range(virtual_pp_size):
-            layer_offset = virtual_pp_rank_idx * (config.num_hidden_layers // virtual_pp_size) + pp_rank_idx * num_layers_per_model
+            layer_offset = (
+                virtual_pp_rank_idx * (config.num_hidden_layers // virtual_pp_size) + pp_rank_idx * num_layers_per_model
+            )
             for layer_idx in range(num_layers_per_model):
                 layer_map[layer_offset + layer_idx] = (
                     pp_rank_idx,
@@ -115,7 +121,9 @@ def merge_megatron_ckpt_gptmodel(wrapped_models, config, dtype, is_value_model=F
 
     for i, wrapped_model in enumerate(wrapped_models):
         models[i] = unwrap_model(wrapped_model, (torchDDP, LocalDDP, Float16Module))
-        assert len(models[i].decoder.layers) == num_layers_per_model, f"len model layers {len(models[i].decoder.layers)} not equal to num_layers_per_model {num_layers_per_model}"
+        assert len(models[i].decoder.layers) == num_layers_per_model, (
+            f"len model layers {len(models[i].decoder.layers)} not equal to num_layers_per_model {num_layers_per_model}"
+        )
 
     state_dict = dict()
 
@@ -463,7 +471,9 @@ def merge_megatron_ckpt_gptmodel(wrapped_models, config, dtype, is_value_model=F
     return state_dict
 
 
-def merge_megatron_ckpt_gptmodel_qwen_moe(wrapped_models, config, dtype, is_value_model=False, tie_word_embeddings=False):
+def merge_megatron_ckpt_gptmodel_qwen_moe(
+    wrapped_models, config, dtype, is_value_model=False, tie_word_embeddings=False
+):
     raise NotImplementedError("merge_megatron_ckpt_gptmodel_qwen_moe is not implemented")
 
 
@@ -471,5 +481,7 @@ def merge_megatron_ckpt_gptmodel_dpskv3(wrapped_models, config, dtype, is_value_
     raise NotImplementedError("merge_megatron_ckpt_gptmodel_dpskv3 is not implemented")
 
 
-def merge_megatron_ckpt_gptmodel_mixtral(wrapped_models, config, dtype, is_value_model=False, tie_word_embeddings=False):
+def merge_megatron_ckpt_gptmodel_mixtral(
+    wrapped_models, config, dtype, is_value_model=False, tie_word_embeddings=False
+):
     raise NotImplementedError("merge_megatron_ckpt_gptmodel_mixtral is not implemented")

@@ -108,7 +108,9 @@ def convert_checkpoint_from_transformers_to_megatron(hf_model, model, hf_config)
         for layer, hf_layer in zip(model.decoder.layers, hf_model.model.layers, strict=False):
             layer.self_attention.linear_qkv.layer_norm_weight.copy_(hf_layer.input_layernorm.weight)
 
-            q = hf_layer.self_attn.q_proj.weight.view([num_key_value_heads, head_dim * num_attention_heads // num_key_value_heads, -1])
+            q = hf_layer.self_attn.q_proj.weight.view(
+                [num_key_value_heads, head_dim * num_attention_heads // num_key_value_heads, -1]
+            )
             k = hf_layer.self_attn.k_proj.weight.view([num_key_value_heads, head_dim, -1])
             v = hf_layer.self_attn.v_proj.weight.view([num_key_value_heads, head_dim, -1])
             qkv = torch.cat([q, k, v], dim=1).view(-1, hidden_dim).contiguous()
@@ -137,7 +139,9 @@ def convert_checkpoint_from_transformers_to_megatron(hf_model, model, hf_config)
 
             if has_share_expert:
                 layer.mlp.shared_experts.gate_weight.copy_(hf_layer.mlp.shared_expert_gate.weight)
-                shared_fc1_weight = torch.cat([hf_layer.mlp.shared_expert.gate_proj.weight, hf_layer.mlp.shared_expert.up_proj.weight])
+                shared_fc1_weight = torch.cat(
+                    [hf_layer.mlp.shared_expert.gate_proj.weight, hf_layer.mlp.shared_expert.up_proj.weight]
+                )
                 layer.mlp.shared_experts.linear_fc1.weight.copy_(shared_fc1_weight)
                 layer.mlp.shared_experts.linear_fc2.weight.copy_(hf_layer.mlp.shared_expert.down_proj.weight)
 
@@ -201,7 +205,9 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(hf_model, model, hf_
                     expert.linear_fc1.weight.copy_(fc1_weight)
                     expert.linear_fc2.weight.copy_(hf_expert.down_proj.weight)
             layer.pre_mlp_layernorm.weight.copy_(hf_layer.post_attention_layernorm.weight)
-            shared_fc1_weight = torch.cat([hf_layer.mlp.shared_experts.gate_proj.weight, hf_layer.mlp.shared_experts.up_proj.weight])
+            shared_fc1_weight = torch.cat(
+                [hf_layer.mlp.shared_experts.gate_proj.weight, hf_layer.mlp.shared_experts.up_proj.weight]
+            )
             layer.mlp.shared_experts.linear_fc1.weight.copy_(shared_fc1_weight)
             layer.mlp.shared_experts.linear_fc2.weight.copy_(hf_layer.mlp.shared_experts.down_proj.weight)
 
@@ -265,7 +271,9 @@ def convert_hf_to_mcore(hf_model_path, output_path, use_cpu_initialization=False
         warnings.simplefilter("ignore")
 
     # init hf model
-    hf_model = AutoModelForCausalLM.from_pretrained(hf_model_path, torch_dtype=torch.bfloat16, trust_remote_code=trust_remote_code)
+    hf_model = AutoModelForCausalLM.from_pretrained(
+        hf_model_path, torch_dtype=torch.bfloat16, trust_remote_code=trust_remote_code
+    )
     hf_state_dict = hf_model.state_dict()
 
     # load hf state dict to megatron model
@@ -299,4 +307,6 @@ def convert_hf_to_mcore(hf_model_path, output_path, use_cpu_initialization=False
 
 if __name__ == "__main__":
     args = _init_args()
-    convert_hf_to_mcore(args.hf_model_path, args.output_path, args.use_cpu_initialization, args.test, args.trust_remote_code)
+    convert_hf_to_mcore(
+        args.hf_model_path, args.output_path, args.use_cpu_initialization, args.test, args.trust_remote_code
+    )

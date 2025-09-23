@@ -165,7 +165,9 @@ class ModelRunner(ModelRunner):
                         self.model.__class__,
                     )
             else:
-                logger.warning("Using FP8 KV cache but no scaling factors provided. Defaulting to scaling factors of 1.0. This may lead to less accurate results!")
+                logger.warning(
+                    "Using FP8 KV cache but no scaling factors provided. Defaulting to scaling factors of 1.0. This may lead to less accurate results!"
+                )
 
         if envs.VLLM_TORCH_COMPILE_LEVEL == CompilationLevel.DYNAMO_AS_IS and supports_dynamo():
             from vllm.plugins import get_torch_compile_backend

@@ -22,6 +22,7 @@ from verl.utils.device import get_nccl_backend, get_torch_device
 
 def initialize_global_process_group(timeout_second=3600):
     from datetime import timedelta
+
     timeout_second = max(timeout_second, 7200)
     print("Initializing global process group...with timout:", timeout_second)
     torch.distributed.init_process_group(

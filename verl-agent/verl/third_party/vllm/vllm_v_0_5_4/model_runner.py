@@ -149,7 +149,9 @@ class ModelRunner(ModelRunner):
                         self.model.__class__,
                     )
             else:
-                logger.warning("Using FP8 KV cache but no scaling factors provided. Defaulting to scaling factors of 1.0. This may lead to less accurate results!")
+                logger.warning(
+                    "Using FP8 KV cache but no scaling factors provided. Defaulting to scaling factors of 1.0. This may lead to less accurate results!"
+                )
 
         if envs.VLLM_TEST_DYNAMO_GRAPH_CAPTURE:
             self.model = torch.compile(self.model, fullgraph=True, backend="eager")

@@ -99,7 +99,9 @@ class BaseModelMerger(ABC):
         self.hf_model_config_path = config.hf_model_config_path
 
         if config.hf_model_path:
-            print("Warning: --hf_model_path is deprecated and will be removed in a future version. Currently verl will save huggingface model configuration files into checkpoint directories. Therefore, there is no need to provide --hf_model_path. ")
+            print(
+                "Warning: --hf_model_path is deprecated and will be removed in a future version. Currently verl will save huggingface model configuration files into checkpoint directories. Therefore, there is no need to provide --hf_model_path. "
+            )
             self.hf_model_config_path = config.hf_model_path
 
         self.model_config = AutoConfig.from_pretrained(self.hf_model_config_path)
@@ -125,7 +127,9 @@ class BaseModelMerger(ABC):
             try:
                 model.generation_config = GenerationConfig.from_pretrained(self.hf_model_config_path)
             except OSError:
-                print(f"Warning: Generation config file not found in {self.hf_model_config_path}, using a generation config created from the model config.")
+                print(
+                    f"Warning: Generation config file not found in {self.hf_model_config_path}, using a generation config created from the model config."
+                )
         return model
 
     def save_hf_model_and_tokenizer(self, state_dict: dict[str, torch.Tensor]):
@@ -168,10 +172,16 @@ class FSDPModelMerger(BaseModelMerger):
             match = re.match(r"model_world_size_(\d+)_rank_0\.pt", filename)
             if match:
                 return int(match.group(1))
-        raise FileNotFoundError(rf"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}")
+        raise FileNotFoundError(
+            rf"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}"
+        )
 
     def _load_rank_zero_state_dict(self, world_size: int) -> dict:
-        return torch.load(Path(self.config.local_dir) / f"model_world_size_{world_size}_rank_0.pt", map_location="cpu", weights_only=False)
+        return torch.load(
+            Path(self.config.local_dir) / f"model_world_size_{world_size}_rank_0.pt",
+            map_location="cpu",
+            weights_only=False,
+        )
 
     def _extract_device_mesh_info(self, state_dict: dict, world_size: int) -> tuple[np.ndarray, tuple[str, ...]]:
         """
@@ -193,7 +203,9 @@ class FSDPModelMerger(BaseModelMerger):
 
         return mesh, mesh_dim_names
 
-    def _calculate_shard_configuration(self, mesh: np.ndarray, mesh_dim_names: tuple[str, ...]) -> tuple[int, tuple[int, ...]]:
+    def _calculate_shard_configuration(
+        self, mesh: np.ndarray, mesh_dim_names: tuple[str, ...]
+    ) -> tuple[int, tuple[int, ...]]:
         """Calculates the total number of shards and the shape of the device mesh."""
         assert mesh_dim_names in (("fsdp",), ("ddp", "fsdp")), f"Unsupported mesh_dim_names {mesh_dim_names}"
 
@@ -218,7 +230,9 @@ class FSDPModelMerger(BaseModelMerger):
 
         raise NotImplementedError(f"Unsupported placement: {placement}")
 
-    def _load_and_merge_state_dicts(self, world_size: int, total_shards: int, mesh_shape: tuple[int, ...], mesh_dim_names: tuple[str, ...]) -> dict[str, torch.Tensor]:
+    def _load_and_merge_state_dicts(
+        self, world_size: int, total_shards: int, mesh_shape: tuple[int, ...], mesh_dim_names: tuple[str, ...]
+    ) -> dict[str, torch.Tensor]:
         model_state_dict_lst = [None] * total_shards
 
         def process_one_shard(rank: int, model_state_dict_lst: list):
@@ -321,11 +335,15 @@ class FSDPModelMerger(BaseModelMerger):
         for key in hf_model_keys:
             hf_shape = hf_state_dict[key].shape
             collected_shape = state_dict[key].shape
-            assert hf_shape == collected_shape, f"Shape mismatch for key '{key}': original {hf_shape} vs collected {collected_shape}"
+            assert hf_shape == collected_shape, (
+                f"Shape mismatch for key '{key}': original {hf_shape} vs collected {collected_shape}"
+            )
 
             hf_dtype = hf_state_dict[key].dtype
             collected_dtype = state_dict[key].dtype
-            assert hf_dtype == collected_dtype, f"Dtype mismatch for key '{key}': original {hf_dtype} vs collected {collected_dtype}"
+            assert hf_dtype == collected_dtype, (
+                f"Dtype mismatch for key '{key}': original {hf_dtype} vs collected {collected_dtype}"
+            )
 
             torch.testing.assert_close(hf_state_dict[key], state_dict[key], atol=1e-6, rtol=1e-6)
 
@@ -361,7 +379,14 @@ class MegatronModelMerger(BaseModelMerger):
             pp_size = max(pp_size, pp_rank + 1)
         return sharded_dirs, tp_size, pp_size
 
-    def _merge_across_tp(self, key: str, tp_data: list[torch.Tensor], config: PretrainedConfig, tp_size: int, is_value_model: bool = False) -> torch.Tensor | list[torch.Tensor]:
+    def _merge_across_tp(
+        self,
+        key: str,
+        tp_data: list[torch.Tensor],
+        config: PretrainedConfig,
+        tp_size: int,
+        is_value_model: bool = False,
+    ) -> torch.Tensor | list[torch.Tensor]:
         if "linear_fc1.weight" in key:
             # if the tensor is gate and proj
             gate_lst = []
@@ -412,7 +437,9 @@ class MegatronModelMerger(BaseModelMerger):
                 dim = 1
             return torch.cat(tp_data, dim=dim)
 
-    def _load_state_dicts(self, model_ckpt_path: str, sharded_dirs: list[str], tp_size: int, pp_size: int) -> list[list[dict]]:
+    def _load_state_dicts(
+        self, model_ckpt_path: str, sharded_dirs: list[str], tp_size: int, pp_size: int
+    ) -> list[list[dict]]:
         model_state_dict_lst = [[None for _ in range(tp_size)] for _ in range(pp_size)]
 
         def _process_one_megatron_shard(sharded_dir: str):
@@ -428,7 +455,9 @@ class MegatronModelMerger(BaseModelMerger):
 
         return model_state_dict_lst
 
-    def _merge_state_dicts(self, model_state_dict_lst: list[list[dict]], tp_size: int, pp_size: int) -> dict[str, torch.Tensor]:
+    def _merge_state_dicts(
+        self, model_state_dict_lst: list[list[dict]], tp_size: int, pp_size: int
+    ) -> dict[str, torch.Tensor]:
         state_dict = {}
         vpp_size = len(model_state_dict_lst[0][0])
         layers_cum = 0
@@ -454,7 +483,9 @@ class MegatronModelMerger(BaseModelMerger):
                         new_key = ".".join(new_key_list)
 
                     tp_data = [model_state_dict_lst[pp_rank][tp_rank][vpp_rank][key] for tp_rank in range(tp_size)]
-                    merged = self._merge_across_tp(new_key, tp_data, self.model_config, tp_size, self.config.is_value_model)
+                    merged = self._merge_across_tp(
+                        new_key, tp_data, self.model_config, tp_size, self.config.is_value_model
+                    )
 
                     if not isinstance(merged, list):
                         state_dict[new_key] = merged
@@ -562,19 +593,44 @@ def main():
     subparsers = parser.add_subparsers(dest="operation", required=True, help="Specify 'merge' or 'test' operation.")
 
     base_op_parser = argparse.ArgumentParser(add_help=False)
-    base_op_parser.add_argument("--backend", type=str, required=True, choices=["fsdp", "megatron"], help="The backend of the model")
+    base_op_parser.add_argument(
+        "--backend", type=str, required=True, choices=["fsdp", "megatron"], help="The backend of the model"
+    )
     base_op_parser.add_argument("--local_dir", type=str, required=True, help="Path to the saved model checkpoints")
-    base_op_parser.add_argument("--hf_model_path", type=str, default=None, help="(Deprecated) Path to the original Hugging Face model for config.")
-    base_op_parser.add_argument("--tie-word-embedding", action="store_true", help="Whether to tie word embedding weights (currently only Megatron supported)")
-    base_op_parser.add_argument("--is-value-model", action="store_true", help="Whether the model is a value model (currently only Megatron supported)")
+    base_op_parser.add_argument(
+        "--hf_model_path",
+        type=str,
+        default=None,
+        help="(Deprecated) Path to the original Hugging Face model for config.",
+    )
+    base_op_parser.add_argument(
+        "--tie-word-embedding",
+        action="store_true",
+        help="Whether to tie word embedding weights (currently only Megatron supported)",
+    )
+    base_op_parser.add_argument(
+        "--is-value-model",
+        action="store_true",
+        help="Whether the model is a value model (currently only Megatron supported)",
+    )
 
     merge_parser = subparsers.add_parser("merge", parents=[base_op_parser], help="Merge model checkpoints and save.")
-    merge_parser.add_argument("--target_dir", default="tmp", type=str, help="Directory to save the merged huggingface model")
-    merge_parser.add_argument("--hf_upload_path", default=None, type=str, help="Hugging Face repository ID to upload the model")
-    merge_parser.add_argument("--private", action="store_true", help="Whether to upload the model to a private Hugging Face repository")
+    merge_parser.add_argument(
+        "--target_dir", default="tmp", type=str, help="Directory to save the merged huggingface model"
+    )
+    merge_parser.add_argument(
+        "--hf_upload_path", default=None, type=str, help="Hugging Face repository ID to upload the model"
+    )
+    merge_parser.add_argument(
+        "--private", action="store_true", help="Whether to upload the model to a private Hugging Face repository"
+    )
 
-    test_parser = subparsers.add_parser("test", parents=[base_op_parser], help="Test merged model against a reference Hugging Face model")
-    test_parser.add_argument("--test_hf_dir", type=str, required=True, help="Path to the reference Hugging Face model directory for testing")
+    test_parser = subparsers.add_parser(
+        "test", parents=[base_op_parser], help="Test merged model against a reference Hugging Face model"
+    )
+    test_parser.add_argument(
+        "--test_hf_dir", type=str, required=True, help="Path to the reference Hugging Face model directory for testing"
+    )
 
     args = parser.parse_args()
 

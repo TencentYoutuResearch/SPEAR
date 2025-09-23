@@ -745,13 +745,17 @@ def agg_loss(loss_mat: torch.Tensor, loss_mask: torch.Tensor, loss_agg_mode: str
         # agg_loss to ensure divisor stays constant throughout.
     elif loss_agg_mode == "seq-norm-token-sum":
         # here by mistral implementation
-        seq_losses = torch.sum(loss_mat * loss_mask, dim=-1) # token-sum
+        seq_losses = torch.sum(loss_mat * loss_mask, dim=-1)  # token-sum
         if rollout_n:
+
             def groupwise_sum(token_len_sum, N):
                 groups = token_len_sum.view(-1, N)
                 group_sums = groups.sum(dim=1)
                 return group_sums.repeat_interleave(N)
-            assert loss_mat.shape[0] % rollout_n == 0, f"Batch size {loss_mat.shape[0]} is not divisible by rollout_n {rollout_n}."
+
+            assert loss_mat.shape[0] % rollout_n == 0, (
+                f"Batch size {loss_mat.shape[0]} is not divisible by rollout_n {rollout_n}."
+            )
             token_len_sum = torch.sum(loss_mask, dim=-1)  # group-norm
             token_len_sum_group = groupwise_sum(token_len_sum, rollout_n)
             loss = torch.mean(seq_losses / token_len_sum_group)  # seq-norm
@@ -774,7 +778,7 @@ def compute_policy_loss(
     cliprange_high=None,
     clip_ratio_c=3.0,
     loss_agg_mode: str = "token-mean",
-    rollout_n=8.0
+    rollout_n=8.0,
 ):
     """
     Compute the clipped policy objective and related metrics for PPO.
@@ -922,7 +926,9 @@ def compute_policy_loss_vanilla(
 
 
 @register_policy_loss("gpg")
-def compute_policy_loss_gpg(old_log_prob, log_prob, advantages, response_mask, loss_agg_mode="token-mean", config=None, is_replay=False):
+def compute_policy_loss_gpg(
+    old_log_prob, log_prob, advantages, response_mask, loss_agg_mode="token-mean", config=None, is_replay=False
+):
     """Adapted from
     https://github.com/AMAP-ML/GPG/blob/main/VisualThinker-R1-Zero/src/open-r1-multimodal/src/open_r1/trainer/grpo_trainer.py#L495
     Args:
@@ -1022,7 +1028,6 @@ def compute_policy_loss_clip_cov(
     cov_all[response_mask == 0] = -torch.inf
     cov_all[clip_by_origin] = -torch.inf
 
-
     clip_num = max(int(clip_cov_ratio * response_mask.sum().item()), 1)
     top_k_idx = (cov_all < clip_cov_ub) & (cov_all > clip_cov_lb) & (response_mask > 0)
     top_k_idx = torch.nonzero(top_k_idx)
@@ -1079,7 +1084,9 @@ def compute_policy_loss_kl_cov(
     assert not isinstance(config, AlgoConfig), "passing AlgoConfig not supported yet"
     assert config.policy_loss is not None
     if is_replay:
-        kl_cov_ratio = config.policy_loss.kl_cov_ratio_replay if config.policy_loss.kl_cov_ratio_replay is not None else 0.8
+        kl_cov_ratio = (
+            config.policy_loss.kl_cov_ratio_replay if config.policy_loss.kl_cov_ratio_replay is not None else 0.8
+        )
     else:
         kl_cov_ratio = config.policy_loss.kl_cov_ratio if config.policy_loss.kl_cov_ratio is not None else 0.0002
 

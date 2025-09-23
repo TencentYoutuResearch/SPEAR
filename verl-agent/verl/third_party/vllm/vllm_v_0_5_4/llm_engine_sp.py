@@ -229,7 +229,10 @@ class LLMEngine(LLMEngine):
         # Create the scheduler.
         # NOTE: the cache_config here have been updated with the numbers of
         # GPU and CPU blocks, which are profiled in the distributed executor.
-        self.scheduler = [Scheduler(scheduler_config, cache_config, lora_config, parallel_config.pipeline_parallel_size) for _ in range(parallel_config.pipeline_parallel_size)]
+        self.scheduler = [
+            Scheduler(scheduler_config, cache_config, lora_config, parallel_config.pipeline_parallel_size)
+            for _ in range(parallel_config.pipeline_parallel_size)
+        ]
 
         # Metric Logging.
         if self.log_stats:
@@ -266,7 +269,9 @@ class LLMEngine(LLMEngine):
 
     # TODO(sgm): add for verl but we may not tokenizer in Rollout
     def _init_tokenizer(self, tokenizer, **tokenizer_init_kwargs):
-        init_kwargs = dict(enable_lora=bool(self.lora_config), max_num_seqs=self.scheduler_config.max_num_seqs, max_input_length=None)
+        init_kwargs = dict(
+            enable_lora=bool(self.lora_config), max_num_seqs=self.scheduler_config.max_num_seqs, max_input_length=None
+        )
         init_kwargs.update(tokenizer_init_kwargs)
         return TokenizerGroup(tokenizer, **init_kwargs)
 
@@ -282,7 +287,9 @@ class LLMEngine(LLMEngine):
     # The GPUExecutor remove the Ray dependency
     @classmethod
     def _get_executor_cls(cls, engine_config: EngineConfig) -> type[ExecutorBase]:
-        assert engine_config.device_config.device_type == "cuda", "Currently, the vllm in verl only support running on GPU"
+        assert engine_config.device_config.device_type == "cuda", (
+            "Currently, the vllm in verl only support running on GPU"
+        )
 
         if engine_config.parallel_config.world_size == 1:
             engine_config.load_config.load_format = "dummy_hf"
@@ -306,7 +313,9 @@ class LLMEngine(LLMEngine):
         engine_config = engine_args.create_engine_config()
         executor_class = cls._get_executor_cls(engine_config)
         # Initialize the cluster and specify the executor class.
-        assert engine_config.device_config.device_type == "cuda", "Currently, the vllm in verl only support running on GPU"
+        assert engine_config.device_config.device_type == "cuda", (
+            "Currently, the vllm in verl only support running on GPU"
+        )
 
         from .spmd_gpu_executor import SPMDGPUExecutor
 

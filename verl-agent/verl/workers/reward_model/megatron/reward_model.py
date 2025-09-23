@@ -81,7 +81,12 @@ class MegatronRewardModel(BasePPORewardModel):
             # 2. decode by sft_tokenizer, remove sft system prompts
             decode_result = self.sft_tokenizer.decode(valid_id)
             # workaround
-            decode_with_rm_chat = decode_result.replace("<|user|>\n", "[INST] ").replace("</s>\n<|assistant|>\n", " [/INST]").replace("</s> \n<|assistant|>\n", " [/INST]") + "</s>"
+            decode_with_rm_chat = (
+                decode_result.replace("<|user|>\n", "[INST] ")
+                .replace("</s>\n<|assistant|>\n", " [/INST]")
+                .replace("</s> \n<|assistant|>\n", " [/INST]")
+                + "</s>"
+            )
             if print_decode and torch.distributed.get_rank() == 0:
                 # only print first decode result
                 print(
@@ -91,7 +96,9 @@ class MegatronRewardModel(BasePPORewardModel):
                 )
                 print_decode = False
             # 3. encode by rm_tokenizer
-            rm_input_ids = self.rm_tokenizer(decode_with_rm_chat, return_tensors="pt")["input_ids"][0].to(input_ids.device)
+            rm_input_ids = self.rm_tokenizer(decode_with_rm_chat, return_tensors="pt")["input_ids"][0].to(
+                input_ids.device
+            )
             # 4. generate attention_mask and position_ids
             rm_attention_mask = torch.ones_like(rm_input_ids, device=input_ids.device)
             cur_seqlen = rm_input_ids.shape[-1]
@@ -144,7 +151,9 @@ class MegatronRewardModel(BasePPORewardModel):
         response_length = responses.size(1)
 
         with torch.no_grad():
-            output = self.forward_batch(data, use_dynamic_bsz=use_dynamic_bsz, micro_batch_size=micro_batch_size, max_token_len=max_token_len)
+            output = self.forward_batch(
+                data, use_dynamic_bsz=use_dynamic_bsz, micro_batch_size=micro_batch_size, max_token_len=max_token_len
+            )
             if mpu.is_pipeline_last_stage(ignore_virtual=True):
                 logits = torch.cat(output["output"], dim=0)
                 if use_dynamic_bsz:
@@ -210,7 +219,11 @@ class MegatronRewardModel(BasePPORewardModel):
         # TODO: actually, we just need to control the sampling order.
         mini_batch = data
         mini_batch.batch = mini_batch.batch.contiguous()
-        broadcast_dict_tensor(mini_batch.batch, src=mpu.get_pipeline_model_parallel_last_rank(), group=mpu.get_pipeline_model_parallel_group())
+        broadcast_dict_tensor(
+            mini_batch.batch,
+            src=mpu.get_pipeline_model_parallel_last_rank(),
+            group=mpu.get_pipeline_model_parallel_group(),
+        )
 
         mini_batch.batch["attention_mask"] = mini_batch.batch["attention_mask"].to(bool)
 
@@ -220,13 +233,21 @@ class MegatronRewardModel(BasePPORewardModel):
             vpp_size = mpu.get_virtual_pipeline_model_parallel_world_size()
             if vpp_size is not None and vpp_size > 1:
                 microbatch_group_size_per_vp_stage = self.tf_config.microbatch_group_size_per_vp_stage
-                micro_batches, indices = rearrange_micro_batches(batch=mini_batch.batch, num_batches_divided_by=microbatch_group_size_per_vp_stage, max_token_len=max_token_len)
-                assert len(micro_batches) % self.tf_config.microbatch_group_size_per_vp_stage == 0, f"micro_batches {micro_batches} must be divisible by microbatch_group_size_per_vp_stage {microbatch_group_size_per_vp_stage} for megatron backend"
+                micro_batches, indices = rearrange_micro_batches(
+                    batch=mini_batch.batch,
+                    num_batches_divided_by=microbatch_group_size_per_vp_stage,
+                    max_token_len=max_token_len,
+                )
+                assert len(micro_batches) % self.tf_config.microbatch_group_size_per_vp_stage == 0, (
+                    f"micro_batches {micro_batches} must be divisible by microbatch_group_size_per_vp_stage {microbatch_group_size_per_vp_stage} for megatron backend"
+                )
             else:
                 micro_batches, indices = rearrange_micro_batches(batch=mini_batch.batch, max_token_len=max_token_len)
             total_seqlen = max_token_len
         else:
-            assert micro_batch_size is not None, "micro_batch_size is needed to be passed in when not using dynamic batch size"
+            assert micro_batch_size is not None, (
+                "micro_batch_size is needed to be passed in when not using dynamic batch size"
+            )
             micro_batches = mini_batch.batch.split(micro_batch_size)
             seq_len = micro_batches[0]["input_ids"].shape[1]
             total_seqlen = micro_batch_size * seq_len

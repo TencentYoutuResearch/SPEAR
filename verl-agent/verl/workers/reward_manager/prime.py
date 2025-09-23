@@ -29,10 +29,7 @@ async def single_compute_score(evaluation_func, completion, reference, task, tas
     loop = asyncio.get_running_loop()
     try:
         # Ensure process_completion is called properly
-        future = loop.run_in_executor(
-            executor,
-            partial(evaluation_func, task, completion, reference, task_extra_info)
-        )
+        future = loop.run_in_executor(executor, partial(evaluation_func, task, completion, reference, task_extra_info))
         return await asyncio.wait_for(future, timeout=timeout)
     except asyncio.TimeoutError:
         print(f"[Timeout] Task timeout: {completion}")
@@ -42,7 +39,9 @@ async def single_compute_score(evaluation_func, completion, reference, task, tas
         return None  # Default value for failed rows
 
 
-async def parallel_compute_score_async(evaluation_func, completions, references, tasks, extra_info=None, num_processes=64):
+async def parallel_compute_score_async(
+    evaluation_func, completions, references, tasks, extra_info=None, num_processes=64
+):
     if extra_info is None:
         extra_info = [None] * len(tasks)
     scores = []
@@ -84,13 +83,14 @@ async def parallel_compute_score_async(evaluation_func, completions, references,
             scores.append(float(result[0]))
     return scores
 
+
 def run_reward_scoring(evaluation_func, completions, references, tasks, extra_info=None, num_processes=64):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
-        return loop.run_until_complete(parallel_compute_score_async(
-            evaluation_func, completions, references, tasks, extra_info, num_processes
-        ))
+        return loop.run_until_complete(
+            parallel_compute_score_async(evaluation_func, completions, references, tasks, extra_info, num_processes)
+        )
     finally:
         loop.close()
 

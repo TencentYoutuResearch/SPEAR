@@ -85,9 +85,15 @@ class ExecutionWorker:
                 logger.warning(f"Error when executing code: {e}")
 
 
-def init_execution_pool(num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode):
+def init_execution_pool(
+    num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode
+):
     if mode == PoolMode.ThreadMode:
-        return ray.remote(ExecutionWorker).options(max_concurrency=num_workers).remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+        return (
+            ray.remote(ExecutionWorker)
+            .options(max_concurrency=num_workers)
+            .remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+        )
     else:
         raise NotImplementedError("Process mode is not implemented yet")
         # return ray.util.multiprocessing.Pool(processes=num_workers)
@@ -131,7 +137,12 @@ class SandboxFusionTool(BaseTool):
         self.default_timeout = config.get("default_timeout", 30)
         self.default_language = config.get("default_language", "python")
         self.enable_global_rate_limit = config.get("enable_global_rate_limit", True)
-        self.execution_pool = init_execution_pool(num_workers=self.num_workers, enable_global_rate_limit=self.enable_global_rate_limit, rate_limit=self.rate_limit, mode=PoolMode.ThreadMode)
+        self.execution_pool = init_execution_pool(
+            num_workers=self.num_workers,
+            enable_global_rate_limit=self.enable_global_rate_limit,
+            rate_limit=self.rate_limit,
+            mode=PoolMode.ThreadMode,
+        )
         self.sandbox_fusion_url = config.get("sandbox_fusion_url", "")
         if self.sandbox_fusion_url == "":
             raise ValueError("sandbox_fusion_url is not set")

@@ -79,8 +79,6 @@ def get_policy_loss_fn(name):
     return POLICY_LOSS_REGISTRY[loss_name]
 
 
-
-
 class AdaptiveKLController:
     """
     Adaptive KL controller described in the paper:
@@ -117,7 +115,6 @@ def get_kl_controller(kl_ctrl):
         return AdaptiveKLController(init_kl_coef=kl_ctrl.kl_coef, target_kl=kl_ctrl.target_kl, horizon=kl_ctrl.horizon)
     else:
         raise NotImplementedError
-
 
 
 def compute_gae_advantage_return(
@@ -189,7 +186,7 @@ def compute_grpo_outcome_advantage(
             If True, the advantage is scaled by the std, as in the original GRPO.
             If False, the advantage is not scaled, as in Dr.GRPO (https://arxiv.org/abs/2503.20783).
         compute_mean_std_cross_all_data: bool
-            If True (more stable), the mean and std are computed across all data in the batch. 
+            If True (more stable), the mean and std are computed across all data in the batch.
             If False (i.e., standard episode-level adv), the mean and std are computed across N trajectories.
 
     Returns:
@@ -199,7 +196,7 @@ def compute_grpo_outcome_advantage(
             shape is (bs, response_length)
     """
     scores = token_level_rewards.sum(dim=-1)
-    assert(scores.size(0) == response_mask.size(0))
+    assert scores.size(0) == response_mask.size(0)
     id2score = defaultdict(list)
     id2mean = {}
     id2std = {}
@@ -270,7 +267,7 @@ def compute_grpo_passk_outcome_advantage(
         epsilon: float for numerical stability
         norm_adv_by_std_in_grpo: if True, normalize advantage by std within group
         compute_mean_std_cross_all_data: bool
-            If True (more stable), the mean and std are computed across all data in the batch. 
+            If True (more stable), the mean and std are computed across all data in the batch.
             If False (i.e., standard episode-level adv), the mean and std are computed across N trajectories.
 
     Returns:
@@ -296,7 +293,9 @@ def compute_grpo_passk_outcome_advantage(
         for idx in id2scores:
             rewards = torch.stack(id2scores[idx])  # (k,)
             if rewards.numel() < 2:
-                raise ValueError(f"Pass@k requires at least 2 samples per group. Got {rewards.numel()} for group {idx}.")
+                raise ValueError(
+                    f"Pass@k requires at least 2 samples per group. Got {rewards.numel()} for group {idx}."
+                )
             topk, topk_idx = torch.topk(rewards, 2)
             r_max, r_second_max = topk[0], topk[1]
             i_max = id2indices[idx][topk_idx[0].item()]
@@ -310,7 +309,14 @@ def compute_grpo_passk_outcome_advantage(
     return advantages, advantages
 
 
-def compute_reinforce_plus_plus_baseline_outcome_advantage(token_level_rewards: torch.Tensor, response_mask: torch.Tensor, index: torch.Tensor, traj_index: np.ndarray, epsilon: float = 1e-6, compute_mean_std_cross_all_data: bool = True):
+def compute_reinforce_plus_plus_baseline_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: torch.Tensor,
+    traj_index: np.ndarray,
+    epsilon: float = 1e-6,
+    compute_mean_std_cross_all_data: bool = True,
+):
     """
     Compute advantage for RF++-baseline (https://arxiv.org/abs/2501.03262), operating only on Outcome reward
     (with only one scalar reward for each response).
@@ -356,7 +362,14 @@ def compute_reinforce_plus_plus_baseline_outcome_advantage(token_level_rewards: 
     return scores, scores
 
 
-def compute_rloo_outcome_advantage(token_level_rewards: torch.Tensor, response_mask: torch.Tensor, index: np.ndarray, traj_index: np.ndarray, epsilon: float = 1e-6, compute_mean_std_cross_all_data: bool = True):
+def compute_rloo_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.ndarray,
+    traj_index: np.ndarray,
+    epsilon: float = 1e-6,
+    compute_mean_std_cross_all_data: bool = True,
+):
     """
     Compute advantage for RLOO based on https://arxiv.org/abs/2402.14740
     Args:
@@ -394,13 +407,17 @@ def compute_rloo_outcome_advantage(token_level_rewards: torch.Tensor, response_m
         for i in range(bsz):
             response_num = len(id2score[index[i]])
             if response_num > 1:
-                scores[i] = scores[i] * response_num / (response_num - 1) - id2mean[index[i]] * response_num / (response_num - 1)
+                scores[i] = scores[i] * response_num / (response_num - 1) - id2mean[index[i]] * response_num / (
+                    response_num - 1
+                )
         scores = scores.unsqueeze(-1) * response_mask
 
     return scores, scores
 
 
-def compute_reinforce_plus_plus_outcome_advantage(token_level_rewards: torch.Tensor, response_mask: torch.Tensor, gamma: torch.Tensor):
+def compute_reinforce_plus_plus_outcome_advantage(
+    token_level_rewards: torch.Tensor, response_mask: torch.Tensor, gamma: torch.Tensor
+):
     """
     Compute advantage for REINFORCE++.
     This implementation is based on the paper: https://arxiv.org/abs/2501.03262
@@ -433,7 +450,9 @@ def compute_reinforce_plus_plus_outcome_advantage(token_level_rewards: torch.Ten
     return advantages, returns
 
 
-def compute_remax_outcome_advantage(token_level_rewards: torch.Tensor, reward_baselines: torch.Tensor, response_mask: torch.Tensor):
+def compute_remax_outcome_advantage(
+    token_level_rewards: torch.Tensor, reward_baselines: torch.Tensor, response_mask: torch.Tensor
+):
     """
     Compute advantage for ReMax, operating only on Outcome reward
     This implementation is based on the paper: https://arxiv.org/abs/2310.10505
@@ -541,7 +560,10 @@ def compute_policy_loss(
         loss_agg_mode (str, optional):
             Aggregation mode for `agg_loss`. Defaults to "token-mean".
     """
-    assert clip_ratio_c > 1.0, "The lower bound of the clip_ratio_c for dual-clip PPO should be greater than 1.0," + f" but get the value: {clip_ratio_c}."
+    assert clip_ratio_c > 1.0, (
+        "The lower bound of the clip_ratio_c for dual-clip PPO should be greater than 1.0,"
+        + f" but get the value: {clip_ratio_c}."
+    )
 
     negative_approx_kl = log_prob - old_log_prob
     ratio = torch.exp(negative_approx_kl)
@@ -552,21 +574,24 @@ def compute_policy_loss(
         cliprange_low = cliprange
     if cliprange_high is None:
         cliprange_high = cliprange
-    pg_losses2 = -advantages * torch.clamp(ratio, 1 - cliprange_low, 1 + cliprange_high)  # - clip(ratio, 1-cliprange, 1+cliprange) * A
-    clip_pg_losses1 = torch.maximum(pg_losses1, pg_losses2)  # max(-ratio * A, -clip(ratio, 1-cliprange, 1+cliprange) * A)
+    pg_losses2 = -advantages * torch.clamp(
+        ratio, 1 - cliprange_low, 1 + cliprange_high
+    )  # - clip(ratio, 1-cliprange, 1+cliprange) * A
+    clip_pg_losses1 = torch.maximum(
+        pg_losses1, pg_losses2
+    )  # max(-ratio * A, -clip(ratio, 1-cliprange, 1+cliprange) * A)
     pg_clipfrac = verl_F.masked_mean(torch.gt(pg_losses2, pg_losses1).float(), response_mask)
 
     pg_losses3 = -advantages * clip_ratio_c
     clip_pg_losses2 = torch.min(pg_losses3, clip_pg_losses1)
-    pg_clipfrac_lower = verl_F.masked_mean(torch.gt(clip_pg_losses1, pg_losses3) * (advantages < 0).float(), response_mask)
+    pg_clipfrac_lower = verl_F.masked_mean(
+        torch.gt(clip_pg_losses1, pg_losses3) * (advantages < 0).float(), response_mask
+    )
 
     pg_losses = torch.where(advantages < 0, clip_pg_losses2, clip_pg_losses1)
     pg_loss = agg_loss(loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
 
     return pg_loss, pg_clipfrac, ppo_kl, pg_clipfrac_lower
-
-
-
 
 
 @register_policy_loss("vanilla")
@@ -578,7 +603,7 @@ def compute_policy_loss_vanilla(
     loss_agg_mode: str = "token-mean",
     # config: Optional[DictConfig | AlgoConfig] = None,
     config: Optional[DictConfig] = None,
-    is_replay: bool = False
+    is_replay: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute the clipped policy objective and related metrics for PPO.
@@ -649,7 +674,9 @@ def compute_policy_loss_vanilla(
 
 
 @register_policy_loss("gpg")
-def compute_policy_loss_gpg(old_log_prob, log_prob, advantages, response_mask, loss_agg_mode="token-mean", config=None, is_replay: bool = False):
+def compute_policy_loss_gpg(
+    old_log_prob, log_prob, advantages, response_mask, loss_agg_mode="token-mean", config=None, is_replay: bool = False
+):
     """Adapted from
     https://github.com/AMAP-ML/GPG/blob/main/VisualThinker-R1-Zero/src/open-r1-multimodal/src/open_r1/trainer/grpo_trainer.py#L495
     Args:
@@ -678,7 +705,7 @@ def compute_policy_loss_clip_cov(
     loss_agg_mode: str = "token-mean",
     # config: Optional[DictConfig | AlgoConfig] = None,
     config: Optional[DictConfig] = None,
-    is_replay: bool = False
+    is_replay: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute the clipped policy objective and related metrics for Clip-Cov.
@@ -751,7 +778,6 @@ def compute_policy_loss_clip_cov(
     cov_all[response_mask == 0] = -torch.inf
     cov_all[clip_by_origin] = -torch.inf
 
-
     clip_num = max(int(clip_cov_ratio * response_mask.sum().item()), 1)
     top_k_idx = (cov_all < clip_cov_ub) & (cov_all > clip_cov_lb) & (response_mask > 0)
     top_k_idx = torch.nonzero(top_k_idx)
@@ -781,7 +807,7 @@ def compute_policy_loss_kl_cov(
     loss_agg_mode: str = "token-mean",
     # config: Optional[DictConfig | AlgoConfig] = None,
     config: Optional[DictConfig] = None,
-    is_replay: bool = False
+    is_replay: bool = False,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     Compute the clipped policy objective and related metrics for Clip-Cov.
@@ -809,7 +835,9 @@ def compute_policy_loss_kl_cov(
     # assert not isinstance(config, AlgoConfig), "passing AlgoConfig not supported yet"
     assert config.policy_loss is not None
     if is_replay:
-        kl_cov_ratio = config.policy_loss.kl_cov_ratio_replay if config.policy_loss.kl_cov_ratio_replay is not None else 0.8
+        kl_cov_ratio = (
+            config.policy_loss.kl_cov_ratio_replay if config.policy_loss.kl_cov_ratio_replay is not None else 0.8
+        )
     else:
         kl_cov_ratio = config.policy_loss.kl_cov_ratio if config.policy_loss.kl_cov_ratio is not None else 0.0002
 
@@ -848,13 +876,6 @@ def compute_policy_loss_kl_cov(
     return pg_loss, torch.tensor(0.0), ppo_kl_abs, torch.tensor(0.0)
 
 
-
-
-
-
-
-
-
 def compute_entropy_loss(logits, response_mask, loss_agg_mode: str = "token-mean"):
     """Compute categorical entropy loss (For backward compatibility)
 
@@ -872,7 +893,14 @@ def compute_entropy_loss(logits, response_mask, loss_agg_mode: str = "token-mean
     return entropy_loss
 
 
-def compute_value_loss(vpreds: torch.Tensor, returns: torch.Tensor, values: torch.Tensor, response_mask: torch.Tensor, cliprange_value: float, loss_agg_mode: str = "token-mean"):
+def compute_value_loss(
+    vpreds: torch.Tensor,
+    returns: torch.Tensor,
+    values: torch.Tensor,
+    response_mask: torch.Tensor,
+    cliprange_value: float,
+    loss_agg_mode: str = "token-mean",
+):
     """
     Compute the clipped value-function loss for PPO.
 

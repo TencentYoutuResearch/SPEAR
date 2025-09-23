@@ -143,10 +143,14 @@ class SPMDGPUExecutor(ExecutorBase):
         self.cache_config.num_cpu_blocks = num_cpu_blocks
 
         if torch.distributed.get_rank() == 0:
-            print(f"before init cache memory allocated: {torch.cuda.memory_allocated() / 1e9}GB, reserved: {torch.cuda.memory_reserved() / 1e9}GB")
+            print(
+                f"before init cache memory allocated: {torch.cuda.memory_allocated() / 1e9}GB, reserved: {torch.cuda.memory_reserved() / 1e9}GB"
+            )
         self.worker.initialize_cache(num_gpu_blocks=num_gpu_blocks, num_cpu_blocks=num_cpu_blocks)
         if torch.distributed.get_rank() == 0:
-            print(f"after init cache memory allocated: {torch.cuda.memory_allocated() / 1e9}GB, reserved: {torch.cuda.memory_reserved() / 1e9}GB")
+            print(
+                f"after init cache memory allocated: {torch.cuda.memory_allocated() / 1e9}GB, reserved: {torch.cuda.memory_reserved() / 1e9}GB"
+            )
 
     # NOTE(sgm): This will not profile & capture the model(CUDAGraph) when rebuilding KVCache
     def init_cache_engine(self) -> None:

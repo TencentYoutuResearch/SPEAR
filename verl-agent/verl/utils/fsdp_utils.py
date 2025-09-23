@@ -85,7 +85,9 @@ def get_fsdp_wrap_policy(module, config=None, is_lora=False):
         return None
 
     default_transformer_cls_names_to_wrap = getattr(module, "_no_split_modules", None)
-    fsdp_transformer_layer_cls_to_wrap = _get_attr("transformer_layer_cls_to_wrap", default_transformer_cls_names_to_wrap)
+    fsdp_transformer_layer_cls_to_wrap = _get_attr(
+        "transformer_layer_cls_to_wrap", default_transformer_cls_names_to_wrap
+    )
     min_num_params = _get_attr("min_num_params", 0)
     auto_wrap_policy = None
 
@@ -97,7 +99,11 @@ def get_fsdp_wrap_policy(module, config=None, is_lora=False):
     if is_lora:
 
         def lambda_policy_fn(module):
-            return bool(len(list(module.named_children())) == 0 and getattr(module, "weight", None) is not None and module.weight.requires_grad)
+            return bool(
+                len(list(module.named_children())) == 0
+                and getattr(module, "weight", None) is not None
+                and module.weight.requires_grad
+            )
 
         lambda_policy = functools.partial(lambda_auto_wrap_policy, lambda_fn=lambda_policy_fn)
         policies.append(lambda_policy)
@@ -140,7 +146,11 @@ def offload_fsdp_model_to_cpu(model: FSDP, empty_cache: bool = True):
         if handle._offload_params:
             continue
         flat_param = handle.flat_param
-        assert flat_param.data.data_ptr() == flat_param._local_shard.data_ptr() and id(flat_param.data) != id(flat_param._local_shard) and flat_param.data.size() == flat_param._local_shard.size()
+        assert (
+            flat_param.data.data_ptr() == flat_param._local_shard.data_ptr()
+            and id(flat_param.data) != id(flat_param._local_shard)
+            and flat_param.data.size() == flat_param._local_shard.size()
+        )
         handle.flat_param_to(torch.device("cpu"), non_blocking=True)
         # the following still keeps id(._local_shard) != id(.data)
         flat_param._local_shard = flat_param.data
@@ -310,7 +320,9 @@ def parallel_init_module_fn(module: torch.nn.Module, shard_states: dict[str, tor
     """
 
     state2fqn = {}
-    for name, state in itertools.chain(module.named_parameters(remove_duplicate=False), module.named_buffers(remove_duplicate=False)):
+    for name, state in itertools.chain(
+        module.named_parameters(remove_duplicate=False), module.named_buffers(remove_duplicate=False)
+    ):
         state2fqn.setdefault(state, []).append(name)
     # remove standalone parameters and buffers
     shared = {s for s, names in state2fqn.items() if len(names) > 1}
@@ -347,7 +359,9 @@ def parallel_init_module_fn(module: torch.nn.Module, shard_states: dict[str, tor
             # non-persistent buffers will not be saved in state dict, we can safely skip it
             if (not is_param) and fqn not in shard_states:
                 if state.is_meta:
-                    raise RuntimeError(f"find a non-persistent buffer ({fqn}) initiated with device meta. Such buffer is not saved in checkpoint and user should guarantee to init in CPU / GPU device.")
+                    raise RuntimeError(
+                        f"find a non-persistent buffer ({fqn}) initiated with device meta. Such buffer is not saved in checkpoint and user should guarantee to init in CPU / GPU device."
+                    )
                 continue
             # for shared parameter, we get it from the first time it is created
             if state in shared:
@@ -427,7 +441,9 @@ def apply_fsdp2(model, fsdp_kwargs, config):
     assert CPUOffloadPolicy is not None, "PyTorch version >= 2.4 is required for using fully_shard API (FSDP2)"
 
     default_transformer_cls_names_to_wrap = getattr(model, "_no_split_modules", None)
-    fsdp_transformer_layer_cls_to_wrap = config.get("wrap_policy", {}).get("transformer_layer_cls_to_wrap", default_transformer_cls_names_to_wrap)
+    fsdp_transformer_layer_cls_to_wrap = config.get("wrap_policy", {}).get(
+        "transformer_layer_cls_to_wrap", default_transformer_cls_names_to_wrap
+    )
 
     if isinstance(fsdp_transformer_layer_cls_to_wrap, str):
         fsdp_transformer_layer_cls_to_wrap = [fsdp_transformer_layer_cls_to_wrap]
@@ -436,7 +452,9 @@ def apply_fsdp2(model, fsdp_kwargs, config):
 
     modules = []
     for name, module in model.named_modules():
-        if module.__class__.__name__ in fsdp_transformer_layer_cls_to_wrap or (isinstance(module, nn.Embedding) and not model.config.tie_word_embeddings):
+        if module.__class__.__name__ in fsdp_transformer_layer_cls_to_wrap or (
+            isinstance(module, nn.Embedding) and not model.config.tie_word_embeddings
+        ):
             modules.append(module)
 
     for idx, module in enumerate(modules):
@@ -459,30 +477,37 @@ def fsdp2_clip_grad_norm_(parameters, max_norm, norm_type=2.0, error_if_nonfinit
     _clip_grads_with_norm_(parameters, max_norm, total_norm, foreach)
     return total_norm
 
-def layered_summon_lora_params(fsdp_module)->OrderedDict:
+
+def layered_summon_lora_params(fsdp_module) -> OrderedDict:
     from peft.utils.save_and_load import get_peft_model_state_dict
 
     def __prefix_submodules(module, prefix):
         for name, submodule in module.named_modules():
-            if name.startswith(prefix) and "." not in name[len(prefix):]:
+            if name.startswith(prefix) and "." not in name[len(prefix) :]:
                 yield name, submodule
 
     lora_params = OrderedDict()
     prefix_list = [
-        '_fsdp_wrapped_module.base_model.model.',
-        '_fsdp_wrapped_module.base_model.model.model.',
-        '_fsdp_wrapped_module.base_model.model.model.layers.'
+        "_fsdp_wrapped_module.base_model.model.",
+        "_fsdp_wrapped_module.base_model.model.model.",
+        "_fsdp_wrapped_module.base_model.model.model.layers.",
     ]
     for prefix in prefix_list:
         for name, submodule in __prefix_submodules(fsdp_module, prefix):
-            prefix = name.replace("_fsdp_wrapped_module.base_model.model.","base_model.model.")
-            if name.endswith('.model') or name.endswith('.layers'):
+            prefix = name.replace("_fsdp_wrapped_module.base_model.model.", "base_model.model.")
+            if name.endswith(".model") or name.endswith(".layers"):
                 continue
             if fsdp_version(submodule) > 0:
                 with FSDP.summon_full_params(submodule, writeback=False):
-                    sub_lora_params = get_peft_model_state_dict(fsdp_module._fsdp_wrapped_module, state_dict=submodule.state_dict())
-                    sub_lora_params = {f"{prefix}.{name}": param.full_tensor().detach().cpu() if hasattr(param, 'full_tensor') else param.detach().cpu()
-                        for name, param in sub_lora_params.items()}
+                    sub_lora_params = get_peft_model_state_dict(
+                        fsdp_module._fsdp_wrapped_module, state_dict=submodule.state_dict()
+                    )
+                    sub_lora_params = {
+                        f"{prefix}.{name}": param.full_tensor().detach().cpu()
+                        if hasattr(param, "full_tensor")
+                        else param.detach().cpu()
+                        for name, param in sub_lora_params.items()
+                    }
                     lora_params.update(sub_lora_params)
                     submodule._is_root = False
                 torch.cuda.empty_cache()

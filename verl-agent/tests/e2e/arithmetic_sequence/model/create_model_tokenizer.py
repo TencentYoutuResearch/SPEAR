@@ -54,4 +54,8 @@ load_tokenizer = AutoTokenizer.from_pretrained(tokenizer_folder)
 chat = [{"role": "user", "content": "1,0:2,3"}]
 
 load_tokenizer.padding_side = "left"
-print(load_tokenizer.apply_chat_template(chat, tokenize=True, add_generation_prompt=True, max_length=10, padding="max_length"))
+print(
+    load_tokenizer.apply_chat_template(
+        chat, tokenize=True, add_generation_prompt=True, max_length=10, padding="max_length"
+    )
+)

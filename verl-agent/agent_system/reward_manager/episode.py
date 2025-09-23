@@ -25,18 +25,17 @@ from verl import DataProto
 def has_repeated_ngrams(words, n=20, threshold=10):
     # words = text.split()
     words = [str(item) for item in words]
-    ngrams = [' '.join(words[i:i+n]) for i in range(len(words)-n+1)]
+    ngrams = [" ".join(words[i : i + n]) for i in range(len(words) - n + 1)]
     counts = Counter(ngrams)
     return any(count >= threshold for count in counts.values())
 
 
-
 def is_think_action_valid(solution_str):
     """Extracts the final answer from the model's response string.
-    
+
     Args:
         solution_str: Raw response string from the language model
-        
+
     Returns:
         Tuple containing (extracted_answer, processed_string)
     """
@@ -47,7 +46,7 @@ def is_think_action_valid(solution_str):
         return False
 
     # Extract think content using XML-style tags
-    think_pattern = r'<think>(.*?)</think>'
+    think_pattern = r"<think>(.*?)</think>"
     matches_think = list(re.finditer(think_pattern, solution_str, re.DOTALL))
 
     if matches_think:
@@ -56,12 +55,12 @@ def is_think_action_valid(solution_str):
         final_think = None
 
     if "</think>" in solution_str:
-        answer_candidate = (solution_str[solution_str.rfind("</think>")+len("</think>"):]).strip()
+        answer_candidate = (solution_str[solution_str.rfind("</think>") + len("</think>") :]).strip()
     else:
         answer_candidate = solution_str
 
     # Extract think content using XML-style tags
-    action_pattern = r'<action>(.*?)</action>'
+    action_pattern = r"<action>(.*?)</action>"
     matches_action = list(re.finditer(action_pattern, answer_candidate, re.DOTALL))
     if matches_action:
         final_answer = matches_action[-1].group(1).strip()
@@ -79,11 +78,8 @@ def is_think_action_valid(solution_str):
         return True
 
 
-
-
 class EpisodeRewardManager:
-    """The reward manager.
-    """
+    """The reward manager."""
 
     def __init__(self, tokenizer, num_examine, normalize_by_length=False) -> None:
         self.tokenizer = tokenizer
@@ -100,7 +96,7 @@ class EpisodeRewardManager:
             else:
                 return data.batch["rm_scores"]
 
-        reward_tensor = torch.zeros_like(data.batch['responses'], dtype=torch.float32)
+        reward_tensor = torch.zeros_like(data.batch["responses"], dtype=torch.float32)
         reward_extra_info = defaultdict(list)
         reward_extra_info["is_incomplete"] = []
         reward_extra_info["is_overlong"] = []
@@ -112,15 +108,15 @@ class EpisodeRewardManager:
         for i in range(len(data)):
             data_item = data[i]  # DataProtoItem
 
-            prompt_ids = data_item.batch['prompts']
+            prompt_ids = data_item.batch["prompts"]
 
             prompt_length = prompt_ids.shape[-1]
 
-            valid_prompt_length = data_item.batch['attention_mask'][:prompt_length].sum()
+            valid_prompt_length = data_item.batch["attention_mask"][:prompt_length].sum()
             valid_prompt_ids = prompt_ids[-valid_prompt_length:]
 
-            response_ids = data_item.batch['responses']
-            valid_response_length = data_item.batch['attention_mask'][prompt_length:].sum()
+            response_ids = data_item.batch["responses"]
+            valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
             valid_response_ids = response_ids[:valid_response_length]
 
             # decode
@@ -128,25 +124,24 @@ class EpisodeRewardManager:
             response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=False)
 
             # ground_truth = data_item.non_tensor_batch['reward_model']['ground_truth']
-            data_source = data_item.non_tensor_batch['data_source']
+            data_source = data_item.non_tensor_batch["data_source"]
 
-            extra_info = data_item.non_tensor_batch.get('extra_info', None)
-            multi_modal_inputs = data_item.non_tensor_batch.get('multi_modal_inputs', None)
+            extra_info = data_item.non_tensor_batch.get("extra_info", None)
+            multi_modal_inputs = data_item.non_tensor_batch.get("multi_modal_inputs", None)
             if multi_modal_inputs is not None:
-                pixel_values = multi_modal_inputs['pixel_values']
-                image_grid_thw = multi_modal_inputs['image_grid_thw']
+                pixel_values = multi_modal_inputs["pixel_values"]
+                image_grid_thw = multi_modal_inputs["image_grid_thw"]
 
-
-            episode_rewards = data_item.non_tensor_batch['episode_rewards']
-            episode_lengths = data_item.non_tensor_batch['episode_lengths']
+            episode_rewards = data_item.non_tensor_batch["episode_rewards"]
+            episode_lengths = data_item.non_tensor_batch["episode_lengths"]
 
             if self.normalize_by_length:
                 score = episode_rewards / episode_lengths
             else:
                 score = episode_rewards
             ## 是否施加step-wise reward
-            use_toolcall_reward = data_item.meta_info['use_toolcall_reward']
-            max_toolcall_steps = data_item.meta_info['max_toolcall_steps']
+            use_toolcall_reward = data_item.meta_info["use_toolcall_reward"]
+            max_toolcall_steps = data_item.meta_info["max_toolcall_steps"]
             if use_toolcall_reward == "none":
                 score += 0  # 不额外添加toolcall-reward
             elif use_toolcall_reward == "constant":
@@ -155,15 +150,17 @@ class EpisodeRewardManager:
                 score += score_toolcall * 1
             else:
                 # cosine衰减
-                global_steps = data_item.meta_info['global_steps']
-                assert(global_steps >= 0)
+                global_steps = data_item.meta_info["global_steps"]
+                assert global_steps >= 0
                 if global_steps <= max_toolcall_steps:
                     score_toolcall = min(1.0, episode_lengths * 0.1)
-                    score_toolcall *= (np.cos((global_steps / max_toolcall_steps) * np.pi) + 1)/2
+                    score_toolcall *= (np.cos((global_steps / max_toolcall_steps) * np.pi) + 1) / 2
                     score_toolcall = max(0, score_toolcall)
                     score += score_toolcall
 
-            reward_tensor[i, valid_response_length - 1] = torch.tensor(score, dtype=torch.float32, device=prompt_ids.device)
+            reward_tensor[i, valid_response_length - 1] = torch.tensor(
+                score, dtype=torch.float32, device=prompt_ids.device
+            )
 
             if data_source not in already_print_data_sources:
                 already_print_data_sources[data_source] = 0

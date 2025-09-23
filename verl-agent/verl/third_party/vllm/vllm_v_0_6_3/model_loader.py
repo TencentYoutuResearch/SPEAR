@@ -99,7 +99,9 @@ def get_model_loader(load_config: LoadConfig) -> BaseModelLoader:
         update_dtensor_weight_loader()
         return DummyModelLoader(load_config)
 
-    raise ValueError(f"load format not supported in verl: {load_config.load_format}, only support {LoadFormat.MEGATRON} and {LoadFormat.HF}")
+    raise ValueError(
+        f"load format not supported in verl: {load_config.load_format}, only support {LoadFormat.MEGATRON} and {LoadFormat.HF}"
+    )
 
 
 class DummyModelLoader(BaseModelLoader):
@@ -167,7 +169,9 @@ class MegatronLoader(BaseModelLoader):
 
             # TODO(sgm): This is a hack, we need to register the load_weight() func for each model in vllm
             if isinstance(actor_model, nn.Module):
-                load_megatron_weights(actor_weights=dict(actor_model.named_parameters(remove_duplicate=False)), vllm_model=model)
+                load_megatron_weights(
+                    actor_weights=dict(actor_model.named_parameters(remove_duplicate=False)), vllm_model=model
+                )
             else:
                 load_megatron_weights(actor_weights=actor_model, vllm_model=model)
 
@@ -267,7 +271,9 @@ class DTensorLoader(BaseModelLoader):
 
             # TODO(sgm): This is a hack, we need to register the load_weight() func for each model in vllm
             if isinstance(actor_model, nn.Module):
-                load_dtensor_weights(actor_weights=dict(actor_model.named_parameters(remove_duplicate=False)), vllm_model=model)
+                load_dtensor_weights(
+                    actor_weights=dict(actor_model.named_parameters(remove_duplicate=False)), vllm_model=model
+                )
             else:
                 load_dtensor_weights(actor_weights=actor_model, vllm_model=model)
 
@@ -288,7 +294,9 @@ class DTensorLoader(BaseModelLoader):
 # as they use ray, the _get_logits result will only need to return to the driver node,
 # therefore gather is enough. However, we use SPMD instead of a central scheduler,
 # all_gather is required (aligned with v0.2.6)
-def _get_logits(self, hidden_states: torch.Tensor, embedding: torch.Tensor, embedding_bias: Optional[torch.Tensor]) -> torch.Tensor:
+def _get_logits(
+    self, hidden_states: torch.Tensor, embedding: torch.Tensor, embedding_bias: Optional[torch.Tensor]
+) -> torch.Tensor:
     # Get the logits for the next tokens.
     logits = torch.matmul(hidden_states, embedding.t())
     if embedding_bias is not None:

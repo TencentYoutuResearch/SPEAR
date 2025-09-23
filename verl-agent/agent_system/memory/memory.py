@@ -22,6 +22,7 @@ class SimpleMemory(BaseMemory):
     """
     Memory manager: responsible for storing & fetching per‑environment history records.
     """
+
     def __init__(self):
         self._data = None
         self.keys = None
@@ -46,8 +47,8 @@ class SimpleMemory(BaseMemory):
 
         Args:
             record (Dict[str, List[Any]]):
-                A dictionary where each key corresponds to a type of data 
-                (e.g., 'text_obs', 'action'), and each value is a list of 
+                A dictionary where each key corresponds to a type of data
+                (e.g., 'text_obs', 'action'), and each value is a list of
                 length `batch_size`, containing the data for each environment.
         """
         if self.keys is None:
@@ -92,9 +93,7 @@ class SimpleMemory(BaseMemory):
                 step_num = start_idx + j + 1
                 act = rec[action_key]
                 obs = rec[obs_key]
-                lines.append(
-                    f"[Observation {step_num}: '{obs}', Action {step_num}: '{act}']"
-                )
+                lines.append(f"[Observation {step_num}: '{obs}', Action {step_num}: '{act}']")
 
             memory_contexts.append("\n".join(lines))
             valid_lengths.append(valid_len)

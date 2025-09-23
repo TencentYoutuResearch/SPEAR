@@ -90,11 +90,12 @@ class GPUMemoryLogger(DecoratorLoggerBase):
         self.logging_function(message)
         return output
 
+
 def log_print(ctn: Any):
-    current_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     frame = inspect.currentframe().f_back
     function_name = frame.f_code.co_name
     line_number = frame.f_lineno
-    file_name = frame.f_code.co_filename.split('/')[-1]
+    file_name = frame.f_code.co_filename.split("/")[-1]
     print(f"[{file_name}:{line_number}:{function_name}]: {ctn}")

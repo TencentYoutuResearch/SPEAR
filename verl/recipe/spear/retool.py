@@ -26,7 +26,7 @@ from verl.utils.rollout_trace import rollout_trace_op
 logger = logging.getLogger(__name__)
 
 
-WRAPPER_CODE="""
+WRAPPER_CODE = """
 import traceback
 from string import *
 from re import *
@@ -65,7 +65,6 @@ import json
 import numpy as np
 
 """
-
 
 
 class CustomSandboxFusionTool(SandboxFusionTool):
@@ -157,7 +156,7 @@ def compute_score(data_source, solution_str, ground_truth, extra_info):
     # encourage model to call tools
     num_turns = extra_info["num_turns"]
     if num_turns is None:
-        num_turns = (solution_str.count("assistant\n"))*2 + 2
+        num_turns = (solution_str.count("assistant\n")) * 2 + 2
     # print("solution_str", solution_str, " num_turns", num_turns)
     if result["score"] < 0:
         tool_call_reward = (num_turns - 2) / 2 * 0.1
@@ -174,7 +173,7 @@ def compute_score_wtool(data_source, solution_str, ground_truth, extra_info):
     # encourage model to call tools
     num_turns = extra_info["num_turns"]
     tool_call_reward = (num_turns - 2) / 2 * 0.1
-    result["score"] += (tool_call_reward > 0)
+    result["score"] += tool_call_reward > 0
     if result["pred"] is None:
         result["pred"] = ""
     return result
@@ -190,7 +189,7 @@ def compute_score_wtool_neg(data_source, solution_str, ground_truth, extra_info)
     if result["score"] < 0:
         result["score"] = min(0, result["score"] + tool_call_reward)
     else:
-        result["score"] += (tool_call_reward > 0)
+        result["score"] += tool_call_reward > 0
     if result["pred"] is None:
         result["pred"] = ""
     return result

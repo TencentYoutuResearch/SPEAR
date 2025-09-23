@@ -53,11 +53,7 @@ def compute_score(model_output: str, ground_truth: str, timeout_score: float = 0
         ret_score = timeout_score
         predictions_str = "TimeoutVerification"
 
-    ret = {
-        "score": float(ret_score),
-        'acc': acc,
-        'pred': predictions_str
-    }
+    ret = {"score": float(ret_score), "acc": acc, "pred": predictions_str}
     return ret
 
 

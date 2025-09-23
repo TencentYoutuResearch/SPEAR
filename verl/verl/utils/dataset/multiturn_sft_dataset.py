@@ -86,38 +86,16 @@ class MultiTurnSFTDataset(Dataset):
                 if "tool_calls" in message:
                     tool_calls = message["tool_calls"]
                     if tool_calls is None:
-                        messages_new.append(
-                            {
-                                "role": role,
-                                "content": content
-                            }
-                        )
+                        messages_new.append({"role": role, "content": content})
                     else:
-                        messages_new.append(
-                            {
-                                "role": role,
-                                "content": content,
-                                "tool_calls": tool_calls.tolist()
-                            }
-                        )
+                        messages_new.append({"role": role, "content": content, "tool_calls": tool_calls.tolist()})
                 else:
-                    messages_new.append(
-                        {
-                            "role": role,
-                            "content": content
-                        }
-                    )
+                    messages_new.append({"role": role, "content": content})
             else:
-                messages_new.append(
-                    {
-                        "role": role,
-                        "content": content
-                    }
-                )
+                messages_new.append({"role": role, "content": content})
         while messages_new[-1]["role"] != "assistant":
             messages_new.pop(-1)
         return messages_new
-
 
     def _read_files_and_process(self):
         def series_to_item(ls):
@@ -162,13 +140,15 @@ class MultiTurnSFTDataset(Dataset):
                 self.tools.append(tools)
 
             except Exception as e:
-                logging.error(f"===========\n\nError applying chat template: {e}\n\n\nMessages: {messages_reform}\nTools: {tools}\n\n===========")
+                logging.error(
+                    f"===========\n\nError applying chat template: {e}\n\n\nMessages: {messages_reform}\nTools: {tools}\n\n==========="
+                )
                 # import pdb;pdb.set_trace();
                 continue
 
         print("数据集总量", len(self.messages), " 工具总量", len(self.tools))
 
-        assert(len(self.messages) == len(self.tools))
+        assert len(self.messages) == len(self.tools)
         # Extract enable_thinking list from dataframe
         if self.enable_thinking_key in self.dataframe.columns:
             self.enable_thinking = self.dataframe[self.enable_thinking_key].tolist()
@@ -186,7 +166,7 @@ class MultiTurnSFTDataset(Dataset):
         is_assistant: bool = False,
         enable_thinking: Optional[bool] = None,
         tools: Optional[list[dict[str, Any]]] = None,
-        loss_mask_flag: bool = True
+        loss_mask_flag: bool = True,
     ) -> tuple[list[int], list[int], list[int]]:
         """
         Process tokens for a single message or a group of messages.
@@ -346,7 +326,13 @@ class MultiTurnSFTDataset(Dataset):
             if cur_messages["role"] == "assistant":
                 # Process assistant message
                 tokens, loss_mask, attention_mask = self._process_message_tokens(
-                    messages, i, i + 1, is_assistant=True, enable_thinking=enable_thinking, tools=tools, loss_mask_flag=loss_mask_flag
+                    messages,
+                    i,
+                    i + 1,
+                    is_assistant=True,
+                    enable_thinking=enable_thinking,
+                    tools=tools,
+                    loss_mask_flag=loss_mask_flag,
                 )
                 concat_tokens.extend(tokens)
                 concat_loss_mask.extend(loss_mask)

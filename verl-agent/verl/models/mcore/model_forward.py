@@ -44,17 +44,31 @@ def gptmodel_forward(
             packed_seq_params=packed_seq_params,
         )
         if post_process and logits_processor is not None:
-            args = {k: preprocess_packed_seqs(v, attention_mask, pre_process=True)[0] for k, v in logits_processor_args.items()}
+            args = {
+                k: preprocess_packed_seqs(v, attention_mask, pre_process=True)[0]
+                for k, v in logits_processor_args.items()
+            }
             output_dict = logits_processor(output_orig, **args)
-            output = {k: postprocess_packed_seqs(v, packed_seq_params, attention_mask, batch_size, seq_len, post_process=post_process) for k, v in output_dict.items()}
+            output = {
+                k: postprocess_packed_seqs(
+                    v, packed_seq_params, attention_mask, batch_size, seq_len, post_process=post_process
+                )
+                for k, v in output_dict.items()
+            }
         else:
-            output = postprocess_packed_seqs(output_orig, packed_seq_params, attention_mask, batch_size, seq_len, post_process=post_process)
+            output = postprocess_packed_seqs(
+                output_orig, packed_seq_params, attention_mask, batch_size, seq_len, post_process=post_process
+            )
     else:
         assert logits_processor is None, "logits_processor is not supported for non-packed sequence"
         batch_size, sequence_length = attention_mask.shape
-        new_input_ids, new_attention_mask, new_position_ids = remove_left_padding(input_ids, attention_mask, position_ids, sequence_parallel, pre_process=pre_process)
+        new_input_ids, new_attention_mask, new_position_ids = remove_left_padding(
+            input_ids, attention_mask, position_ids, sequence_parallel, pre_process=pre_process
+        )
         output = model(input_ids=new_input_ids, attention_mask=new_attention_mask, position_ids=new_position_ids)
-        output = recover_left_padding(output, new_attention_mask, attention_mask, sequence_length, post_process=post_process)
+        output = recover_left_padding(
+            output, new_attention_mask, attention_mask, sequence_length, post_process=post_process
+        )
     if value_model and post_process:
         output = output[..., 0]
     return output

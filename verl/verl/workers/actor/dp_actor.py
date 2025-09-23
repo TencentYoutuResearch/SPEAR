@@ -16,6 +16,7 @@
 """
 Single Process Actor
 """
+
 import logging
 import os
 
@@ -91,11 +92,9 @@ class DataParallelPPOActor(BasePPOActor):
         )
         self.device_name = get_device_name()
 
-
     def _forward_micro_batch(
         self, micro_batch, temperature, calculate_entropy=False
     ) -> tuple[torch.Tensor, torch.Tensor]:
-
         """
         Returns:
             entropy: # (bs, response_len)
@@ -364,7 +363,6 @@ class DataParallelPPOActor(BasePPOActor):
 
         return log_probs, entropys
 
-
     @GPUMemoryLogger(role="dp actor", logger=logger)
     def update_policy(self, data: DataProto, data_replay: DataProto):
         # make sure we are in training mode
@@ -386,7 +384,7 @@ class DataParallelPPOActor(BasePPOActor):
         non_tensor_select_keys = ["multi_modal_inputs"] if has_multi_modal_inputs else []
 
         data = data.select(batch_keys=select_keys, non_tensor_batch_keys=non_tensor_select_keys)
-       # Split to make minibatch iterator for updating the actor
+        # Split to make minibatch iterator for updating the actor
         # See PPO paper for details. https://arxiv.org/abs/1707.06347
         print("self.config.ppo_mini_batch_size (might be normalized)", self.config.ppo_mini_batch_size)
         print("📕 RL total batch size", len(data.batch))
@@ -425,8 +423,10 @@ class DataParallelPPOActor(BasePPOActor):
 
                     self.actor_optimizer.zero_grad()
                     for micro_batch_idx, micro_batch in enumerate(micro_batches):
-                        print(f"🏋️ Update microbatch-Default loss with {micro_batch_idx}-th default batch with batchsize of ",\
-                            len(micro_batch))
+                        print(
+                            f"🏋️ Update microbatch-Default loss with {micro_batch_idx}-th default batch with batchsize of ",
+                            len(micro_batch),
+                        )
                         micro_batch_metrics = {}
                         model_inputs = {**micro_batch.batch, **micro_batch.non_tensor_batch}
                         response_mask = model_inputs["response_mask"]
@@ -460,7 +460,9 @@ class DataParallelPPOActor(BasePPOActor):
                         )
 
                         if entropy_coeff != 0:
-                            entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                            entropy_loss = agg_loss(
+                                loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode
+                            )
                             # compute policy loss
                             policy_loss = pg_loss - entropy_loss * entropy_coeff
                         else:
@@ -499,7 +501,6 @@ class DataParallelPPOActor(BasePPOActor):
                     mini_batch_metrics = {"actor/grad_norm": grad_norm.detach().item()}
                     append_to_dict(metrics, mini_batch_metrics)
 
-
             # add Trajectory advantage here
             if len(dataloader_replay):
                 for batch_idx, mini_batch_replay in enumerate(dataloader_replay):
@@ -515,8 +516,10 @@ class DataParallelPPOActor(BasePPOActor):
                     # import pdb;pdb.set_trace();
                     self.actor_optimizer.zero_grad()
                     for micro_batch_replay_idx, micro_batch_replay in enumerate(micro_batches_replay):
-                        print(f"🏋️ Update microbatch-replay loss with {micro_batch_replay_idx}-th trajectory replay of mini_batch with length=",\
-                            len(micro_batch_replay))
+                        print(
+                            f"🏋️ Update microbatch-replay loss with {micro_batch_replay_idx}-th trajectory replay of mini_batch with length=",
+                            len(micro_batch_replay),
+                        )
                         micro_batch_metrics = {}
                         model_inputs = {**micro_batch_replay.batch, **micro_batch_replay.non_tensor_batch}
                         # import pdb;pdb.set_trace();
@@ -545,11 +548,13 @@ class DataParallelPPOActor(BasePPOActor):
                             response_mask=response_mask,
                             loss_agg_mode=loss_agg_mode,
                             config=self.config,
-                            is_replay=True
+                            is_replay=True,
                         )
 
                         if entropy_coeff != 0:
-                            entropy_loss = agg_loss(loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+                            entropy_loss = agg_loss(
+                                loss_mat=entropy, loss_mask=response_mask, loss_agg_mode=loss_agg_mode
+                            )
                             # compute policy loss
                             policy_loss = pg_loss - entropy_loss * entropy_coeff
                         else:
@@ -575,7 +580,11 @@ class DataParallelPPOActor(BasePPOActor):
 
                         max_replay_loss_steps = self.config.max_replay_loss_steps
                         if global_steps <= max_replay_loss_steps:
-                            loss *= self.config.replay_loss_coef * (-np.cos((global_steps / max_replay_loss_steps) * np.pi) + 1)/2
+                            loss *= (
+                                self.config.replay_loss_coef
+                                * (-np.cos((global_steps / max_replay_loss_steps) * np.pi) + 1)
+                                / 2
+                            )
                         else:
                             loss *= self.config.replay_loss_coef
                         loss.backward()
@@ -593,8 +602,6 @@ class DataParallelPPOActor(BasePPOActor):
                     grad_norm = self._optimizer_step()
                     mini_batch_metrics = {"actor/grad_norm_replay": grad_norm.detach().item()}
                     append_to_dict(metrics, mini_batch_metrics)
-
-
 
         self.actor_optimizer.zero_grad()
         return metrics

@@ -87,7 +87,9 @@ Consider using the `MegatronPPOActor` class directly as a replacement."
                 self.pp_models[cur_pp_rank] = models
             else:
                 # for regular model, we wrapped it with DDP
-                models = get_model(model_provider, wrap_with_ddp=True, use_distributed_optimizer=use_distributed_optimizer)
+                models = get_model(
+                    model_provider, wrap_with_ddp=True, use_distributed_optimizer=use_distributed_optimizer
+                )
                 assert len(models) == self._model_chunk_size, f"{len(models)} != {self._model_chunk_size}"
                 self._this_rank_models = nn.ModuleList(models)
                 self.pp_models[cur_pp_rank] = nn.ModuleList(unwrap_model(models, (torchDDP, LocalDDP)))
@@ -111,7 +113,9 @@ Consider using the `MegatronPPOActor` class directly as a replacement."
             # 2. `_this_rank_models[0]` is a instance of `DistributedDataParallel` and `use_distributed_optimizer=True`
             # 3. Only bfloat16 data type is used in parameters
             source = self._this_rank_models[0].buffers[0].param_data
-            self.memory_buffers[pp_rank] = {torch.bfloat16: MemoryBuffer(source.numel(), source.numel(), torch.bfloat16, source)}
+            self.memory_buffers[pp_rank] = {
+                torch.bfloat16: MemoryBuffer(source.numel(), source.numel(), torch.bfloat16, source)
+            }
         else:
             model = self.pp_models[pp_rank]
             weight_buffer_meta = get_weight_buffer_meta_from_module(model)
@@ -308,7 +312,14 @@ class MegatronVLLMShardingManager(BaseShardingManager):
             "0.5.4",
             "0.6.3",
         ):
-            per_tensor_param = per_tensor_generator(self.actor_module, self.model_config, self.weight_converter, self.transformer_config, self.layer_name_mapping, convert_qkv_gate_up_by_simple_split=False)
+            per_tensor_param = per_tensor_generator(
+                self.actor_module,
+                self.model_config,
+                self.weight_converter,
+                self.transformer_config,
+                self.layer_name_mapping,
+                convert_qkv_gate_up_by_simple_split=False,
+            )
             self.inference_engine.sync_model_weights(per_tensor_param, load_format="megatron")
         else:
             # > 0.7.2

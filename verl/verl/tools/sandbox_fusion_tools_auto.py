@@ -40,13 +40,13 @@ import sys
 
 sys.set_int_max_str_digits(10000)
 
+
 class PoolMode(Enum):
     ThreadMode = 1
     ProcessMode = 2
 
 
-
-WRAPPER_CODE="""
+WRAPPER_CODE = """
 import traceback
 from string import *
 from re import *
@@ -114,7 +114,7 @@ def remove_code_fence(code):
     # ^```[\w\+\-]*\n  匹配以```开头，后面跟0个或多个字母、数字、下划线、+、-，再跟一个换行
     # (.*?)            非贪婪匹配中间的内容
     # \n```$           匹配以换行和```结尾
-    pattern = r'^```[\w\+\-]*\n(.*?)\n```$'
+    pattern = r"^```[\w\+\-]*\n(.*?)\n```$"
     match = re.match(pattern, code, re.DOTALL)
     if match:
         return match.group(1)
@@ -145,9 +145,15 @@ class ExecutionWorker:
                 logger.warning(f"Error when executing code: {e}")
 
 
-def init_execution_pool(num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode):
+def init_execution_pool(
+    num_workers: int, enable_global_rate_limit=True, rate_limit=10, mode: PoolMode = PoolMode.ThreadMode
+):
     if mode == PoolMode.ThreadMode:
-        return ray.remote(ExecutionWorker).options(max_concurrency=num_workers).remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+        return (
+            ray.remote(ExecutionWorker)
+            .options(max_concurrency=num_workers)
+            .remote(enable_global_rate_limit=enable_global_rate_limit, rate_limit=rate_limit)
+        )
     else:
         raise NotImplementedError("Process mode is not implemented yet")
         # return ray.util.multiprocessing.Pool(processes=num_workers)
@@ -192,7 +198,12 @@ class SandboxFusionTool(BaseTool):
         self.default_memory_limit_mb = config.get("memory_limit_mb", 1024)
         self.default_language = config.get("default_language", "python")
         self.enable_global_rate_limit = config.get("enable_global_rate_limit", True)
-        self.execution_pool = init_execution_pool(num_workers=self.num_workers, enable_global_rate_limit=self.enable_global_rate_limit, rate_limit=self.rate_limit, mode=PoolMode.ThreadMode)
+        self.execution_pool = init_execution_pool(
+            num_workers=self.num_workers,
+            enable_global_rate_limit=self.enable_global_rate_limit,
+            rate_limit=self.rate_limit,
+            mode=PoolMode.ThreadMode,
+        )
         self.sandbox_fusion_url = config.get("sandbox_fusion_url", "")
         if self.sandbox_fusion_url == "":
             raise ValueError("sandbox_fusion_url is not set")
@@ -229,7 +240,9 @@ class SandboxFusionTool(BaseTool):
         }
         return instance_id
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], assistant_content="", time_limit=30, **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], assistant_content="", time_limit=30, **kwargs
+    ) -> tuple[str, float, dict]:
         timeout = time_limit
         # timeout = parameters.get("timeout", self.default_timeout)
         memory_limit_mb = parameters.get("memory_limit_mb", self.default_memory_limit_mb)
@@ -245,14 +258,18 @@ class SandboxFusionTool(BaseTool):
 
         code = remove_code_fence(code)
         code = WRAPPER_CODE + code.strip()  ## here add wrapper
-        result = await self.execution_pool.execute.remote(self.execute_code, instance_id, code, timeout, memory_limit_mb, language)
+        result = await self.execution_pool.execute.remote(
+            self.execute_code, instance_id, code, timeout, memory_limit_mb, language
+        )
         # result = self.execute_code(instance_id, code, timeout, language)
         print(f"<<< execution messages 💌 {result=}")
         # return result, result, result.strip()
-        return msg+result, 0, {}
+        return msg + result, 0, {}
 
     def execute_code(self, instance_id, code, timeout=30, memory_limit_mb=1024, language="python"):
-        result_status, metadata = _process_single_case(0, None, None, self.sandbox_fusion_url, code, timeout, memory_limit_mb=memory_limit_mb, language=language)
+        result_status, metadata = _process_single_case(
+            0, None, None, self.sandbox_fusion_url, code, timeout, memory_limit_mb=memory_limit_mb, language=language
+        )
         # we should always expect this since we don't have correct answer
         if "case_index" in metadata:
             metadata.pop("case_index")

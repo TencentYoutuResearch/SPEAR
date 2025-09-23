@@ -80,10 +80,12 @@ class TestComputeDataMetrics(unittest.TestCase):
             "advantages": torch.tensor([[0.1, 0.2], [0.3, 0.4]]),
             "returns": torch.tensor([[1.1, 1.2], [1.3, 1.4]]),
             "responses": torch.zeros((2, 2)),  # 2 samples, 2 tokens each
-            "attention_mask": torch.tensor([
-                [1, 1, 1, 1],  # 2 prompt tokens, 2 response tokens
-                [1, 1, 1, 1],
-            ]),
+            "attention_mask": torch.tensor(
+                [
+                    [1, 1, 1, 1],  # 2 prompt tokens, 2 response tokens
+                    [1, 1, 1, 1],
+                ]
+            ),
             "values": torch.tensor([[0.9, 1.0], [1.1, 1.2]]),
         }
 
@@ -128,10 +130,12 @@ class TestComputeTimingMetrics(unittest.TestCase):
         self.batch = MagicMock()
         self.batch.batch = {
             "responses": torch.zeros((2, 3)),  # 2 samples, 3 response tokens each
-            "attention_mask": torch.tensor([
-                [1, 1, 1, 1, 1, 1],  # 3 prompt tokens, 3 response tokens
-                [1, 1, 1, 1, 1, 1],
-            ]),
+            "attention_mask": torch.tensor(
+                [
+                    [1, 1, 1, 1, 1, 1],  # 3 prompt tokens, 3 response tokens
+                    [1, 1, 1, 1, 1, 1],
+                ]
+            ),
         }
 
         # Mock the _compute_response_info function to return known values
@@ -277,9 +281,7 @@ class TestProcessValidationMetrics(unittest.TestCase):
             "score": [0.8, 0.9, 0.7],
         }
 
-        result = process_validation_metrics(
-            data_sources, sample_inputs, infos_dict, seed=42
-        )
+        result = process_validation_metrics(data_sources, sample_inputs, infos_dict, seed=42)
 
         # Check the structure of the result
         self.assertIn("source1", result)
@@ -303,9 +305,7 @@ class TestProcessValidationMetrics(unittest.TestCase):
             "pred": ["A", "B", "A"],
         }
 
-        result = process_validation_metrics(
-            data_sources, sample_inputs, infos_dict, seed=42
-        )
+        result = process_validation_metrics(data_sources, sample_inputs, infos_dict, seed=42)
 
         # Check that majority voting metrics are present
         self.assertIn("maj@2/mean", result["source1"]["score"])

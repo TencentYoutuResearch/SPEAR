@@ -80,7 +80,7 @@ class MathsAnswerTool(BaseTool):
 
         if answer.startswith("\\boxed{"):
             self._instance_dict[instance_id]["response"] = answer
-            answer_content = (answer[answer.find("\\boxed{")+len("\\boxed{"):answer.rfind("}")]).strip()
+            answer_content = (answer[answer.find("\\boxed{") + len("\\boxed{") : answer.rfind("}")]).strip()
         else:
             answer_content = answer.strip()
             self._instance_dict[instance_id]["response"] = "\\boxed{" + answer + "}"
@@ -94,8 +94,8 @@ class MathsAnswerTool(BaseTool):
 
     async def calc_reward(self, instance_id: str, **kwargs) -> float:
         return math_verify.compute_score(
-            self._instance_dict[instance_id]["response"],
-            self._instance_dict[instance_id]["ground_truth"])
+            self._instance_dict[instance_id]["response"], self._instance_dict[instance_id]["ground_truth"]
+        )
 
     async def release(self, instance_id: str, **kwargs) -> None:
         del self._instance_dict[instance_id]

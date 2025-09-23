@@ -674,7 +674,7 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     @DistProfiler.annotate(color="red", role="actor_update")
-    def update_actor(self, data: DataProto, data_replay: DataProto=DataProto.from_single_dict({})):
+    def update_actor(self, data: DataProto, data_replay: DataProto = DataProto.from_single_dict({})):
         # Support all hardwares
         data = data.to(get_device_id())
 
@@ -760,7 +760,6 @@ class ActorRolloutRefWorker(Worker, DistProfilerExtension):
         # clear kv cache
         get_torch_device().empty_cache()
         return output
-
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     @DistProfiler.annotate(color="blue", role="actor_compute_log_prob")
@@ -930,7 +929,9 @@ class CriticWorker(Worker, DistProfilerExtension):
 
         if not torch.distributed.is_initialized():
             torch.distributed.init_process_group(
-                backend=get_nccl_backend(), init_method=os.environ.get("DIST_INIT_METHOD", None), timeout=datetime.timedelta(seconds=7200)
+                backend=get_nccl_backend(),
+                init_method=os.environ.get("DIST_INIT_METHOD", None),
+                timeout=datetime.timedelta(seconds=7200),
             )
         self.config: FSDPCriticConfig = config
 
@@ -1446,7 +1447,6 @@ class RewardModelWorker(Worker, DistProfilerExtension):
                 rearrange,
                 unpad_input,
             )
-
 
         with torch.no_grad(), torch.autocast(device_type=device_name, dtype=torch.bfloat16):
             input_ids = micro_batch["input_ids"]

@@ -31,7 +31,7 @@ class ActorWorker(Worker):
         raise NotImplementedError
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
-    def update_actor(self, data: DataProto, data_replay: DataProto=None):
+    def update_actor(self, data: DataProto, data_replay: DataProto = None):
         raise NotImplementedError
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)

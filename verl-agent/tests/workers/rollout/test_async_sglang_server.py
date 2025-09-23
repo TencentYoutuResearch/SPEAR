@@ -50,10 +50,14 @@ class TestAsyncSglangServer:
         from verl.workers.rollout.sglang_rollout.async_sglang_server import AsyncSglangServer
 
         ActualClassToInstantiate = AsyncSglangServer
-        if hasattr(AsyncSglangServer, "__ray_metadata__") and hasattr(AsyncSglangServer.__ray_metadata__, "modified_class"):
+        if hasattr(AsyncSglangServer, "__ray_metadata__") and hasattr(
+            AsyncSglangServer.__ray_metadata__, "modified_class"
+        ):
             ActualClassToInstantiate = AsyncSglangServer.__ray_metadata__.modified_class
 
-        with patch("verl.workers.rollout.sglang_rollout.async_sglang_server.ray.get_actor", return_value=mock_ray_actor):
+        with patch(
+            "verl.workers.rollout.sglang_rollout.async_sglang_server.ray.get_actor", return_value=mock_ray_actor
+        ):
             instance = ActualClassToInstantiate(server_config, 2, 0, "test_prefix")
 
             await instance.init_engine()

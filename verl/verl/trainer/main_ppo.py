@@ -48,6 +48,7 @@ def main(config):
 # Define a function to run the PPO-like training process
 def run_ppo(config) -> None:
     import os
+
     os.environ["NCCL_TIMEOUT"] = "7200"
     print("NCCL_TIMEOUT:", os.environ.get("NCCL_TIMEOUT"))
     """Initialize Ray cluster and run distributed PPO training process.

@@ -16,30 +16,9 @@ FSDP PPO Trainer with Ray-based single controller.
 This trainer supports model-agonistic model initialization with huggingface
 """
 
-import uuid
-from collections import defaultdict
-from copy import deepcopy
-from pprint import pprint
-
-import numpy as np
-import torch
-from tqdm import tqdm
-
-from verl import DataProto
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-    reduce_metrics,
-)
 from verl.trainer.ppo.ray_trainer import (
-    AdvantageEstimator,
     RayPPOTrainer,
-    apply_kl_penalty,
-    compute_advantage,
-    compute_response_mask,
 )
-from verl.utils.profiler import simple_timer
 
 
 class RayEntropyTrainer(RayPPOTrainer):

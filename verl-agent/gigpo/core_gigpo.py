@@ -44,6 +44,7 @@ def to_hashable(x):
     else:
         raise TypeError(f"Unsupported type: {type(x)}")
 
+
 def summarize_group_size(group_size: list):
     """
     Summarize the dynamics of step-level group.
@@ -69,9 +70,9 @@ def summarize_group_size(group_size: list):
 
 
 def compute_step_discounted_returns(batch: DataProto, gamma: float):
-    rewards = batch.non_tensor_batch['rewards'].astype(np.float32)
-    traj_uids = batch.non_tensor_batch['traj_uid']
-    active_masks = batch.non_tensor_batch['active_masks'].astype(np.float32)
+    rewards = batch.non_tensor_batch["rewards"].astype(np.float32)
+    traj_uids = batch.non_tensor_batch["traj_uid"]
+    active_masks = batch.non_tensor_batch["active_masks"].astype(np.float32)
     returns_by_traj = {}
     unique_traj_uids = np.unique(traj_uids)
     for uid in unique_traj_uids:
@@ -102,24 +103,26 @@ def compute_step_discounted_returns(batch: DataProto, gamma: float):
         idx_in_traj = np.where(traj_indices == i)[0][0]  # Find position of i in its trajectory
         all_returns[i] = returns_by_traj[uid][idx_in_traj]
 
-    all_returns = torch.tensor(all_returns, dtype=torch.float32, device=batch.batch['input_ids'].device)
+    all_returns = torch.tensor(all_returns, dtype=torch.float32, device=batch.batch["input_ids"].device)
     return all_returns
+
 
 # ---------------------------------------------------------- #
 # ---------------- Core Functions of GiGPO ----------------- #
 # ---------------------------------------------------------- #
 
-def compute_gigpo_outcome_advantage(token_level_rewards: torch.Tensor,
-                                   step_rewards: torch.Tensor,
-                                   response_mask: torch.Tensor,
-                                   anchor_obs: np.array,
-                                   index: np.array,
-                                   traj_index: np.array,
-                                   epsilon: float = 1e-6,
-                                   step_advantage_w: float = 1.0,
-                                   mode: str = "mean_norm"
-                                   ):
 
+def compute_gigpo_outcome_advantage(
+    token_level_rewards: torch.Tensor,
+    step_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    anchor_obs: np.array,
+    index: np.array,
+    traj_index: np.array,
+    epsilon: float = 1e-6,
+    step_advantage_w: float = 1.0,
+    mode: str = "mean_norm",
+):
     if mode == "mean_std_norm":
         remove_std = False
     elif mode == "mean_norm":
@@ -140,14 +143,15 @@ def compute_gigpo_outcome_advantage(token_level_rewards: torch.Tensor,
     return scores, scores
 
 
-def episode_norm_reward(token_level_rewards: torch.Tensor,
-                        response_mask: torch.Tensor,
-                        index: np.array,
-                        traj_index: np.array,
-                        epsilon: float = 1e-6,
-                        remove_std: bool = True,
-                        compute_mean_std_cross_all_data: bool = True,
-                        ):
+def episode_norm_reward(
+    token_level_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.array,
+    traj_index: np.array,
+    epsilon: float = 1e-6,
+    remove_std: bool = True,
+    compute_mean_std_cross_all_data: bool = True,
+):
     """
     Compute episode-level advantage using mean-std normalization for GiGPO.
     (with only one scalar reward for each episode).
@@ -165,9 +169,9 @@ def episode_norm_reward(token_level_rewards: torch.Tensor,
         remove_std: bool
             If True, the standard deviation is removed from the normalization.
         compute_mean_std_cross_all_data: bool
-            If True (more stable), the mean and std are computed across all data in the batch. 
+            If True (more stable), the mean and std are computed across all data in the batch.
             If False (i.e., standard episode-level adv), the mean and std are computed across N trajectories.
-    
+
     Returns:
         advantages: `(torch.Tensor)`
             shape: (bs, response_length)
@@ -213,7 +217,7 @@ def build_step_group(anchor_obs: np.array, index: np.array, summarize: bool = Fa
     """
     Group observations by index and then cluster identical observations within each index group.
     Assigns a unique step_group_uid (UUID) to each cluster.
-    
+
     Parameters:
     -----------
     anchor_obs : np.array
@@ -222,7 +226,7 @@ def build_step_group(anchor_obs: np.array, index: np.array, summarize: bool = Fa
         Array of episode_group_uid
     summarize : bool
         Whether to summarize the group sizes (default: True)
-    
+
     Returns:
     --------
     np.array
@@ -267,12 +271,13 @@ def build_step_group(anchor_obs: np.array, index: np.array, summarize: bool = Fa
     return step_group_uids
 
 
-def step_norm_reward(step_rewards: torch.Tensor,
-                      response_mask: torch.Tensor,
-                      index: np.array,
-                      epsilon: float = 1e-6,
-                      remove_std: bool = True,
-                      ):
+def step_norm_reward(
+    step_rewards: torch.Tensor,
+    response_mask: torch.Tensor,
+    index: np.array,
+    epsilon: float = 1e-6,
+    remove_std: bool = True,
+):
     """
     Compute step-level advantage using mean-std normalization for GiGPO.
     Args:
@@ -280,7 +285,7 @@ def step_norm_reward(step_rewards: torch.Tensor,
             shape: (bs,)
         response_mask: `(torch.Tensor)`
             shape: (bs, response_length)
-    
+
     Returns:
         advantages: `(torch.Tensor)`
             shape: (bs, response_length)
@@ -318,4 +323,3 @@ def step_norm_reward(step_rewards: torch.Tensor,
         step_advantages = scores.unsqueeze(-1).tile([1, response_length]) * response_mask
 
     return step_advantages
-

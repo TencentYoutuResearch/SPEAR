@@ -38,7 +38,7 @@ def process_item(reward_fn, data_source, response_lst, reward_data):
 
 @hydra.main(config_path="config", config_name="evaluation", version_base=None)
 def main(config):
-    local_path = copy_to_local(config.data.path, use_shm=config.data.get('use_shm', False))
+    local_path = copy_to_local(config.data.path, use_shm=config.data.get("use_shm", False))
     dataset = pd.read_parquet(local_path)
     responses = dataset[config.data.response_key]
     data_sources = dataset[config.data.data_source_key]
@@ -55,7 +55,9 @@ def main(config):
     compute_score = get_custom_reward_fn(config)
 
     # Create remote tasks
-    remote_tasks = [process_item.remote(compute_score, data_sources[i], responses[i], reward_model_data[i]) for i in range(total)]
+    remote_tasks = [
+        process_item.remote(compute_score, data_sources[i], responses[i], reward_model_data[i]) for i in range(total)
+    ]
 
     # Process results as they come in
     with tqdm(total=total) as pbar:

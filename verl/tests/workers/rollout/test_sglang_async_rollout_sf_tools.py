@@ -223,9 +223,11 @@ class TestRolloutWithTools:
     @pytest.fixture
     def mock_rollout(self, sandbox_fusion_rollout_config, qwen_tokenizer, qwen_model_config):
         """Mock the rollout instance"""
-        with patch.object(SGLangRollout, "_init_distributed_env", return_value=None), patch.object(
-            SGLangRollout, "_init_inference_engine", return_value=None
-        ), patch.object(SGLangRollout, "_init_sampling_params", return_value=None):
+        with (
+            patch.object(SGLangRollout, "_init_distributed_env", return_value=None),
+            patch.object(SGLangRollout, "_init_inference_engine", return_value=None),
+            patch.object(SGLangRollout, "_init_sampling_params", return_value=None),
+        ):
             rollout = SGLangRollout(
                 actor_module="",
                 config=sandbox_fusion_rollout_config,

@@ -313,7 +313,7 @@ class RLHFDataset(Dataset):
 
         # get prompts with chat template
         if self.return_full_prompt:
-            row_dict["full_prompts"] = raw_prompt # array of strings
+            row_dict["full_prompts"] = raw_prompt  # array of strings
 
         # get prompts with chat template
         if self.return_full_prompt:

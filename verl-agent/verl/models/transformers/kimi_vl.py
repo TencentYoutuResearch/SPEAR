@@ -156,7 +156,11 @@ def _ulysses_flash_attn_forward(
     compressed_kv = self.kv_a_proj_with_mqa(hidden_states)
     compressed_kv, k_pe = torch.split(compressed_kv, [self.kv_lora_rank, self.qk_rope_head_dim], dim=-1)
     k_pe = k_pe.view(bsz, q_len, 1, self.qk_rope_head_dim).transpose(1, 2)
-    kv = self.kv_b_proj(self.kv_a_layernorm(compressed_kv)).view(bsz, q_len, self.num_heads, self.qk_nope_head_dim + self.v_head_dim).transpose(1, 2)
+    kv = (
+        self.kv_b_proj(self.kv_a_layernorm(compressed_kv))
+        .view(bsz, q_len, self.num_heads, self.qk_nope_head_dim + self.v_head_dim)
+        .transpose(1, 2)
+    )
 
     k_nope, value_states = torch.split(kv, [self.qk_nope_head_dim, self.v_head_dim], dim=-1)
     kv_seq_len = value_states.shape[-2]

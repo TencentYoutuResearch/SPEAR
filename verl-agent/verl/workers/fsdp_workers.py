@@ -74,7 +74,9 @@ def create_device_mesh(world_size, fsdp_size):
     if fsdp_size < 0 or fsdp_size >= world_size:
         device_mesh = init_device_mesh(device_name, mesh_shape=(world_size,), mesh_dim_names=["fsdp"])
     else:
-        device_mesh = init_device_mesh(device_name, mesh_shape=(world_size // fsdp_size, fsdp_size), mesh_dim_names=["ddp", "fsdp"])
+        device_mesh = init_device_mesh(
+            device_name, mesh_shape=(world_size // fsdp_size, fsdp_size), mesh_dim_names=["ddp", "fsdp"]
+        )
     return device_mesh
 
 
@@ -104,7 +106,11 @@ class ActorRolloutRefWorker(Worker):
         if not torch.distributed.is_initialized():
             rank = int(os.environ.get("RANK", 0))
             world_size = int(os.environ.get("WORLD_SIZE", 1))
-            torch.distributed.init_process_group(backend="cpu:gloo,cuda:nccl" if is_cuda_available else "cpu:gloo,npu:hccl", rank=rank, world_size=world_size)
+            torch.distributed.init_process_group(
+                backend="cpu:gloo,cuda:nccl" if is_cuda_available else "cpu:gloo,npu:hccl",
+                rank=rank,
+                world_size=world_size,
+            )
 
         # build device mesh for FSDP
         world_size = torch.distributed.get_world_size()
@@ -116,10 +122,12 @@ class ActorRolloutRefWorker(Worker):
         self.ulysses_sequence_parallel_size = self.config.actor.get("ulysses_sequence_parallel_size", 1)
         dp = world_size // self.ulysses_sequence_parallel_size
         if self.ulysses_sequence_parallel_size > 1:
-            self.ulysses_device_mesh = init_device_mesh(device_name, mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"])
+            self.ulysses_device_mesh = init_device_mesh(
+                device_name, mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"]
+            )
 
         self.ulysses_sharding_manager = FSDPUlyssesShardingManager(self.ulysses_device_mesh)
-        self._lora_rank = self.config.model.get('lora_rank', 0)
+        self._lora_rank = self.config.model.get("lora_rank", 0)
         self._is_lora = self._lora_rank > 0
 
         self.role = role
@@ -142,19 +150,29 @@ class ActorRolloutRefWorker(Worker):
         if self._is_actor:
             self.config.actor.ppo_mini_batch_size *= self.config.rollout.n
             self.config.actor.ppo_mini_batch_size //= self.device_mesh.size() // self.ulysses_sequence_parallel_size
-            assert self.config.actor.ppo_mini_batch_size > 0, f"ppo_mini_batch_size {self.config.actor.ppo_mini_batch_size} should be larger than 0 after normalization"
+            assert self.config.actor.ppo_mini_batch_size > 0, (
+                f"ppo_mini_batch_size {self.config.actor.ppo_mini_batch_size} should be larger than 0 after normalization"
+            )
             # micro bsz
             if self.config.actor.ppo_micro_batch_size is not None:
-                self.config.actor.ppo_micro_batch_size //= self.device_mesh.size() // self.ulysses_sequence_parallel_size
+                self.config.actor.ppo_micro_batch_size //= (
+                    self.device_mesh.size() // self.ulysses_sequence_parallel_size
+                )
                 self.config.actor.ppo_micro_batch_size_per_gpu = self.config.actor.ppo_micro_batch_size
 
             if self.config.actor.ppo_micro_batch_size_per_gpu is not None:
-                assert self.config.actor.ppo_mini_batch_size % self.config.actor.ppo_micro_batch_size_per_gpu == 0, f"normalized ppo_mini_batch_size {self.config.actor.ppo_mini_batch_size} should be divisible by ppo_micro_batch_size_per_gpu {self.config.actor.ppo_micro_batch_size_per_gpu}"
-                assert self.config.actor.ppo_mini_batch_size // self.config.actor.ppo_micro_batch_size_per_gpu > 0, f"normalized ppo_mini_batch_size {self.config.actor.ppo_mini_batch_size} should be larger than ppo_micro_batch_size_per_gpu {self.config.actor.ppo_micro_batch_size_per_gpu}"
+                assert self.config.actor.ppo_mini_batch_size % self.config.actor.ppo_micro_batch_size_per_gpu == 0, (
+                    f"normalized ppo_mini_batch_size {self.config.actor.ppo_mini_batch_size} should be divisible by ppo_micro_batch_size_per_gpu {self.config.actor.ppo_micro_batch_size_per_gpu}"
+                )
+                assert self.config.actor.ppo_mini_batch_size // self.config.actor.ppo_micro_batch_size_per_gpu > 0, (
+                    f"normalized ppo_mini_batch_size {self.config.actor.ppo_mini_batch_size} should be larger than ppo_micro_batch_size_per_gpu {self.config.actor.ppo_micro_batch_size_per_gpu}"
+                )
 
         # normalize rollout config
         if self._is_rollout and self.config.rollout.log_prob_micro_batch_size is not None:
-            self.config.rollout.log_prob_micro_batch_size //= self.device_mesh.size() // self.ulysses_sequence_parallel_size
+            self.config.rollout.log_prob_micro_batch_size //= (
+                self.device_mesh.size() // self.ulysses_sequence_parallel_size
+            )
             self.config.rollout.log_prob_micro_batch_size_per_gpu = self.config.rollout.log_prob_micro_batch_size
         # normalize ref config
         if self._is_ref and self.config.ref.log_prob_micro_batch_size is not None:
@@ -199,7 +217,9 @@ class ActorRolloutRefWorker(Worker):
             torch_dtype = PrecisionType.to_dtype(torch_dtype)
 
         # override model kwargs
-        actor_model_config = AutoConfig.from_pretrained(local_path, trust_remote_code=trust_remote_code, attn_implementation="flash_attention_2")
+        actor_model_config = AutoConfig.from_pretrained(
+            local_path, trust_remote_code=trust_remote_code, attn_implementation="flash_attention_2"
+        )
 
         # patch for kimi-vl
         if getattr(actor_model_config, "model_type", None) == "kimi_vl":
@@ -218,7 +238,9 @@ class ActorRolloutRefWorker(Worker):
             print(f"Model config after override: {actor_model_config}")
 
         # NOTE(fix me): tie_word_embedding causes meta_tensor init to hang
-        init_context = get_init_weight_context_manager(use_meta_tensor=not actor_model_config.tie_word_embeddings, mesh=self.device_mesh)
+        init_context = get_init_weight_context_manager(
+            use_meta_tensor=not actor_model_config.tie_word_embeddings, mesh=self.device_mesh
+        )
 
         with init_context(), warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -257,11 +279,11 @@ class ActorRolloutRefWorker(Worker):
                 actor_module.enable_input_require_grads()
                 # Convert config to regular Python types before creating PEFT model
                 lora_config = {
-                    'task_type': TaskType.CAUSAL_LM,
-                    'r': self.config.model.lora_rank,
-                    'lora_alpha': self.config.model.lora_alpha,
-                    'target_modules': convert_to_regular_types(self.config.model.target_modules),
-                    'bias': "none"
+                    "task_type": TaskType.CAUSAL_LM,
+                    "r": self.config.model.lora_rank,
+                    "lora_alpha": self.config.model.lora_alpha,
+                    "target_modules": convert_to_regular_types(self.config.model.target_modules),
+                    "bias": "none",
                 }
                 actor_module = get_peft_model(actor_module, LoraConfig(**lora_config))
         torch.distributed.barrier()
@@ -284,7 +306,11 @@ class ActorRolloutRefWorker(Worker):
 
         mixed_precision = MixedPrecision(param_dtype=param_dtype, reduce_dtype=reduce_dtype, buffer_dtype=buffer_dtype)
 
-        auto_wrap_policy = get_fsdp_wrap_policy(module=actor_module, config=fsdp_config.get("wrap_policy", None), is_lora=self.config.model.get('lora_rank', 0) > 0)
+        auto_wrap_policy = get_fsdp_wrap_policy(
+            module=actor_module,
+            config=fsdp_config.get("wrap_policy", None),
+            is_lora=self.config.model.get("lora_rank", 0) > 0,
+        )
 
         if self._is_rollout and self.config.rollout.name == "hf":
             # TODO(zhangchi.usc1992, shengguangming) fix me. Current, auto_wrap_policy causes HFRollout to hang in Gemma
@@ -316,7 +342,9 @@ class ActorRolloutRefWorker(Worker):
             )
         elif fsdp_strategy == "fsdp2":
             assert CPUOffloadPolicy is not None, "PyTorch version >= 2.4 is required for using fully_shard API (FSDP2)"
-            mp_policy = MixedPrecisionPolicy(param_dtype=param_dtype, reduce_dtype=reduce_dtype, cast_forward_inputs=True)
+            mp_policy = MixedPrecisionPolicy(
+                param_dtype=param_dtype, reduce_dtype=reduce_dtype, cast_forward_inputs=True
+            )
             if role == "actor" and fsdp_config.offload_policy:
                 cpu_offload = CPUOffloadPolicy(pin_memory=True)
                 self._is_offload_param = False
@@ -365,9 +393,17 @@ class ActorRolloutRefWorker(Worker):
             print(f"Total steps: {total_steps}, num_warmup_steps: {num_warmup_steps}")
 
             if warmup_style == "constant":
-                actor_lr_scheduler = get_constant_schedule_with_warmup(optimizer=actor_optimizer, num_warmup_steps=num_warmup_steps)
+                actor_lr_scheduler = get_constant_schedule_with_warmup(
+                    optimizer=actor_optimizer, num_warmup_steps=num_warmup_steps
+                )
             elif warmup_style == "cosine":
-                actor_lr_scheduler = get_cosine_schedule_with_warmup(optimizer=actor_optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=total_steps, min_lr_ratio=min_lr_ratio, num_cycles=num_cycles)
+                actor_lr_scheduler = get_cosine_schedule_with_warmup(
+                    optimizer=actor_optimizer,
+                    num_warmup_steps=num_warmup_steps,
+                    num_training_steps=total_steps,
+                    min_lr_ratio=min_lr_ratio,
+                    num_cycles=num_cycles,
+                )
             else:
                 raise NotImplementedError(f"Warmup style {warmup_style} is not supported")
 
@@ -384,8 +420,12 @@ class ActorRolloutRefWorker(Worker):
         # TODO(sgm): support FSDP hybrid shard for larger model
         infer_tp = self.config.rollout.tensor_model_parallel_size
         dp = self.world_size // infer_tp
-        assert self.world_size % infer_tp == 0, f"rollout world_size: {self.world_size} is not divisible by infer_tp: {infer_tp}"
-        rollout_device_mesh = init_device_mesh(device_name, mesh_shape=(dp, infer_tp), mesh_dim_names=["dp", "infer_tp"])
+        assert self.world_size % infer_tp == 0, (
+            f"rollout world_size: {self.world_size} is not divisible by infer_tp: {infer_tp}"
+        )
+        rollout_device_mesh = init_device_mesh(
+            device_name, mesh_shape=(dp, infer_tp), mesh_dim_names=["dp", "infer_tp"]
+        )
         rollout_name = self.config.rollout.name
         if rollout_name == "hf":
             from verl.workers.rollout import HFRollout
@@ -400,8 +440,12 @@ class ActorRolloutRefWorker(Worker):
             from verl.workers.sharding_manager.fsdp_vllm import FSDPVLLMShardingManager
 
             log_gpu_memory_usage(f"Before building {rollout_name} rollout", logger=logger)
-            local_path = copy_to_local(self.config.model.path, use_shm=self.config.model.get('use_shm', False))
-            lora_kwargs = {'lora_kwargs': {"enable_lora":True, "max_loras":1, "max_lora_rank":self._lora_rank}} if self._is_lora else {}
+            local_path = copy_to_local(self.config.model.path, use_shm=self.config.model.get("use_shm", False))
+            lora_kwargs = (
+                {"lora_kwargs": {"enable_lora": True, "max_loras": 1, "max_lora_rank": self._lora_rank}}
+                if self._is_lora
+                else {}
+            )
             # lora_kwargs = {}
             if vllm_mode == "customized":
                 rollout = vLLMRollout(
@@ -410,7 +454,8 @@ class ActorRolloutRefWorker(Worker):
                     tokenizer=self.tokenizer,
                     model_hf_config=self.actor_model_config,
                     trust_remote_code=trust_remote_code,
-                    **lora_kwargs)
+                    **lora_kwargs,
+                )
             elif vllm_mode == "spmd":
                 from verl.workers.rollout.vllm_rollout import vLLMAsyncRollout
 
@@ -422,7 +467,8 @@ class ActorRolloutRefWorker(Worker):
                     model_hf_config=self.actor_model_config,
                     device_mesh=rollout_device_mesh,
                     trust_remote_code=trust_remote_code,
-                    **lora_kwargs)
+                    **lora_kwargs,
+                )
             else:
                 raise NotImplementedError("vllm_mode must be 'customized' or 'spmd'")
 
@@ -436,15 +482,14 @@ class ActorRolloutRefWorker(Worker):
                 device_mesh=rollout_device_mesh,
                 offload_param=self._is_offload_param,
                 load_format=self.config.rollout.load_format,
-                layered_summon=self.config.rollout.get('layered_summon', False),
+                layered_summon=self.config.rollout.get("layered_summon", False),
             )
             log_gpu_memory_usage("After building sharding manager", logger=logger)
 
         elif rollout_name in ["sglang", "sglang_async"]:
             if rollout_name == "sglang_async":
                 warnings.warn(
-                    "'sglang_async' has been deprecated and merged into 'sglang'. "
-                    "Please use 'sglang' going forward.",
+                    "'sglang_async' has been deprecated and merged into 'sglang'. Please use 'sglang' going forward.",
                     DeprecationWarning,
                     stacklevel=2,
                 )
@@ -499,7 +544,7 @@ class ActorRolloutRefWorker(Worker):
         override_model_config = OmegaConf.to_container(self.config.model.get("override_config", OmegaConf.create()))
 
         use_remove_padding = self.config.model.get("use_remove_padding", False)
-        use_shm = self.config.model.get('use_shm', False)
+        use_shm = self.config.model.get("use_shm", False)
         use_fused_kernels = self.config.model.get("use_fused_kernels", False)
 
         if self._is_actor or self._is_rollout:
@@ -548,10 +593,14 @@ class ActorRolloutRefWorker(Worker):
             with open_dict(self.config.actor):
                 self.config.actor.use_remove_padding = use_remove_padding
                 self.config.actor.use_fused_kernels = use_fused_kernels
-            self.actor = DataParallelPPOActor(config=self.config.actor, actor_module=self.actor_module_fsdp, actor_optimizer=self.actor_optimizer)
+            self.actor = DataParallelPPOActor(
+                config=self.config.actor, actor_module=self.actor_module_fsdp, actor_optimizer=self.actor_optimizer
+            )
 
         if self._is_rollout:
-            self.rollout, self.rollout_sharding_manager = self._build_rollout(trust_remote_code=self.config.model.get("trust_remote_code", False))
+            self.rollout, self.rollout_sharding_manager = self._build_rollout(
+                trust_remote_code=self.config.model.get("trust_remote_code", False)
+            )
 
         if self._is_ref:
             local_path = copy_to_local(self.config.model.path, use_shm=use_shm)
@@ -583,7 +632,7 @@ class ActorRolloutRefWorker(Worker):
             )
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
-    def update_actor(self, data: DataProto,  data_replay: DataProto=DataProto.from_single_dict({})):
+    def update_actor(self, data: DataProto, data_replay: DataProto = DataProto.from_single_dict({})):
         # Support all hardwares
         data = data.to(get_torch_device().current_device())
 
@@ -603,7 +652,9 @@ class ActorRolloutRefWorker(Worker):
             delta_time = timer.last
             global_num_tokens = data.meta_info["global_token_num"]
             estimated_flops, promised_flops = self.flops_counter.estimate_flops(global_num_tokens, delta_time)
-            metrics["perf/mfu/actor"] = estimated_flops * self.config.actor.ppo_epochs / promised_flops / self.world_size
+            metrics["perf/mfu/actor"] = (
+                estimated_flops * self.config.actor.ppo_epochs / promised_flops / self.world_size
+            )
             metrics["perf/max_memory_allocated_gb"] = get_torch_device().max_memory_allocated() / (1024**3)
             metrics["perf/max_memory_reserved_gb"] = get_torch_device().max_memory_reserved() / (1024**3)
             metrics["perf/cpu_memory_used_gb"] = psutil.virtual_memory().used / (1024**3)
@@ -635,8 +686,12 @@ class ActorRolloutRefWorker(Worker):
         assert self._is_rollout
 
         meta_info = {
-            "eos_token_id": self.generation_config.eos_token_id if self.generation_config is not None else self.tokenizer.eos_token_id,
-            "pad_token_id": self.generation_config.pad_token_id if self.generation_config is not None else self.tokenizer.pad_token_id,
+            "eos_token_id": self.generation_config.eos_token_id
+            if self.generation_config is not None
+            else self.tokenizer.eos_token_id,
+            "pad_token_id": self.generation_config.pad_token_id
+            if self.generation_config is not None
+            else self.tokenizer.pad_token_id,
         }
         prompts.meta_info.update(meta_info)
         with self.rollout_sharding_manager:
@@ -655,7 +710,6 @@ class ActorRolloutRefWorker(Worker):
         get_torch_device().empty_cache()
         return output
 
-
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_log_prob(self, data: DataProto):
         # when is_lora is True, we use the actor without lora applied to calculate the log_prob
@@ -666,6 +720,7 @@ class ActorRolloutRefWorker(Worker):
 
         # Support all hardwares
         from contextlib import nullcontext
+
         is_lora = data.meta_info.pop("is_lora", False)
         adapter_ctx = self.actor.actor_module.disable_adapter() if is_lora else nullcontext()
         data = data.to(get_torch_device().current_device())
@@ -702,10 +757,10 @@ class ActorRolloutRefWorker(Worker):
     def compute_ref_log_prob(self, data: DataProto):
         if self._is_lora:
             # if _is_lora, actor without lora applied is the ref
-            data.meta_info['is_lora'] = True
+            data.meta_info["is_lora"] = True
             data = self.compute_log_prob(data)
             # this old_log_probs is in fact ref_log_prob
-            data = DataProto.from_dict(tensors={'ref_log_prob': data.batch['old_log_probs']})
+            data = DataProto.from_dict(tensors={"ref_log_prob": data.batch["old_log_probs"]})
             return data
         assert self._is_ref
         # else:
@@ -741,7 +796,9 @@ class ActorRolloutRefWorker(Worker):
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.actor_module_fsdp)
 
-        self.checkpoint_manager.save_checkpoint(local_path=local_path, hdfs_path=hdfs_path, global_step=global_step, max_ckpt_to_keep=max_ckpt_to_keep)
+        self.checkpoint_manager.save_checkpoint(
+            local_path=local_path, hdfs_path=hdfs_path, global_step=global_step, max_ckpt_to_keep=max_ckpt_to_keep
+        )
         dist.barrier()
 
         if self._is_lora and isinstance(self.actor_module, PeftModel):
@@ -749,17 +806,17 @@ class ActorRolloutRefWorker(Worker):
             peft_config = {}
             if dist.get_rank() == 0:
                 os.makedirs(lora_save_path, exist_ok=True)
-                peft_config = asdict(self.actor_module.peft_config.get('default', {}))
-                peft_config['task_type'] = peft_config['task_type'].value
-                peft_config['peft_type'] = peft_config['peft_type'].value
-                peft_config['target_modules'] = list(peft_config['target_modules'])
+                peft_config = asdict(self.actor_module.peft_config.get("default", {}))
+                peft_config["task_type"] = peft_config["task_type"].value
+                peft_config["peft_type"] = peft_config["peft_type"].value
+                peft_config["target_modules"] = list(peft_config["target_modules"])
             try:
                 if isinstance(self.actor_module_fsdp, FSDP):
                     self.actor_module_fsdp = self.actor_module_fsdp.cuda()
                     lora_params = layered_summon_lora_params(self.actor_module_fsdp)
                     if dist.get_rank() == 0:
                         save_file(lora_params, os.path.join(lora_save_path, "adapter_model.safetensors"))
-                        with open(os.path.join(lora_save_path, "adapter_config.json"), "w", encoding='utf-8') as f:
+                        with open(os.path.join(lora_save_path, "adapter_config.json"), "w", encoding="utf-8") as f:
                             json.dump(peft_config, f, ensure_ascii=False, indent=4)
             except Exception as e:
                 if dist.get_rank() == 0:
@@ -777,7 +834,9 @@ class ActorRolloutRefWorker(Worker):
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.actor_module_fsdp)
 
-        self.checkpoint_manager.load_checkpoint(local_path=local_path, hdfs_path=hdfs_path, del_local_after_load=del_local_after_load)
+        self.checkpoint_manager.load_checkpoint(
+            local_path=local_path, hdfs_path=hdfs_path, del_local_after_load=del_local_after_load
+        )
 
         if self._is_offload_param:
             offload_fsdp_model_to_cpu(self.actor_module_fsdp)
@@ -806,7 +865,9 @@ class CriticWorker(Worker):
         self.ulysses_sequence_parallel_size = self.config.get("ulysses_sequence_parallel_size", 1)
         dp = world_size // self.ulysses_sequence_parallel_size
         if self.ulysses_sequence_parallel_size > 1:
-            self.ulysses_device_mesh = init_device_mesh(device_name, mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"])
+            self.ulysses_device_mesh = init_device_mesh(
+                device_name, mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"]
+            )
 
         self.ulysses_sharding_manager = FSDPUlyssesShardingManager(self.ulysses_device_mesh)
 
@@ -818,15 +879,23 @@ class CriticWorker(Worker):
         self.config.ppo_mini_batch_size *= self.config.rollout_n
         self.config.ppo_mini_batch_size //= torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
         if self.config.ppo_micro_batch_size is not None:
-            self.config.ppo_micro_batch_size //= torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
-            self.config.forward_micro_batch_size //= torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
+            self.config.ppo_micro_batch_size //= (
+                torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
+            )
+            self.config.forward_micro_batch_size //= (
+                torch.distributed.get_world_size() // self.ulysses_sequence_parallel_size
+            )
             self.config.ppo_micro_batch_size_per_gpu = self.config.ppo_micro_batch_size
             self.config.forward_micro_batch_size_per_gpu = self.config.forward_micro_batch_size
 
         if self.config.ppo_micro_batch_size_per_gpu is not None:
-            assert self.config.ppo_mini_batch_size % self.config.ppo_micro_batch_size_per_gpu == 0, f"normalized ppo_mini_batch_size {self.config.ppo_mini_batch_size} should be divisible by ppo_micro_batch_size_per_gpu {self.config.ppo_micro_batch_size_per_gpu}"
-            assert self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu > 0, f"normalized ppo_mini_batch_size {self.config.ppo_mini_batch_size} should be larger than ppo_micro_batch_size_per_gpu {self.config.ppo_micro_batch_size_per_gpu}"
-        self._is_lora = self.config.model.get('lora_rank', 0) > 0
+            assert self.config.ppo_mini_batch_size % self.config.ppo_micro_batch_size_per_gpu == 0, (
+                f"normalized ppo_mini_batch_size {self.config.ppo_mini_batch_size} should be divisible by ppo_micro_batch_size_per_gpu {self.config.ppo_micro_batch_size_per_gpu}"
+            )
+            assert self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu > 0, (
+                f"normalized ppo_mini_batch_size {self.config.ppo_mini_batch_size} should be larger than ppo_micro_batch_size_per_gpu {self.config.ppo_micro_batch_size_per_gpu}"
+            )
+        self._is_lora = self.config.model.get("lora_rank", 0) > 0
 
     def _build_critic_model_optimizer(self, config):
         # the following line is necessary
@@ -836,7 +905,7 @@ class CriticWorker(Worker):
         from verl.utils.model import print_model_size
         from verl.utils.torch_dtypes import PrecisionType
 
-        use_shm = config.model.get('use_shm', False)
+        use_shm = config.model.get("use_shm", False)
         local_path = copy_to_local(config.model.path, use_shm=use_shm)
         # note that the tokenizer between actor and critic may be different. So override tokenizer info with actor info
         # using random initialized model from any architecture. May not be the same as Actor.
@@ -862,13 +931,19 @@ class CriticWorker(Worker):
 
         from transformers import AutoConfig, AutoModelForTokenClassification
 
-        critic_model_config = AutoConfig.from_pretrained(local_path, attn_implementation="flash_attention_2", trust_remote_code=config.model.get("trust_remote_code", False))
+        critic_model_config = AutoConfig.from_pretrained(
+            local_path,
+            attn_implementation="flash_attention_2",
+            trust_remote_code=config.model.get("trust_remote_code", False),
+        )
         critic_model_config.num_labels = 1
         # patch for kimi-vl
         if getattr(critic_model_config, "model_type", None) == "kimi_vl":
             critic_model_config.text_config.topk_method = "greedy"
 
-        init_context = get_init_weight_context_manager(use_meta_tensor=not critic_model_config.tie_word_embeddings, mesh=self.device_mesh)
+        init_context = get_init_weight_context_manager(
+            use_meta_tensor=not critic_model_config.tie_word_embeddings, mesh=self.device_mesh
+        )
 
         with init_context(), warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -900,11 +975,11 @@ class CriticWorker(Worker):
             critic_module.enable_input_require_grads()
             # Convert config to regular Python types before creating PEFT model
             lora_config = {
-                'task_type': TaskType.CAUSAL_LM,
-                'r': self.config.model.lora_rank,
-                'lora_alpha': self.config.model.lora_alpha,
-                'target_modules': convert_to_regular_types(self.config.model.target_modules),
-                'bias': "none",
+                "task_type": TaskType.CAUSAL_LM,
+                "r": self.config.model.lora_rank,
+                "lora_alpha": self.config.model.lora_alpha,
+                "target_modules": convert_to_regular_types(self.config.model.target_modules),
+                "bias": "none",
             }
             critic_module = get_peft_model(critic_module, LoraConfig(**lora_config))
 
@@ -926,7 +1001,11 @@ class CriticWorker(Worker):
 
         mixed_precision = MixedPrecision(param_dtype=param_dtype, reduce_dtype=reduce_dtype, buffer_dtype=buffer_dtype)
 
-        auto_wrap_policy = get_fsdp_wrap_policy(module=critic_module, config=self.config.model.fsdp_config.wrap_policy, is_lora=self.config.model.get('lora_rank', 0) > 0)
+        auto_wrap_policy = get_fsdp_wrap_policy(
+            module=critic_module,
+            config=self.config.model.fsdp_config.wrap_policy,
+            is_lora=self.config.model.get("lora_rank", 0) > 0,
+        )
 
         log_gpu_memory_usage("Before critic FSDP", logger=None)
 
@@ -950,7 +1029,9 @@ class CriticWorker(Worker):
             )
         elif config.strategy == "fsdp2":
             assert CPUOffloadPolicy is not None, "PyTorch version >= 2.4 is required for using fully_shard API (FSDP2)"
-            mp_policy = MixedPrecisionPolicy(param_dtype=param_dtype, reduce_dtype=reduce_dtype, cast_forward_inputs=True)
+            mp_policy = MixedPrecisionPolicy(
+                param_dtype=param_dtype, reduce_dtype=reduce_dtype, cast_forward_inputs=True
+            )
             offload_policy = None
             if fsdp_config.offload_policy:
                 self._is_offload_param = False
@@ -994,9 +1075,13 @@ class CriticWorker(Worker):
         from verl.utils.torch_functional import get_constant_schedule_with_warmup, get_cosine_schedule_with_warmup
 
         if warmup_style == "constant":
-            critic_lr_scheduler = get_constant_schedule_with_warmup(optimizer=critic_optimizer, num_warmup_steps=num_warmup_steps)
+            critic_lr_scheduler = get_constant_schedule_with_warmup(
+                optimizer=critic_optimizer, num_warmup_steps=num_warmup_steps
+            )
         elif warmup_style == "cosine":
-            critic_lr_scheduler = get_cosine_schedule_with_warmup(optimizer=critic_optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=total_steps)
+            critic_lr_scheduler = get_cosine_schedule_with_warmup(
+                optimizer=critic_optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=total_steps
+            )
         else:
             raise NotImplementedError(f"Warmup style {warmup_style} is not supported")
 
@@ -1009,7 +1094,9 @@ class CriticWorker(Worker):
 
         from verl.workers.critic import DataParallelPPOCritic
 
-        self.critic_module, self.critic_optimizer, self.critic_lr_scheduler = self._build_critic_model_optimizer(self.config)
+        self.critic_module, self.critic_optimizer, self.critic_lr_scheduler = self._build_critic_model_optimizer(
+            self.config
+        )
 
         if self._is_offload_param:
             offload_fsdp_model_to_cpu(self.critic_module)
@@ -1018,7 +1105,9 @@ class CriticWorker(Worker):
             offload_fsdp_optimizer(optimizer=self.critic_optimizer)
             log_gpu_memory_usage("After offload critic optimizer during init", logger=logger)
 
-        self.critic = DataParallelPPOCritic(config=self.config, critic_module=self.critic_module, critic_optimizer=self.critic_optimizer)
+        self.critic = DataParallelPPOCritic(
+            config=self.config, critic_module=self.critic_module, critic_optimizer=self.critic_optimizer
+        )
 
         self.flops_counter = FlopsCounter(self.critic_model_config)
         self.checkpoint_manager = FSDPCheckpointManager(
@@ -1095,7 +1184,9 @@ class CriticWorker(Worker):
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.critic_module)
 
-        self.checkpoint_manager.save_checkpoint(local_path=local_path, hdfs_path=hdfs_path, global_step=global_step, max_ckpt_to_keep=max_ckpt_to_keep)
+        self.checkpoint_manager.save_checkpoint(
+            local_path=local_path, hdfs_path=hdfs_path, global_step=global_step, max_ckpt_to_keep=max_ckpt_to_keep
+        )
 
         torch.distributed.barrier()
         if self._is_offload_param:
@@ -1108,7 +1199,9 @@ class CriticWorker(Worker):
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.critic_module)
 
-        self.checkpoint_manager.load_checkpoint(local_path=local_path, hdfs_path=hdfs_path, del_local_after_load=del_local_after_load)
+        self.checkpoint_manager.load_checkpoint(
+            local_path=local_path, hdfs_path=hdfs_path, del_local_after_load=del_local_after_load
+        )
 
         torch.distributed.barrier()
         if self._is_offload_param:
@@ -1143,7 +1236,9 @@ class RewardModelWorker(Worker):
         self.ulysses_sequence_parallel_size = self.config.get("ulysses_sequence_parallel_size", 1)
         dp = world_size // self.ulysses_sequence_parallel_size
         if self.ulysses_sequence_parallel_size > 1:
-            self.ulysses_device_mesh = init_device_mesh(device_name, mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"])
+            self.ulysses_device_mesh = init_device_mesh(
+                device_name, mesh_shape=(dp, self.ulysses_sequence_parallel_size), mesh_dim_names=["dp", "sp"]
+            )
 
         self.ulysses_sharding_manager = FSDPUlyssesShardingManager(self.ulysses_device_mesh)
 
@@ -1159,7 +1254,7 @@ class RewardModelWorker(Worker):
         from torch.distributed.fsdp import CPUOffload, FullyShardedDataParallel as FSDP
         from transformers import AutoConfig, AutoModelForTokenClassification
 
-        use_shm = config.model.get('use_shm', False)
+        use_shm = config.model.get("use_shm", False)
         # download the checkpoint from hdfs
         local_path = copy_to_local(config.model.path, use_shm=use_shm)
 
@@ -1168,7 +1263,9 @@ class RewardModelWorker(Worker):
         else:
             self._do_switch_chat_template = True
             input_tokenizer_local_path = copy_to_local(config.model.input_tokenizer, use_shm=use_shm)
-            self.input_tokenizer = hf_tokenizer(input_tokenizer_local_path, trust_remote_code=config.model.get("trust_remote_code", False))
+            self.input_tokenizer = hf_tokenizer(
+                input_tokenizer_local_path, trust_remote_code=config.model.get("trust_remote_code", False)
+            )
             self.tokenizer = hf_tokenizer(local_path, trust_remote_code=config.model.get("trust_remote_code", False))
 
         trust_remote_code = config.model.get("trust_remote_code", False)
@@ -1176,7 +1273,9 @@ class RewardModelWorker(Worker):
         model_config.num_labels = 1
 
         # note that we have to create model in fp32. Otherwise, the optimizer is in bf16, which is incorrect
-        init_context = get_init_weight_context_manager(use_meta_tensor=not model_config.tie_word_embeddings, mesh=self.device_mesh)
+        init_context = get_init_weight_context_manager(
+            use_meta_tensor=not model_config.tie_word_embeddings, mesh=self.device_mesh
+        )
 
         with init_context(), warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -1256,29 +1355,41 @@ class RewardModelWorker(Worker):
             position_ids = micro_batch["position_ids"]
 
             if self.use_remove_padding:
-                input_ids_rmpad, indices, *_ = unpad_input(input_ids.unsqueeze(-1), attention_mask)  # input_ids_rmpad (total_nnz, ...)
+                input_ids_rmpad, indices, *_ = unpad_input(
+                    input_ids.unsqueeze(-1), attention_mask
+                )  # input_ids_rmpad (total_nnz, ...)
                 input_ids_rmpad = input_ids_rmpad.transpose(0, 1)  # (1, total_nnz)
 
                 # unpad the position_ids to align the rotary
-                position_ids_rmpad = index_first_axis(rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices).transpose(0, 1)
+                position_ids_rmpad = index_first_axis(
+                    rearrange(position_ids.unsqueeze(-1), "b s ... -> (b s) ..."), indices
+                ).transpose(0, 1)
 
                 # pad and slice the inputs if sp > 1
                 if self.ulysses_sequence_parallel_size > 1:
-                    input_ids_rmpad, position_ids_rmpad, pad_size = ulysses_pad_and_slice_inputs(input_ids_rmpad, position_ids_rmpad, sp_size=self.ulysses_sequence_parallel_size)
+                    input_ids_rmpad, position_ids_rmpad, pad_size = ulysses_pad_and_slice_inputs(
+                        input_ids_rmpad, position_ids_rmpad, sp_size=self.ulysses_sequence_parallel_size
+                    )
 
                 # only pass input_ids and position_ids to enable flash_attn_varlen
-                output = self.reward_module(input_ids=input_ids_rmpad, attention_mask=None, position_ids=position_ids_rmpad, use_cache=False)  # prevent model thinks we are generating
+                output = self.reward_module(
+                    input_ids=input_ids_rmpad, attention_mask=None, position_ids=position_ids_rmpad, use_cache=False
+                )  # prevent model thinks we are generating
                 reward_rmpad = output.logits
                 reward_rmpad = reward_rmpad.squeeze(0)  # (total_nnz)
 
                 # gather output if sp > 1
                 if self.ulysses_sequence_parallel_size > 1:
-                    reward_rmpad = gather_outpus_and_unpad(reward_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size)
+                    reward_rmpad = gather_outpus_and_unpad(
+                        reward_rmpad, gather_dim=0, unpad_dim=0, padding_size=pad_size
+                    )
 
                 # pad it back
                 rm_score = pad_input(reward_rmpad, indices=indices, batch=batch_size, seqlen=seqlen).squeeze(-1)
             else:
-                output = self.reward_module(input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids, use_cache=False)
+                output = self.reward_module(
+                    input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids, use_cache=False
+                )
                 rm_score = output.logits  # (batch_size, seq_len, 1)
                 rm_score = rm_score.squeeze(-1)
 
@@ -1331,7 +1442,9 @@ class RewardModelWorker(Worker):
 
             chat.append({"role": "assistant", "content": response})
 
-            prompt_with_chat_template = target_tokenizer.apply_chat_template(chat, add_generation_prompt=False, tokenize=False)
+            prompt_with_chat_template = target_tokenizer.apply_chat_template(
+                chat, add_generation_prompt=False, tokenize=False
+            )
             if self.rank == 0 and i == 0:
                 # for debugging purpose
                 print(f"Switch template. chat: {prompt_with_chat_template}")
@@ -1449,7 +1562,9 @@ class AsyncActorRolloutRefWorker(ActorRolloutRefWorker):
     def execute_method(self, method: str | bytes, *args, **kwargs):
         """Called by ExternalRayDistributedExecutor collective_rpc."""
         if self.vllm_tp_rank == 0 and method != "execute_model":
-            print(f"[DP={self.vllm_dp_rank},TP={self.vllm_tp_rank}] execute_method: {method if isinstance(method, str) else 'Callable'}")
+            print(
+                f"[DP={self.vllm_dp_rank},TP={self.vllm_tp_rank}] execute_method: {method if isinstance(method, str) else 'Callable'}"
+            )
         return self.rollout.execute_method(method, *args, **kwargs)
 
     @register(dispatch_mode=Dispatch.DIRECT_ROLLOUT_METHOD)

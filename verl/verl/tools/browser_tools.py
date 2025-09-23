@@ -1,4 +1,3 @@
-
 import logging
 import traceback
 
@@ -22,6 +21,7 @@ class BrowserTool(BaseTool):
     - `calc_reward`: calculate the reward respect to tool state.
     - `release`: release the tool instance.
     """
+
     def __init__(self, config: dict, tool_schema: OpenAIFunctionToolSchema):
         super().__init__(config, tool_schema)
         self._instance_dict = {}
@@ -40,7 +40,9 @@ class BrowserTool(BaseTool):
         }
         return instance_id
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], download_path: Optional[str] = None, **kwargs) -> tuple[str, float, dict]:
+    async def execute(
+        self, instance_id: str, parameters: dict[str, Any], download_path: Optional[str] = None, **kwargs
+    ) -> tuple[str, float, dict]:
         """Execute the tool.
         Args:
             download_path: `_download_path` for MCP server
@@ -48,7 +50,9 @@ class BrowserTool(BaseTool):
         """
         try:
             assert isinstance(parameters, dict), f"parameters must be a dict, got {type(parameters)}"
-            assert "name" in parameters, f"parameters must contain 'name', got {parameters}"  # tools like `go_back` has not params
+            assert "name" in parameters, (
+                f"parameters must contain 'name', got {parameters}"
+            )  # tools like `go_back` has not params
             action_name, action_params = parameters["name"], parameters.get("params", {})
             if download_path:
                 action_params["_download_path"] = str(download_path)
@@ -56,7 +60,9 @@ class BrowserTool(BaseTool):
             result = await mcp_client.call_tool(action_name, action_params)
             msg_action, msg_state = result.content[0].text, result.content[1].text
             msg = f"Action result: {msg_action}\n\n>>>>> Page Content\nNOTE that the following is one-time information!\n{msg_state}"
-            self._instance_dict[instance_id]["actions"].append({"name": action_name, "params": action_params, "result": msg_action})
+            self._instance_dict[instance_id]["actions"].append(
+                {"name": action_name, "params": action_params, "result": msg_action}
+            )
             return msg, 1.0, {}
         except Exception as e:
             logger.error(f"Error in execute: {instance_id} - `{parameters}`  \n{e}\n{traceback.format_exc()}")

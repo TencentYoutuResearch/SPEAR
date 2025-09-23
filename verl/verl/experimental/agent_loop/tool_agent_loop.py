@@ -59,7 +59,9 @@ class ToolAgentLoop(AgentLoopBase):
         cls.system_prompt = tokenizer.apply_chat_template([{}], add_generation_prompt=False, tokenize=True)
 
     @rollout_trace_op
-    async def run(self, messages: list[dict[str, Any]], sampling_params: dict[str, Any], tools_kwarg: dict={}) -> AgentLoopOutput:
+    async def run(
+        self, messages: list[dict[str, Any]], sampling_params: dict[str, Any], tools_kwarg: dict = {}
+    ) -> AgentLoopOutput:
         """
         messages: list of [{'content':"xxxx", 'role':'user'},...]
         tools: self.tool_schemas, list of [{'type': 'function': }]
@@ -79,7 +81,9 @@ class ToolAgentLoop(AgentLoopBase):
         while True:
             with simple_timer("generate_sequences", metrics):
                 response_ids = await self.server_manager.generate(
-                    request_id=request_id, prompt_ids=prompt_ids, sampling_params=sampling_params,
+                    request_id=request_id,
+                    prompt_ids=prompt_ids,
+                    sampling_params=sampling_params,
                 )
             # # only for qwen
             # if len(response_ids):
@@ -110,10 +114,12 @@ class ToolAgentLoop(AgentLoopBase):
             # no tool calls
             assistant_content, tool_calls = await self.tool_parser.extract_tool_calls(response_ids)
             if not tool_calls:
-                messages_full["messages"].append({"role":"assistant", "content": deepcopy(assistant_content)})
+                messages_full["messages"].append({"role": "assistant", "content": deepcopy(assistant_content)})
                 break
             else:
-                messages_full["messages"].append({"role":"assistant", "content": deepcopy(assistant_content), "tool_calls": deepcopy(tool_calls)})
+                messages_full["messages"].append(
+                    {"role": "assistant", "content": deepcopy(assistant_content), "tool_calls": deepcopy(tool_calls)}
+                )
 
             # call tools
             tasks = []
@@ -156,7 +162,7 @@ class ToolAgentLoop(AgentLoopBase):
         )
         return output
 
-    async def _call_tool(self, request_id, tool_call: FunctionCall, tools_kwarg: dict={}) -> dict[str, str]:
+    async def _call_tool(self, request_id, tool_call: FunctionCall, tools_kwarg: dict = {}) -> dict[str, str]:
         """Call tool and return tool response."""
         tool, instance_id = None, None
         try:
@@ -164,8 +170,8 @@ class ToolAgentLoop(AgentLoopBase):
             tool_name = tool_call.name
             tool_args = json.loads(tool_call.arguments)
             tool = self.tools[tool_name]
-            if tool_name in tools_kwarg and 'create_kwargs' in tools_kwarg[tool_name]:
-                create_kwargs = tools_kwarg[tool_name]['create_kwargs']
+            if tool_name in tools_kwarg and "create_kwargs" in tools_kwarg[tool_name]:
+                create_kwargs = tools_kwarg[tool_name]["create_kwargs"]
             else:
                 create_kwargs = {}
 

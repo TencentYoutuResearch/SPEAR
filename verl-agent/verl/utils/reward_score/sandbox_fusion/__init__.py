@@ -74,9 +74,13 @@ def compute_score(sandbox_fusion_url, concurrent_semaphore, completion, test_cas
         # Note: The return value of check_correctness might need adaptation here
         # Assume check_correctness returns (results_list, metadata_list)
         # results_list contains True, False, or error codes (-1, -2, -3, etc.)
-        res_list, metadata_list = check_correctness(sandbox_fusion_url=sandbox_fusion_url,\
-            in_outs=test_cases, generation=solution, timeout=timeout,\
-                concurrent_semaphore=concurrent_semaphore)
+        res_list, metadata_list = check_correctness(
+            sandbox_fusion_url=sandbox_fusion_url,
+            in_outs=test_cases,
+            generation=solution,
+            timeout=timeout,
+            concurrent_semaphore=concurrent_semaphore,
+        )
 
         # Calculate score
         if not res_list:  # If there are no results (e.g., invalid input)

@@ -96,5 +96,9 @@ class LoadConfig:
 
         rocm_not_supported_load_format: list[str] = []
         if is_hip() and load_format in rocm_not_supported_load_format:
-            rocm_supported_load_format = [f for f in LoadFormat.__members__ if (f not in rocm_not_supported_load_format)]
-            raise ValueError(f"load format '{load_format}' is not supported in ROCm. Supported load formats are {rocm_supported_load_format}")
+            rocm_supported_load_format = [
+                f for f in LoadFormat.__members__ if (f not in rocm_not_supported_load_format)
+            ]
+            raise ValueError(
+                f"load format '{load_format}' is not supported in ROCm. Supported load formats are {rocm_supported_load_format}"
+            )
