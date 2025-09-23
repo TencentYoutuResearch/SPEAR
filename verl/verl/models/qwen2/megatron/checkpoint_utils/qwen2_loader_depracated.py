@@ -27,6 +27,12 @@ def _megatron_calc_layer_map(config):
             mapping from the global layer index to
             a tuple of (pp_rank, virtual_pp_rank, layer_idx inside model)
     """
+    # """Calculate the mapping of global layer_idx to local layer_idx
+    # Returns:
+    #     layer_map (Dict: int -> tuple(int, int, int)):
+    #         mapping from the global layer index to
+    #         a tuple of (pp_rank, virtual_pp_rank, layer_idx inside model)
+    # """
     from megatron.core import mpu
 
     pp_size = mpu.get_pipeline_model_parallel_world_size()
@@ -54,6 +60,58 @@ def load_state_dict_to_megatron_qwen2(
     state_dict, wrapped_models, config, params_dtype, is_value_model=False, tie_word_embeddings=False
 ):
     """Load merged state_dict to sharded Megatron module in training."""
+
+
+    # """
+    # This function loads a merged state_dict (typically from a HuggingFace model) into
+    # a sharded Megatron model that has been distributed across multiple processes using
+    # tensor parallelism (TP), pipeline parallelism (PP), and data parallelism (DP).
+    # It handles the complex mapping of global layer indices to local layer indices across
+    # different parallelization dimensions and properly shards weights according to the
+    # Megatron partitioning scheme.
+
+    # The function supports:
+    # - Tensor parallelism: Weights are sharded across TP ranks
+    # - Pipeline parallelism: Layers are distributed across PP ranks
+    # - Virtual pipeline parallelism: Multiple model replicas per PP rank
+    # - Data parallelism: Parameters are broadcasted within DP groups
+    # - Special handling for value models and tied embeddings
+
+    # Args:
+    #     state_dict (dict): Dictionary containing the merged model weights from a
+    #         HuggingFace-style checkpoint. Keys should follow the format
+    #         "model.layers.{layer_idx}.{component}.weight" or similar.
+    #     wrapped_models (list or tuple): List of wrapped Megatron models. Each model
+    #         corresponds to a virtual pipeline stage. Models should be wrapped with
+    #         DistributedDataParallel or LocalDDP.
+    #     config: Model configuration object containing model architecture parameters
+    #         such as num_hidden_layers, hidden_size, intermediate_size, etc.
+    #     params_dtype (torch.dtype): Data type for the loaded parameters (e.g., torch.float16,
+    #         torch.float32). Should match the model's precision requirements.
+    #     is_value_model (bool, optional): Whether this is a value model (used in RLHF).
+    #         If True, special handling is applied for the language modeling head.
+    #         Defaults to False.
+    #     tie_word_embeddings (bool, optional): Whether input and output embeddings are tied.
+    #         If True, the language modeling head is not loaded separately.
+    #         Defaults to False.
+
+    # Note:
+    #     - This function assumes rank 0 in the global communicator has access to the full state_dict
+    #     - Only data parallel rank 0 performs the actual weight loading and broadcasting
+    #     - The function handles complex tensor sharding for attention (QKV) and MLP (gate/up) weights
+    #     - Virtual pipeline parallelism is supported through multiple models per pipeline stage
+    #     - All processes must call this function collectively for proper synchronization
+
+    # Implementation Details:
+    #     1. Calculates layer mapping from global to local indices across PP and virtual PP dimensions
+    #     2. Broadcasts embedding weights with vocabulary sharding
+    #     3. Iterates through transformer layers, loading weights for each component:
+    #        - Input layer norm, attention QKV projections, output projection
+    #        - Post-attention layer norm, MLP gate/up/down projections
+    #     4. Loads final layer norm and language modeling head (with special value model handling)
+    #     5. Broadcasts all loaded parameters within data parallel groups
+    #     6. Performs memory cleanup and synchronization across all ranks
+    # """
     from megatron.core import DistributedDataParallel as LocalDDP, mpu
     from megatron.core.transformer.module import Float16Module
     from torch.nn.parallel import DistributedDataParallel as torchDDP

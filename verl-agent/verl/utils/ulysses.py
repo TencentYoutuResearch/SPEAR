@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -115,6 +117,29 @@ def _unpad_tensor(x: Tensor, dim: int, padding_size: int) -> Tensor:
 
 
 def slice_input_tensor(x: Tensor, dim: int, padding: bool = True, group: ProcessGroup = None) -> Tensor:
+    # """
+    # Slice input tensor along a specified dimension for Ulysses sequence parallelism.
+    
+    # This function partitions a tensor across multiple processes by slicing it along the specified
+    # dimension. Each process gets an equal-sized chunk. If the dimension size is not evenly 
+    # divisible by the world size, padding can be applied to ensure equal partitioning.
+    
+    # Args:
+    #     x (Tensor): Input tensor to be sliced.
+    #     dim (int): The dimension along which to slice the tensor.
+    #     padding (bool, optional): Whether to pad the tensor if dimension size is not evenly 
+    #         divisible by world size. Defaults to True.
+    #     group (ProcessGroup, optional): Process group for sequence parallelism. If None, 
+    #         uses the default Ulysses sequence parallel group.
+            
+    # Returns:
+    #     Tensor: The sliced portion of the tensor for the current process, contiguous in memory.
+        
+    # Example:
+    #     >>> # For a tensor of shape [2, 100, 64] with 4 processes, slicing along dim=1
+    #     >>> # Each process gets a tensor of shape [2, 25, 64]
+    #     >>> sliced = slice_input_tensor(x, dim=1)
+    # """
     group = get_ulysses_sequence_parallel_group() if group is None else group
     sp_world_size = dist.get_world_size(group)
     sp_rank = get_ulysses_sequence_parallel_rank()
@@ -137,6 +162,36 @@ def all_to_all_tensor(
     group: Optional[dist.ProcessGroup] = None,
     async_op: bool = False,
 ):
+    # """
+    # Perform all-to-all tensor communication across processes in a group.
+    
+    # This function redistributes tensor data across all processes in a process group by:
+    # 1. Splitting the local input tensor along the scatter dimension into chunks
+    # 2. Sending each chunk to a different process via all-to-all communication
+    # 3. Receiving chunks from all other processes and concatenating along the gather dimension
+    
+    # This is a key primitive for sequence parallelism, enabling efficient redistribution of 
+    # sequence and attention head dimensions across processes.
+    
+    # Args:
+    #     local_input (Tensor): Input tensor to be redistributed.
+    #     scatter_dim (int): Dimension along which to split the input tensor for sending.
+    #     gather_dim (int): Dimension along which to concatenate received tensor chunks.
+    #     group (ProcessGroup, optional): Process group for communication. If None, uses 
+    #         the default Ulysses sequence parallel group.
+    #     async_op (bool, optional): Whether to perform asynchronous communication. If True,
+    #         returns a callable that waits for completion. Defaults to False.
+            
+    # Returns:
+    #     Tensor or Callable: If async_op=False, returns the redistributed tensor directly.
+    #         If async_op=True, returns a callable that when invoked returns the result tensor.
+            
+    # Example:
+    #     >>> # Redistribute a tensor from sequence-parallel to head-parallel layout
+    #     >>> # Input: [batch, seq_len//world_size, heads*head_dim] 
+    #     >>> # Output: [batch, seq_len, heads//world_size*head_dim]
+    #     >>> result = all_to_all_tensor(input_tensor, scatter_dim=2, gather_dim=1)
+    # """
     group = get_ulysses_sequence_parallel_group() if group is None else group
     seq_world_size = dist.get_world_size(group)
     input_list = [t.contiguous() for t in torch.tensor_split(local_input, seq_world_size, scatter_dim)]

@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 # Copyright 2022 The HuggingFace Team. All rights reserved.
 #
@@ -145,6 +147,46 @@ def compute_gae_advantage_return(
             shape: (bs, response_length)
 
     """
+
+
+    # This function implements the GAE algorithm as described in the paper:
+    # "High-Dimensional Continuous Control Using Generalized Advantage Estimation"
+    # (https://arxiv.org/abs/1506.02438)
+    
+    # Mathematical Background:
+    # =======================
+    # GAE computes advantages using a weighted combination of temporal difference errors:
+    
+    # δₜ = rₜ + γVₜ₊₁ - Vₜ  (TD error at time t)
+    
+    # Aₜ^GAE(γ,λ) = Σₗ₌₀^∞ (γλ)ˡ δₜ₊ₗ
+    
+    # Where:
+    # - γ (gamma): Discount factor for future rewards (typically 0.99)
+    # - λ (lambda): GAE parameter controlling bias-variance tradeoff (typically 0.95)
+    # - Higher λ: Lower bias, higher variance
+    # - Lower λ: Higher bias, lower variance
+    
+    # Algorithm Implementation:
+    # ========================
+    # The function uses backward iteration for computational efficiency:
+    
+    # 1. Initialize lastgaelam = 0
+    # 2. For t from T-1 to 0:
+    #    a. nextvalues = V_{t+1} (or 0 for terminal state)
+    #    b. δₜ = r_t + γ * nextvalues - V_t
+    #    c. lastgaelam = δₜ + γ * λ * lastgaelam
+    #    d. A_t = lastgaelam
+    # 3. Returns = Advantages + Values
+    # 4. Normalize advantages using masked whitening
+    
+    # Advantages of GAE:
+    # ==================
+    # - Reduces variance compared to Monte Carlo returns
+    # - Provides better bias-variance tradeoff than n-step returns
+    # - Maintains causal structure (future rewards don't affect past advantages)
+    # - Compatible with function approximation in value estimation
+
     with torch.no_grad():
         lastgaelam = 0
         advantages_reversed = []
@@ -713,6 +755,8 @@ def compute_policy_loss_clip_cov(
     Adapted from
     https://github.com/PRIME-RL/Entropy-Mechanism-of-RL/blob/main/verl/trainer/ppo/core_algos.py
 
+
+
     Args:
         old_log_prob (torch.Tensor):
             Log-probabilities of actions under the old policy, shape (batch_size, response_length).
@@ -738,6 +782,53 @@ def compute_policy_loss_clip_cov(
         clip_cov_ub (float, optional):
             Upper bound for clipping covariance. Defaults to 5.0.
     """
+
+    # Algorithm Overview:
+    # ==================
+    # Clip-Cov enhances standard PPO by applying selective clipping based on the 
+    # covariance between advantages and log-probabilities. Instead of clipping all 
+    # tokens uniformly, it identifies tokens with high covariance that indicate 
+    # potential overfitting and applies additional constraints.
+    
+    # Key Innovation:
+    # - Standard PPO: Clips all policy ratio updates uniformly
+    # - Clip-Cov: Selectively clips tokens with high Cov(A, log π) values
+    # - This prevents the policy from overfitting to advantage estimates
+    
+    # Mathematical Foundation:
+    # =======================
+    # The covariance between advantages A and log-probabilities log π is:
+    
+    # Cov(A, log π) = (A - E[A]) * (log π - E[log π])
+    
+    # High positive covariance indicates the policy is learning to increase 
+    # log-probability for tokens with high advantages, which can lead to 
+    # overfitting when advantage estimates are noisy.
+    
+    # Algorithm Steps:
+    # ===============
+    # 1. Compute standard PPO clipping: max(r*A, clip(r, 1-ε, 1+ε)*A)
+    # 2. Calculate token-wise covariance: (A - Ā) * (log π - log π̄)
+    # 3. Select tokens with covariance in [clip_cov_lb, clip_cov_ub] range
+    # 4. Randomly sample clip_cov_ratio fraction of these tokens
+    # 5. Apply additional clipping constraint to selected tokens
+    # 6. Combine with standard PPO loss for final objective
+    
+    # Covariance Selection Strategy:
+    # =============================
+    # - clip_cov_lb: Lower bound for covariance (default: 1.0)
+    # - clip_cov_ub: Upper bound for covariance (default: 5.0) 
+    # - clip_cov_ratio: Fraction of eligible tokens to clip (default: 0.0002)
+    # - Random sampling ensures diversity in clipped tokens across batches
+    
+    # Benefits:
+    # =========
+    # - Reduces overfitting to noisy advantage estimates
+    # - Maintains exploration by preventing premature policy collapse
+    # - Preserves sample efficiency compared to more conservative methods
+    # - Adaptive clipping based on actual policy-advantage correlation
+
+
     assert config is not None
     # assert not isinstance(config, AlgoConfig), "passing AlgoConfig not supported yet"
     assert config.policy_loss is not None
@@ -745,15 +836,15 @@ def compute_policy_loss_clip_cov(
     cliprange_low = config.clip_ratio_low if config.clip_ratio_low is not None else cliprange
     cliprange_high = config.clip_ratio_high if config.clip_ratio_high is not None else cliprange
 
-    # if is_replay:
-    #     clip_cov_ratio = config.policy_loss.clip_cov_ratio_replay if config.policy_loss.clip_cov_ratio_replay is not None else 0.8
-    #     clip_cov_ub = config.policy_loss.clip_cov_ub_replay if config.policy_loss.clip_cov_ub_replay is not None else 10.0
-    #     clip_cov_lb = config.policy_loss.clip_cov_lb_replay if config.policy_loss.clip_cov_lb_replay is not None else 0.1
+    if is_replay:
+        clip_cov_ratio = config.policy_loss.clip_cov_ratio_replay if config.policy_loss.clip_cov_ratio_replay is not None else 0.002
+        clip_cov_ub = config.policy_loss.clip_cov_ub_replay if config.policy_loss.clip_cov_ub_replay is not None else 40.0
+        clip_cov_lb = config.policy_loss.clip_cov_lb_replay if config.policy_loss.clip_cov_lb_replay is not None else 1.0
 
-    # else:
-    clip_cov_ratio = config.policy_loss.clip_cov_ratio if config.policy_loss.clip_cov_ratio is not None else 0.0002
-    clip_cov_ub = config.policy_loss.clip_cov_ub if config.policy_loss.clip_cov_ub is not None else 5.0
-    clip_cov_lb = config.policy_loss.clip_cov_lb if config.policy_loss.clip_cov_lb is not None else 1.0
+    else:
+        clip_cov_ratio = config.policy_loss.clip_cov_ratio if config.policy_loss.clip_cov_ratio is not None else 0.0002
+        clip_cov_ub = config.policy_loss.clip_cov_ub if config.policy_loss.clip_cov_ub is not None else 5.0
+        clip_cov_lb = config.policy_loss.clip_cov_lb if config.policy_loss.clip_cov_lb is not None else 1.0
 
     assert clip_cov_ratio > 0, "clip_ratio should be larger than 0."
 
@@ -989,6 +1080,17 @@ def compute_pf_ppo_reweight_data(
 
     @torch.no_grad()
     def compute_weights(scores: torch.Tensor, reweight_method: str, weight_pow: float) -> torch.Tensor:
+        # """
+        # Compute the weight for each sample according to the specified resampling strategy.
+
+        # Args:
+        #     scores (torch.Tensor): The score of each sample, 1D tensor.
+        #     reweight_method (str): Resampling method, options are 'pow' (power weighting), 'max_min' (only keep max/min), 'max_random' (max weight 0.4, others 0.1).
+        #     weight_pow (float): The exponent for the 'pow' method.
+
+        # Returns:
+        #     torch.Tensor: The weight of each sample, 1D tensor.
+        # """
         if reweight_method == "pow":
             weights = torch.pow(torch.abs(scores), weight_pow)
         elif reweight_method == "max_min":
@@ -1002,15 +1104,21 @@ def compute_pf_ppo_reweight_data(
             raise ValueError(f"Unsupported reweight_method: {reweight_method}")
         return weights
 
+    # Sum token-level scores to get a single score per sample
     scores = data.batch["token_level_scores"].sum(dim=-1)
+    # Compute weights for each sample according to the chosen strategy
     weights = compute_weights(scores, reweight_method, weight_pow)
+    # Ensure all weights are positive and non-zero
     weights = torch.clamp(weights + 1e-8, min=1e-8)
 
     batch_size = scores.shape[0]
+    # Sample indices according to the computed weights (with replacement)
     sample_indices = torch.multinomial(weights, batch_size, replacement=True)
 
+    # Resample the tensor batch using the sampled indices
     resampled_batch = {key: tensor[sample_indices] for key, tensor in data.batch.items()}
 
+    # Resample the non-tensor batch (numpy arrays or lists)
     sample_indices_np = sample_indices.numpy()
     resampled_non_tensor_batch = {}
     for key, array in data.non_tensor_batch.items():
@@ -1019,6 +1127,7 @@ def compute_pf_ppo_reweight_data(
         else:
             resampled_non_tensor_batch[key] = [array[i] for i in sample_indices_np]
 
+    # Resample meta info if it is a list of the same length as batch_size
     resampled_meta_info = {}
     for key, value in data.meta_info.items():
         if isinstance(value, list) and len(value) == batch_size:
@@ -1028,6 +1137,7 @@ def compute_pf_ppo_reweight_data(
 
     from copy import deepcopy
 
+    # Construct a new DataProto object with the resampled data
     resampled_data = deepcopy(data)
     resampled_data.batch = type(data.batch)(resampled_batch)
     resampled_data.batch.batch_size = data.batch.batch_size

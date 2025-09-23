@@ -53,6 +53,54 @@ def get_rope_index(
     The batch dim has been removed and the input_ids should be a 1D tensor representing a single example.
     https://github.com/huggingface/transformers/blob/v4.49.0/src/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py#L1546
     """
+
+    # This function computes the 3D position indices required for multimodal Rotary Position
+    # Embedding (RoPE) in Qwen2-VL models. It handles sequences containing text, images, and
+    # videos by assigning appropriate spatial-temporal coordinates to each token type.
+
+    # The function must be called before sequence sharding to ensure correct position encoding.
+    # Input tensors should have the batch dimension removed, representing a single example.
+
+    # Args:
+    #     processor: Qwen2-VL processor containing tokenizer and image processor configurations.
+    #         Used to extract token IDs and spatial merge size parameters.
+    #     input_ids (torch.Tensor): 1D tensor of input token IDs for a single sequence.
+    #         Should not include batch dimension. Shape: (seq_len,)
+    #     image_grid_thw (Optional[torch.Tensor]): Temporal-height-width grid dimensions for images.
+    #         Shape: (num_images, 3) where each row contains [temporal, height, width] dimensions.
+    #         Required when images are present in the sequence.
+    #     video_grid_thw (Optional[torch.Tensor]): Temporal-height-width grid dimensions for videos.
+    #         Shape: (num_videos, 3) where each row contains [temporal, height, width] dimensions.
+    #         Required when videos are present in the sequence.
+    #     second_per_grid_ts (Optional[torch.Tensor]): Seconds per temporal grid unit for videos.
+    #         Shape: (num_videos,) containing duration scaling factors for each video.
+    #         If None, defaults to 1.0 for all videos.
+    #     attention_mask (Optional[torch.Tensor]): 1D boolean mask indicating valid tokens.
+    #         Shape: (seq_len,) where True indicates valid tokens, False indicates padding.
+    #         If None, assumes all tokens are valid.
+
+    # Returns:
+    #     torch.Tensor: 3D position indices for RoPE. Shape: (3, seq_len) where:
+    #         - position_ids[0]: temporal coordinates (for videos) or sequential positions (for text/images)
+    #         - position_ids[1]: height coordinates in the spatial grid
+    #         - position_ids[2]: width coordinates in the spatial grid
+
+    # Note:
+    #     - Position IDs are 3D to support multimodal RoPE with spatial-temporal awareness
+    #     - Text tokens get sequential position encoding
+    #     - Image tokens are arranged in 2D spatial grids (height × width)
+    #     - Video tokens are arranged in 3D spatio-temporal grids (temporal × height × width)
+    #     - The function handles interleaved text-image-video sequences correctly
+    #     - Must be called on individual sequences before batching
+
+    # Implementation Details:
+    #     1. Identifies image and video tokens using special token IDs from the processor
+    #     2. Processes sequences sequentially, assigning position coordinates based on modality
+    #     3. For images: assigns 2D spatial coordinates within each image's grid
+    #     4. For videos: assigns 3D spatio-temporal coordinates with temporal scaling
+    #     5. For text: assigns sequential position indices between multimodal content
+    #     6. Handles attention masking to skip padded tokens during position assignment
+    
     spatial_merge_size = processor.image_processor.merge_size
     tokens_per_second = 2
     image_token_id = processor.tokenizer.convert_tokens_to_ids("<|image_pad|>")

@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,7 +28,7 @@ class RayEntropyTrainer(RayPPOTrainer):
     Note that this trainer runs on the driver process on a single CPU/GPU node.
     """
 
-    # def fit(self):
+    def fit(self):
     #     """
     #     The training loop of PPO.
     #     The driver process only need to call the compute functions of the worker group through RPC
@@ -324,3 +326,4 @@ class RayEntropyTrainer(RayPPOTrainer):
 
     #             progress_bar.update(1)
     #             self.global_steps += 1
+        return

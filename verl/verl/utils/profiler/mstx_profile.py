@@ -75,6 +75,18 @@ def marked_timer(name: str, timing_raw: dict[str, float], *args: Any, **kwargs: 
     Yields:
         None: This is a context manager that yields control back to the code block.
     """
+    #     """Context manager for timing with MSTX markers.
+
+    # This utility function measures the execution time of code within its context,
+    # accumulates the timing information, and adds MSTX markers for profiling.
+
+    # Args:
+    #     name (str): The name/identifier for this timing measurement.
+    #     timing_raw (Dict[str, float]): Dictionary to store timing information.
+
+    # Yields:
+    #     None: This is a context manager that yields control back to the code block.
+    # """
     if args:
         logging.warning(f"Args are not supported in mstx_profile, but received: {args}")
     if kwargs:
@@ -97,6 +109,16 @@ def get_npu_profiler(option: DictConfig, role: Optional[str] = None, profile_ste
         profile_step(str, optional):
             The current training step. Defaults to None.
     """
+    # """Generate and return an NPU profiler object.
+
+    # Args:
+    #     option (DictConfig):
+    #         The options to control npu profiler.
+    #     role (str, optional):
+    #         The role of the current data collection. Defaults to None.
+    #     profile_step(str, optional):
+    #         The current training step. Defaults to None.
+    # """
     if option.level == "level_none":
         profile_level = torch_npu.profiler.ProfilerLevel.Level_none
     elif option.level == "level0":
@@ -197,6 +219,17 @@ class NPUProfiler(DistProfiler):
             role (str, optional):
                 The role of the current data collection. Defaults to None.
         """
+        # """Decorate a Worker member function to profile the current rank in the current training step.
+
+        # Requires the target function to be a member function of a Worker,
+        # which has a member field `profiler` with NPUProfiler type.
+
+        # Args:
+        #     message (str, optional):
+        #         The message to be displayed in the profiler. Defaults to None.
+        #     role (str, optional):
+        #         The role of the current data collection. Defaults to None.
+        # """
 
         def decorator(func):
             @functools.wraps(func)

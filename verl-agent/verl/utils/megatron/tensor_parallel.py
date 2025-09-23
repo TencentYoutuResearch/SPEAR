@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 #

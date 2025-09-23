@@ -23,6 +23,56 @@ from verl import DataProto
 from verl.protocol import union_numpy_dict, union_tensor_dict
 
 
+
+# """
+# Data Protocol Test Suite for VERL Framework
+
+# This test module provides comprehensive testing for the VERL (Value-based Exploration
+# and Reinforcement Learning) framework's data protocol components. It validates the
+# core functionality of the DataProto class and related data processing utilities
+# that form the foundation of VERL's data handling pipeline.
+
+# The test suite covers:
+
+# 1. DataProto Core Functionality:
+#    - Construction from tensors and non-tensors
+#    - Batch size validation and management
+#    - Iterator creation with mini-batching and epoch support
+#    - Data reordering and indexing operations
+#    - Chunking and concatenation operations
+#    - Data selection and popping operations
+
+# 2. Data Processing Protocols:
+#    - Union operations for tensor and numpy dictionaries
+#    - Padding and unpadding for batch size alignment
+#    - Batch dimension folding and unfolding
+#    - Disk serialization and deserialization
+
+# 3. Advanced Data Operations:
+#    - Sample-level and batch-level repetition
+#    - Column-wise chunk unfolding
+#    - Multi-dimensional tensor handling
+#    - Mixed tensor/non-tensor data processing
+
+# 4. Compatibility and Edge Cases:
+#    - Backward compatibility with legacy APIs
+#    - Error handling for invalid operations
+#    - Memory efficiency validation
+#    - Data integrity checks across transformations
+
+# The DataProto class serves as VERL's primary data container, providing a unified
+# interface for handling heterogeneous data types (PyTorch tensors, NumPy arrays,
+# Python objects) in reinforcement learning workflows. These tests ensure robust
+# data processing capabilities essential for large-scale RL training pipelines.
+
+# Test Categories:
+# - Basic CRUD operations on DataProto objects
+# - Data transformation and manipulation
+# - Memory and performance validation
+# - Integration with PyTorch and NumPy ecosystems
+# - Error handling and edge case coverage
+# """
+
 def test_union_tensor_dict():
     obs = torch.randn(100, 10)
 

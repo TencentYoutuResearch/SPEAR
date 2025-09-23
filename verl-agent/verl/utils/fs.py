@@ -14,6 +14,7 @@
 # limitations under the License.
 
 # -*- coding: utf-8 -*-
+# pylint: disable=line-too-long, function-name-too-long
 """File-system agnostic IO APIs"""
 
 import hashlib

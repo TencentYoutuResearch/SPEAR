@@ -85,6 +85,37 @@ def forward_with_torch_backend(
     temperature: float = 1.0,
     **loss_kwargs,
 ) -> tuple | CausalLMOutputForPPO:
+    # """
+    # Forward pass using PyTorch backend for PPO training.
+    
+    # This function performs a forward pass through the model and computes log probabilities
+    # and entropy using a fused linear operation optimized for PPO. It rolls the labels/input_ids
+    # to align with the model's prediction targets.
+    
+    # Args:
+    #     self: The model instance.
+    #     input_ids (torch.LongTensor, optional): Input token IDs.
+    #     attention_mask (torch.Tensor, optional): Attention mask.
+    #     position_ids (torch.LongTensor, optional): Position IDs.
+    #     past_key_values (Cache or list[torch.FloatTensor], optional): Past key values for generation.
+    #     inputs_embeds (torch.FloatTensor, optional): Input embeddings.
+    #     labels (torch.LongTensor, optional): Target labels for computing loss.
+    #     use_cache (bool, optional): Whether to use cache.
+    #     output_attentions (bool, optional): Whether to output attentions.
+    #     output_hidden_states (bool, optional): Whether to output hidden states.
+    #     return_dict (bool, optional): Whether to return a dict. Must be True.
+    #     cache_position (torch.LongTensor, optional): Cache position.
+    #     logits_to_keep (int or torch.Tensor): Number of logits to keep (unused).
+    #     temperature (float): Temperature for softmax scaling. Default: 1.0.
+    #     **loss_kwargs: Additional loss-related arguments.
+        
+    # Returns:
+    #     CausalLMOutputForPPO: Output containing log_probs, entropy, and other model outputs.
+        
+    # Raises:
+    #     NotImplementedError: If return_dict is False.
+    #     RuntimeError: If neither labels nor input_ids is provided.
+    # """
     from verl.utils.experimental.torch_functional import FusedLinearForPPO
 
     outputs = forward_base_model(

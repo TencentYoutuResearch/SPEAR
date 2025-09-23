@@ -49,6 +49,39 @@ def forward_base_model_old_api(
     cache_position: Optional[torch.LongTensor] = None,
     second_per_grid_ts: Optional[torch.Tensor] = None,
 ) -> tuple | Qwen2_5_VLCausalLMOutputWithPast:
+    # """Forward pass for Qwen2_5_VL model using the old API (pre-transformers v4.52.0).
+
+    # This function handles multimodal input processing including text, images, and videos
+    # for the Qwen2_5_VL model. It processes pixel values for images and videos, embeds them
+    # into the input sequence, and performs the forward pass through the model.
+
+    # Args:
+    #     self: The Qwen2_5_VLForConditionalGeneration model instance.
+    #     input_ids: Input token IDs for text sequences.
+    #     attention_mask: Attention mask for the input sequence.
+    #     position_ids: Position IDs for RoPE calculations.
+    #     past_key_values: Cached key/value states for efficient decoding.
+    #     inputs_embeds: Pre-computed input embeddings.
+    #     use_cache: Whether to use key/value caching.
+    #     output_attentions: Whether to return attention weights.
+    #     output_hidden_states: Whether to return hidden states.
+    #     return_dict: Whether to return a dictionary or tuple.
+    #     pixel_values: Pixel values for image inputs.
+    #     pixel_values_videos: Pixel values for video inputs.
+    #     image_grid_thw: Grid dimensions (height, width, temporal) for images.
+    #     video_grid_thw: Grid dimensions for videos.
+    #     rope_deltas: RoPE deltas for position encoding.
+    #     cache_position: Current position in the cache.
+    #     second_per_grid_ts: Seconds per grid timestamp for videos.
+
+    # Returns:
+    #     Model outputs containing logits, hidden states, attentions, etc.
+
+    # Note:
+    #     This implementation is compatible with transformers versions before v4.52.0.
+    #     It manually handles multimodal embedding integration into the text sequence.
+    # """
+
     r"""
     Copy paste Qwen2_5_VL's forward
     https://github.com/linkedin/Liger-Kernel/blob/main/src/liger_kernel/transformers/model/qwen2_5_vl.py
@@ -160,6 +193,40 @@ def forward_base_model_new_api(
     cache_position: Optional[torch.LongTensor] = None,
     second_per_grid_ts: Optional[torch.Tensor] = None,
 ) -> tuple | Qwen2_5_VLCausalLMOutputWithPast:
+    # """Forward pass for Qwen2_5_VL model using the new API (transformers v4.52.0+).
+
+    # This function provides a simplified interface for multimodal input processing
+    # that delegates the heavy lifting to the underlying model's forward method.
+    # It supports text, image, and video inputs for the Qwen2_5_VL model.
+
+    # Args:
+    #     self: The Qwen2_5_VLForConditionalGeneration model instance.
+    #     input_ids: Input token IDs for text sequences.
+    #     attention_mask: Attention mask for the input sequence.
+    #     position_ids: Position IDs for RoPE calculations.
+    #     past_key_values: Cached key/value states for efficient decoding.
+    #     inputs_embeds: Pre-computed input embeddings.
+    #     labels: Labels for loss computation.
+    #     use_cache: Whether to use key/value caching.
+    #     output_attentions: Whether to return attention weights.
+    #     output_hidden_states: Whether to return hidden states.
+    #     return_dict: Whether to return a dictionary or tuple.
+    #     pixel_values: Pixel values for image inputs.
+    #     pixel_values_videos: Pixel values for video inputs.
+    #     image_grid_thw: Grid dimensions (height, width, temporal) for images.
+    #     video_grid_thw: Grid dimensions for videos.
+    #     rope_deltas: RoPE deltas for position encoding.
+    #     cache_position: Current position in the cache.
+    #     second_per_grid_ts: Seconds per grid timestamp for videos.
+
+    # Returns:
+    #     Model outputs containing logits, hidden states, attentions, etc.
+
+    # Note:
+    #     This implementation relies on the model's built-in multimodal processing
+    #     capabilities available in transformers v4.52.0 and later versions.
+    # """
+
     r"""
     Copy paste Qwen2_5_VL's forward
     https://github.com/huggingface/transformers/blob/v4.52.3/src/transformers/models/qwen2_5_vl/modeling_qwen2_5_vl.py#L1384
@@ -213,6 +280,47 @@ def forward_with_torch_backend(
     temperature: float = 1.0,
     **loss_kwargs,
 ) -> tuple | Qwen2_5_VLCausalLMOutputForPPO:
+    # """Forward pass for Qwen2_5_VL model optimized for PPO training using PyTorch backend.
+
+    # This function performs multimodal forward pass and computes log probabilities and entropy
+    # required for PPO (Proximal Policy Optimization) training. It uses PyTorch operations
+    # for the final linear layer and loss calculations.
+
+    # Args:
+    #     self: The Qwen2_5_VLForConditionalGeneration model instance.
+    #     input_ids: Input token IDs for text sequences.
+    #     attention_mask: Attention mask for the input sequence.
+    #     position_ids: Position IDs for RoPE calculations.
+    #     past_key_values: Cached key/value states for efficient decoding.
+    #     inputs_embeds: Pre-computed input embeddings.
+    #     labels: Labels for loss computation (shifted input_ids if None).
+    #     use_cache: Whether to use key/value caching.
+    #     output_attentions: Whether to return attention weights.
+    #     output_hidden_states: Whether to return hidden states.
+    #     return_dict: Whether to return a dictionary or tuple (must be True).
+    #     pixel_values: Pixel values for image inputs.
+    #     pixel_values_videos: Pixel values for video inputs.
+    #     image_grid_thw: Grid dimensions for images.
+    #     video_grid_thw: Grid dimensions for videos.
+    #     rope_deltas: RoPE deltas for position encoding.
+    #     cache_position: Current position in the cache.
+    #     second_per_grid_ts: Seconds per grid timestamp for videos.
+    #     temperature: Temperature for softmax in log probability calculations.
+    #     **loss_kwargs: Additional keyword arguments for loss computation.
+
+    # Returns:
+    #     Qwen2_5_VLCausalLMOutputForPPO: Model outputs containing log_probs, entropy,
+    #     and standard model outputs (past_key_values, hidden_states, attentions).
+
+    # Raises:
+    #     NotImplementedError: If return_dict is False.
+    #     RuntimeError: If neither labels nor input_ids are provided.
+
+    # Note:
+    #     This function automatically selects the appropriate base model forward method
+    #     based on the transformers version. It uses FusedLinearForPPO for efficient
+    #     log probability and entropy computation.
+    # """
     from verl.utils.experimental.torch_functional import FusedLinearForPPO
 
     if Version(version("transformers")) < Version("4.52.0"):
@@ -292,6 +400,47 @@ def forward_with_triton_backend(
     temperature: float = 1.0,
     **loss_kwargs,
 ) -> tuple | Qwen2_5_VLCausalLMOutputForPPO:
+    # """Forward pass for Qwen2_5_VL model optimized for PPO training using Triton backend.
+
+    # This function performs multimodal forward pass and computes log probabilities and entropy
+    # required for PPO training using highly optimized Triton kernels for the final linear
+    # layer and cross-entropy loss calculations.
+
+    # Args:
+    #     self: The Qwen2_5_VLForConditionalGeneration model instance.
+    #     input_ids: Input token IDs for text sequences.
+    #     attention_mask: Attention mask for the input sequence.
+    #     position_ids: Position IDs for RoPE calculations.
+    #     past_key_values: Cached key/value states for efficient decoding.
+    #     inputs_embeds: Pre-computed input embeddings.
+    #     labels: Labels for loss computation (shifted input_ids if None).
+    #     use_cache: Whether to use key/value caching.
+    #     output_attentions: Whether to return attention weights.
+    #     output_hidden_states: Whether to return hidden states.
+    #     return_dict: Whether to return a dictionary or tuple (must be True).
+    #     pixel_values: Pixel values for image inputs.
+    #     pixel_values_videos: Pixel values for video inputs.
+    #     image_grid_thw: Grid dimensions for images.
+    #     video_grid_thw: Grid dimensions for videos.
+    #     rope_deltas: RoPE deltas for position encoding.
+    #     cache_position: Current position in the cache.
+    #     second_per_grid_ts: Seconds per grid timestamp for videos.
+    #     temperature: Temperature for softmax in log probability calculations.
+    #     **loss_kwargs: Additional keyword arguments for loss computation.
+
+    # Returns:
+    #     Qwen2_5_VLCausalLMOutputForPPO: Model outputs containing log_probs, entropy,
+    #     and standard model outputs (past_key_values, hidden_states, attentions).
+
+    # Raises:
+    #     NotImplementedError: If return_dict is False.
+    #     RuntimeError: If neither labels nor input_ids are provided.
+
+    # Note:
+    #     This function uses Triton-accelerated linear_cross_entropy for maximum performance
+    #     in PPO training scenarios. It automatically selects the appropriate base model
+    #     forward method based on the transformers version.
+    # """
     from verl.utils.kernel.linear_cross_entropy import linear_cross_entropy
 
     if Version(version("transformers")) < Version("4.52.0"):

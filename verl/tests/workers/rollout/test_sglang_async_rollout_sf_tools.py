@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2025 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -147,6 +149,39 @@ def skip_if_valid_sandbox(url):
 
 
 class TestRolloutWithTools:
+    # """
+    # Test suite for SGLang rollout functionality with tool integration capabilities.
+    
+    # This comprehensive test class validates the end-to-end functionality of SGLang rollout
+    # workers when integrated with external tools like code interpreters. It covers various
+    # scenarios including tool registration, request processing, multi-turn conversations,
+    # and error handling.
+    
+    # Key Test Scenarios:
+    #     - Tool registration and schema validation
+    #     - Async rollout request creation and preprocessing
+    #     - Tool call parsing and execution in single and batch modes
+    #     - Response handling for different completion reasons (length, stop, tool_calls)
+    #     - Multi-turn conversation handling with tool interactions
+    #     - Sandbox fusion integration for code execution
+    
+    # Fixtures:
+    #     qwen_tokenizer: Tokenizer for Qwen2.5-0.5B model with left padding
+    #     qwen_model_config: Model configuration for Qwen2.5-0.5B
+    #     sandbox_fusion_data: Pre-processed conversation data with tool calls
+    #     sandbox_fusion_rollout_config: Configuration for rollout with sandbox tools
+    #     sandbox_data_proto: DataProto object containing tokenized prompts and metadata
+    
+    # Dependencies:
+    #     - SGLangRollout: Main rollout worker implementation
+    #     - SandboxFusionTool: Code interpreter tool integration
+    #     - OpenAI-compatible function calling schemas
+    #     - AsyncRolloutRequest: Request state management
+    
+    # Note:
+    #     Many tests use mocking to avoid dependencies on external services and
+    #     focus on the rollout logic and tool integration mechanisms.
+    # """
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
@@ -328,6 +363,46 @@ class TestRolloutWithTools:
     @skip_if_valid_sandbox(sandbox_url)
     def test_tool_call_basic_case(self, mock_rollout, sandbox_data_proto, sandbox_fusion_data):
         """Test basic tool call case"""
+        # """
+        # Test basic tool calling functionality in a single-request scenario.
+        
+        # This test validates the complete workflow of a single async rollout request
+        # that involves tool calls during multi-turn conversation. It simulates a 
+        # mathematical problem-solving scenario where the assistant uses a code 
+        # interpreter tool multiple times.
+        
+        # Test Flow:
+        #     1. Setup SGLangRollout with tool integration enabled
+        #     2. Create a single async rollout request with tool capabilities
+        #     3. Mock multiple engine calls to simulate multi-turn conversation
+        #     4. Validate tool call parsing and execution at each turn
+        #     5. Verify final response state and metrics collection
+        
+        # Mocked Components:
+        #     - Engine calls: Simulated responses with different finish reasons
+        #     - Tool execution: Bypassed with predetermined return values
+        #     - Distributed environment: Avoided external dependencies
+        
+        # Validation Points:
+        #     - Request state transitions (PENDING -> COMPLETED)
+        #     - Tool call parsing and execution metrics
+        #     - Message sequence and role assignments
+        #     - Response content matching expected outputs
+        #     - Handle engine call count (should be 3 for this scenario)
+        
+        # Expected Behavior:
+        #     - 3 assistant turns with 2 tool calls in between
+        #     - Final message sequence: user + 3*assistant + 2*tool responses
+        #     - Metrics contain executed code results: ["3", "149"]
+        #     - All tool returns match expected mathematical computation results
+        
+        # Args:
+        #     sandbox_fusion_rollout_config: Configuration with tool support
+        #     qwen_tokenizer: Tokenizer for processing conversation
+        #     qwen_model_config: Model configuration
+        #     sandbox_data_proto: Input data with tool metadata
+        #     sandbox_fusion_data: Expected conversation turns and tool returns
+        # """        
         mock_rollout.config.multi_turn.max_assistant_turns = 10
         mock_rollout._tool_map["code_interpreter"].sandbox_fusion_url = sandbox_url
         req = mock_rollout._preprocess_prompt_to_async_rollout_requests(sandbox_data_proto, n=1)[0]

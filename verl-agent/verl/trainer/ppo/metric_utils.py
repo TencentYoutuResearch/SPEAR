@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, invalid-name
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +16,42 @@
 """
 Metrics related to the PPO trainer.
 """
+
+# This module provides comprehensive metric computation utilities for Proximal Policy Optimization (PPO) 
+# training in reinforcement learning from human feedback (RLHF) scenarios. It includes functions for:
+
+# 1. **Data Metrics**: Computing statistics about scores, rewards, advantages, returns, and sequence lengths
+# 2. **Timing Metrics**: Measuring performance of different training stages (generation, reference computation, etc.)
+# 3. **Throughput Metrics**: Calculating tokens per second and overall training efficiency
+# 4. **Validation Metrics**: Processing evaluation results with statistical analysis and bootstrap sampling
+# 5. **Utility Functions**: Helper functions for bootstrap sampling, majority voting, and metric reduction
+
+# Key Components:
+# - Training data analysis for PPO algorithm monitoring
+# - Performance profiling for distributed training optimization
+# - Statistical validation with bootstrap confidence intervals
+# - Multi-turn conversation support for complex dialogue scenarios
+
+# Usage:
+#     This module is typically used within PPO training loops to compute and log various metrics
+#     that help monitor training progress, detect issues, and optimize performance.
+
+# Example:
+#     ```python
+#     from verl.trainer.ppo.metric_utils import compute_data_metrics, compute_timing_metrics
+    
+#     # Compute training data metrics
+#     data_metrics = compute_data_metrics(batch, use_critic=True)
+    
+#     # Compute timing and throughput metrics
+#     timing_metrics = compute_timing_metrics(batch, timing_data)
+#     throughput_metrics = compute_throughout_metrics(batch, timing_data, n_gpus=8)
+#     ```
+
+# Note:
+#     This module assumes specific data structures (DataProto) and follows the PPO algorithm
+#     conventions used in the VERL framework for large language model training.
+
 
 from collections import defaultdict
 from functools import partial
@@ -100,6 +138,29 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str,
             - response_length/mean, max, min, clip_ratio: Statistics about response lengths
             - prompt_length/mean, max, min, clip_ratio: Statistics about prompt lengths
     """
+
+
+    # Algorithm Overview:
+    # 1. **Score and Reward Computation**: Aggregates token-level scores and rewards across sequences
+    # 2. **Advantage and Return Analysis**: Extracts valid advantages and returns using response masks
+    # 3. **Value Function Metrics**: Computes value estimates and explained variance (if critic enabled)
+    # 4. **Sequence Length Analysis**: Measures prompt and response lengths with clipping detection
+    # 5. **Multi-turn Support**: Handles conversation turn statistics when available
+
+    # Key Metrics Categories:
+    # - **Critic Scores**: Aggregated sequence-level scores from token-level evaluations
+    # - **Rewards**: Total rewards per sequence, crucial for policy gradient updates
+    # - **Advantages**: Policy gradient advantages, normalized for training stability
+    # - **Returns**: Discounted future rewards, targets for value function training
+    # - **Values**: Critic network predictions (if use_critic=True)
+    # - **Sequence Lengths**: Input statistics for efficiency monitoring and debugging
+
+    # Mathematical Details:
+    # - Sequence Score: sum(token_scores) for each sequence
+    # - Sequence Reward: sum(token_rewards) for each sequence
+    # - Value Function Explained Variance: 1 - Var(returns - values) / Var(returns)
+    # - Clip Ratios: Proportion of sequences hitting maximum length limits
+
     sequence_score = batch.batch["token_level_scores"].sum(-1)
     sequence_reward = batch.batch["token_level_rewards"].sum(-1)
 

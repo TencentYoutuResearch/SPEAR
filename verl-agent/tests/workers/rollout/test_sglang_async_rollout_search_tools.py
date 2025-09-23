@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2025 Bytedance Ltd. and/or its affiliates
 # Copyright 2023-2024 SGLang Team
 #
@@ -53,6 +55,50 @@ user_content = DEFAULT_USER_CONTENT_PREFIX.rstrip("\n") + "How's the weather lat
 
 
 def get_search_messages():
+    # """
+    # Generate test conversation data for search tool integration scenarios.
+    
+    # This function creates the core test data structure that simulates a multi-turn 
+    # conversation between a user and an AI assistant with search tool capabilities.
+    # It defines the complete conversation flow used across all search tool tests.
+    
+    # Conversation Flow:
+    #     1. User Query: "How's the weather lately?" (with reasoning instructions)
+    #     2. Assistant Turn 0: Searches for "today's weather" via tool call
+    #     3. Tool Response 0: Returns current weather information  
+    #     4. Assistant Turn 1: Searches for "tomorrow's weather" via tool call
+    #     5. Tool Response 1: Returns future weather information
+    #     6. Assistant Turn 2: Provides final answer combining both search results
+    
+    # Data Structure:
+    #     - user_prompts: List containing the initial user query with search instructions
+    #     - expect_turn_array: Expected assistant responses at each conversation turn
+    #     - tool_return_array: Mock tool responses for each search query
+    
+    # Search Tool Integration:
+    #     - Uses OpenAI function calling format with "search" tool
+    #     - Each tool call includes properly formatted arguments with query parameters
+    #     - Tool responses simulate realistic search engine results
+    #     - Final assistant response demonstrates information synthesis
+    
+    # Test Coverage:
+    #     - Multi-turn conversation handling
+    #     - Tool call parsing and execution
+    #     - Search result integration into responses  
+    #     - Proper conversation state management
+    #     - OpenAI function calling schema compliance
+    
+    # Returns:
+    #     tuple: (user_prompts, expect_turn_array, tool_return_array)
+    #         - user_prompts: Initial user messages for conversation start
+    #         - expect_turn_array: Expected assistant responses for each turn
+    #         - tool_return_array: Mock search tool response messages
+    
+    # Note:
+    #     This function provides the foundation data for all search tool tests,
+    #     ensuring consistent conversation patterns and expected behaviors across
+    #     different test scenarios (basic, batch, error handling, etc.).
+    # """
     user_prompt = {
         "role": "user",
         "content": user_content,
@@ -89,6 +135,53 @@ def get_search_messages():
 
 
 class TestRolloutWithSearchTools:
+    # """
+    # Comprehensive test suite for SGLang rollout functionality with search tool integration.
+    
+    # This test class validates the end-to-end functionality of SGLang rollout workers when
+    # integrated with external search tools for information retrieval. It tests various
+    # scenarios including tool registration, multi-turn conversations with search queries,
+    # and batch processing of search-enabled requests.
+    
+    # Core Test Scenarios:
+    #     - Search tool registration and OpenAI function schema validation
+    #     - Async rollout request preprocessing with search tool capabilities
+    #     - Single-request multi-turn conversations with search tool calls
+    #     - Batch processing of concurrent search requests (100+ requests)
+    #     - Response handling for different completion reasons (tool_calls, stop, length)
+    #     - Tool execution mocking and response validation
+    
+    # Search Tool Integration:
+    #     - Uses SearchTool for web information retrieval
+    #     - Supports query-based search with structured responses
+    #     - Handles multi-turn conversations where assistant searches multiple times
+    #     - Validates tool call parsing and response integration
+    
+    # Fixtures:
+    #     qwen_tokenizer: Qwen2.5-0.5B tokenizer with left padding configuration
+    #     qwen_model_config: Model configuration for Qwen2.5-0.5B
+    #     search_data: Pre-processed conversation data with search interactions
+    #     search_rollout_config: Configuration enabling search tool integration
+    #     search_data_proto: DataProto containing tokenized prompts and search metadata
+    #     mock_rollout: Fully mocked rollout instance for isolated testing
+    
+    # Test Pattern:
+    #     The tests simulate a weather inquiry scenario where:
+    #     1. User asks "How's the weather lately?"
+    #     2. Assistant searches for "today's weather"
+    #     3. Assistant searches for "tomorrow's weather" 
+    #     4. Assistant provides final answer combining both results
+    
+    # Dependencies:
+    #     - SGLangRollout: Main rollout worker with tool support
+    #     - SearchTool: External search service integration
+    #     - AsyncRolloutRequest: Request lifecycle management
+    #     - OpenAI function calling schemas for tool definitions
+    
+    # Note:
+    #     Tests extensively use mocking to avoid external search API dependencies
+    #     and focus on the rollout logic and search tool integration mechanisms.
+    # """
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
@@ -196,6 +289,53 @@ class TestRolloutWithSearchTools:
         qwen_model_config,
         search_data_proto,
     ):
+        # """
+        # Test the creation and preprocessing of async rollout requests with search tool capabilities.
+        
+        # This test validates the core request preprocessing functionality that converts
+        # input DataProto objects into AsyncRolloutRequest instances with proper search
+        # tool integration and OpenAI function calling schema validation.
+        
+        # Key Validation Areas:
+        #     - Request list creation from DataProto input
+        #     - Initial request state (PENDING) assignment
+        #     - Search tool schema registration and validation
+        #     - OpenAI function calling format compliance
+        #     - Tool parameter schema correctness
+        
+        # Request Creation Process:
+        #     1. SGLangRollout initialization with search tool configuration
+        #     2. DataProto preprocessing into AsyncRolloutRequest objects
+        #     3. Tool schema extraction and validation
+        #     4. Request state initialization and metadata setup
+        
+        # Schema Validation:
+        #     - Tool type: "function" for OpenAI compatibility
+        #     - Function name: "search" matching tool configuration
+        #     - Description: Web search capability description
+        #     - Parameters: Proper OpenAI function parameters schema
+        #     - Required fields: "query_list" for search queries
+        #     - Property types: Array of strings for query inputs
+        
+        # Expected Request Properties:
+        #     - Single request created from input DataProto
+        #     - Initial state: PENDING (ready for processing)
+        #     - Tool schemas: 1 search tool schema registered
+        #     - Schema format: Full OpenAI function calling specification
+        #     - Parameter validation: Required query_list with proper typing
+        
+        # Integration Points:
+        #     - SearchTool integration through rollout configuration
+        #     - OpenAI function calling schema generation
+        #     - Request preprocessing pipeline validation
+        #     - Tool metadata propagation from DataProto
+        
+        # Args:
+        #     search_rollout_config: Configuration with search tool enabled
+        #     qwen_tokenizer: Tokenizer for request processing
+        #     qwen_model_config: Model configuration
+        #     search_data_proto: Input data containing search metadata
+        # """
         rollout = SGLangRollout(
             actor_module="", config=search_rollout_config, tokenizer=qwen_tokenizer, model_hf_config=qwen_model_config
         )
@@ -238,6 +378,53 @@ class TestRolloutWithSearchTools:
         search_data_proto,
         search_data,
     ):
+        # """
+        # Test handling of response truncation due to length limits in search tool scenarios.
+        
+        # This test validates the rollout system's behavior when responses are truncated
+        # due to maximum length constraints, specifically testing the edge case where
+        # the assistant's response is cut off before tool calls can be made.
+        
+        # Test Scenario:
+        #     - Artificially limit max_turns to 1 to force early termination
+        #     - Mock engine response with "length" finish_reason indicating truncation
+        #     - Verify proper handling when conversation is cut short
+        #     - Ensure graceful degradation without tool execution
+        
+        # Key Behaviors Tested:
+        #     - Response truncation handling with "length" finish_reason
+        #     - Request state management under constraint conditions
+        #     - Proper completion without tool call execution
+        #     - Empty reward scores when no tools are executed
+        #     - Message count validation for truncated conversations
+        
+        # Mock Configuration:
+        #     - max_turns: Set to 1 to force early termination
+        #     - finish_reason: "length" with length=3000 to simulate truncation
+        #     - Engine response: First turn only, no tool calls processed
+        #     - Tool execution: Bypassed due to early termination
+        
+        # Expected Behavior:
+        #     - Request completes with COMPLETED state despite truncation
+        #     - No search tool rewards collected (empty reward_scores)
+        #     - Only 2 messages total: user prompt + truncated assistant response
+        #     - Assistant response matches expected first turn content
+        #     - No tool_calls in final assistant message
+        
+        # Validation Points:
+        #     - Proper state transition under length constraints
+        #     - Correct message sequence for truncated conversations
+        #     - Empty metrics collection when tools aren't executed
+        #     - Graceful handling of incomplete multi-turn scenarios
+        #     - No errors or exceptions during truncation scenarios
+        
+        # Args:
+        #     search_rollout_config: Configuration with modified max_turns limit
+        #     qwen_tokenizer: Tokenizer for message processing
+        #     qwen_model_config: Model configuration
+        #     search_data_proto: Input request data
+        #     search_data: Expected conversation patterns (only first turn used)
+        # """
         search_rollout_config.multi_turn.max_turns = 1
         rollout = SGLangRollout(
             actor_module="", config=search_rollout_config, tokenizer=qwen_tokenizer, model_hf_config=qwen_model_config

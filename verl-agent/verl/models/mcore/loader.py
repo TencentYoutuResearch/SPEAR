@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2025 Bytedance Ltd. and/or its affiliates
 # Copyright (c) 2025, NVIDIA CORPORATION. All rights reserved.
 #
@@ -53,6 +55,138 @@ def _megatron_calc_layer_map(config):
 
 def load_state_dict_to_megatron_gptmodel(state_dict, wrapped_models, config, params_dtype, is_value_model=False):
     """Load merged state_dict to sharded Megatron module in training."""
+
+    # """
+    # Load merged state_dict to sharded Megatron module in training.
+    
+    # This function loads a complete (unsharded) model state dictionary into a distributed
+    # Megatron-Core GPT model that is sharded across multiple GPUs using tensor parallelism (TP),
+    # pipeline parallelism (PP), data parallelism (DP), and context parallelism (CP).
+    
+    # Architecture Overview:
+    # =====================
+    # The function handles the complex mapping between:
+    # - Source: Complete model weights (e.g., from HuggingFace format)
+    # - Target: Sharded Megatron model distributed across multiple devices
+    
+    # Parallelism Strategies Supported:
+    # - Tensor Parallelism (TP): Splits tensors across multiple GPUs within a layer
+    # - Pipeline Parallelism (PP): Distributes layers across multiple GPUs
+    # - Virtual Pipeline Parallelism: Further subdivides pipeline stages
+    # - Data Parallelism (DP): Replicates model across data parallel groups
+    # - Context Parallelism (CP): Splits sequence dimension across GPUs
+    
+    # Loading Process:
+    # ===============
+    # 1. **Rank and Group Setup**: Determines source rank (rank 0) and target ranks
+    # 2. **Model Unwrapping**: Extracts core GPT models from distributed wrappers
+    # 3. **Layer Mapping**: Calculates which layers go to which PP ranks/virtual ranks
+    # 4. **Weight Distribution**: Uses specialized broadcast functions for different tensor types:
+    #    - Embeddings: TP-sharded vocabulary embeddings
+    #    - Attention: QKV tensors merged and TP-sharded with proper head grouping
+    #    - MLP: Gate/Up projections concatenated and TP-sharded
+    #    - LayerNorm: Broadcasted without sharding
+    #    - Output: LM head with special handling for value models
+    
+    # Tensor Broadcasting Strategies:
+    # ==============================
+    # - `_broadcast_tensor`: Standard broadcast for non-sharded tensors (LayerNorm weights)
+    # - `_broadcast_tp_shard_tensor`: General TP sharding with configurable dimension
+    # - `_broadcast_tp_shard_tensor_vocab`: Vocabulary-specific TP sharding
+    # - `_broadcast_tp_shard_tensor_qkv`: Attention QKV tensor fusion and TP sharding
+    # - `_broadcast_tp_shard_tensor_gate_up`: MLP gate/up projection fusion and TP sharding
+    
+    # Attention Mechanism Handling:
+    # =============================
+    # The function handles two cases for attention:
+    # 1. **Sufficient KV Heads** (num_key_value_heads >= tp_size):
+    #    - Distributes KV heads across TP ranks
+    #    - Maintains grouped query attention structure
+    # 2. **Insufficient KV Heads** (num_key_value_heads < tp_size):
+    #    - Replicates KV heads across TP ranks
+    #    - Handles GQA (Grouped Query Attention) patterns
+    
+    # Value Model Considerations:
+    # ==========================
+    # When is_value_model=True:
+    # - Handles different head naming conventions (lm_head vs reward_head)
+    # - Supports single-output value heads (shape[0] == 1)
+    # - Provides fallback mechanisms for missing value heads
+    
+    # Args:
+    #     state_dict (dict): Complete model state dictionary with unsharded weights.
+    #                       Keys should follow HuggingFace naming conventions:
+    #                       - "model.embed_tokens.weight": Token embeddings
+    #                       - "model.layers.{i}.{component}": Transformer layer weights
+    #                       - "model.norm.weight": Final layer normalization
+    #                       - "lm_head.weight" or "reward_head.weight": Output projection
+        
+    #     wrapped_models (list or single model): Megatron models wrapped with DDP/Float16Module.
+    #                                           Length should match virtual_pp_size.
+        
+    #     config: Model configuration object containing:
+    #             - num_hidden_layers: Total number of transformer layers
+    #             - num_attention_heads: Number of attention heads
+    #             - num_key_value_heads: Number of key-value heads (for GQA)
+    #             - hidden_size: Hidden dimension size
+    #             - intermediate_size: MLP intermediate dimension
+    #             - head_dim (optional): Dimension per attention head
+        
+    #     params_dtype (torch.dtype): Target parameter dtype (e.g., torch.float16, torch.bfloat16)
+        
+    #     is_value_model (bool, optional): Whether this is a value model (for RLHF).
+    #                                     Defaults to False. When True, applies special
+    #                                     handling for value head loading.
+    
+    # Process Flow:
+    # ============
+    # 1. **Initialization**: Setup parallel ranks, groups, and model unwrapping
+    # 2. **Validation**: Verify layer distribution and model consistency
+    # 3. **Weight Loading** (only on dp_rank == 0):
+    #    a. Embeddings: Load and TP-shard token embeddings
+    #    b. Transformer Layers: For each layer, load attention, MLP, and normalization
+    #    c. Final Components: Load final LayerNorm and output projection
+    # 4. **Synchronization**: Barrier and broadcast within data parallel groups
+    # 5. **Cleanup**: Clear CUDA cache and report timing
+    
+    # Memory and Performance Notes:
+    # ============================
+    # - Only rank 0 in each model parallel group loads the full state_dict
+    # - Temporary tensors are created during TP sharding process
+    # - Memory usage peaks during tensor concatenation and chunking
+    # - CUDA cache is cleared after loading to free temporary memory
+    # - Process is synchronized across all ranks to ensure consistency
+    
+    # Error Handling:
+    # ==============
+    # - Missing tensors are logged and skipped (allows partial loading)
+    # - Shape mismatches trigger assertions with detailed error messages
+    # - Rank verification ensures only appropriate ranks perform operations
+    
+    # Example Usage:
+    # =============
+    # ```python
+    # # Load HuggingFace checkpoint into distributed Megatron model
+    # hf_state_dict = torch.load("model.bin")
+    # load_state_dict_to_megatron_gptmodel(
+    #     state_dict=hf_state_dict,
+    #     wrapped_models=megatron_models,
+    #     config=model_config,
+    #     params_dtype=torch.bfloat16,
+    #     is_value_model=False
+    # )
+    # ```
+    
+    # Raises:
+    #     AssertionError: If model configuration is inconsistent with parallelism settings
+    #     RuntimeError: If tensor shapes don't match expected dimensions
+    
+    # Note:
+    #     This function is specifically designed for Megatron-Core architecture and
+    #     requires proper initialization of Megatron's distributed backend before use.
+    #     The function blocks until all ranks complete loading.
+    # """
+
     from megatron.core import DistributedDataParallel as LocalDDP, mpu
     from megatron.core.transformer.module import Float16Module
     from torch.nn.parallel import DistributedDataParallel as torchDDP

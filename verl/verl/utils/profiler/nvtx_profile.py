@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 # Copyright (c) 2024, NVIDIA CORPORATION. All rights reserved.
 #
@@ -120,6 +122,12 @@ class NsightSystemsProfiler(DistProfiler):
             rank (int): The rank of the current process.
             config (Optional[ProfilerConfig]): Configuration for the profiler. If None, a default configuration is used.
         """
+        # """Initialize the NsightSystemsProfiler.
+
+        # Args:
+        #     rank (int): The rank of the current process.
+        #     config (Optional[ProfilerConfig]): Configuration for the profiler. If None, a default configuration is used.
+        # """
         # If no configuration is provided, create a default ProfilerConfig with an empty list of ranks
         if not config:
             config = ProfilerConfig(ranks=[])
@@ -166,6 +174,21 @@ class NsightSystemsProfiler(DistProfiler):
             category (str, optional):
                 The category of the range. Defaults to None.
         """
+        # """Decorate a Worker member function to profile the current rank in the current training step.
+
+        # Requires the target function to be a member function of a Worker, which has a member field `profiler` with
+        # NightSystemsProfiler type.
+
+        # Args:
+        #     message (str, optional):
+        #         The message to be displayed in the profiler. Defaults to None.
+        #     color (str, optional):
+        #         The color of the range. Defaults to None.
+        #     domain (str, optional):
+        #         The domain of the range. Defaults to None.
+        #     category (str, optional):
+        #         The category of the range. Defaults to None.
+        # """
 
         def decorator(func):
             @functools.wraps(func)

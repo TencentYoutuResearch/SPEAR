@@ -84,6 +84,29 @@ class PRIMERewardModelWorker(Worker):
             assert self.config.mini_batch_size % self.config.micro_batch_size_per_gpu == 0
 
     def _build_reward_ref_model_optimizer(self, config):
+        # """Build reward model, reference model, optimizer and learning rate scheduler.
+
+        # This method initializes the reward model and reference model using FSDP (Fully Sharded Data Parallel),
+        # along with the corresponding optimizer and learning rate scheduler. It handles model loading,
+        # FSDP wrapping, mixed precision configuration, and optimizer setup for PRIME reward modeling.
+
+        # Args:
+        #     config: Configuration object containing model paths, FSDP settings, optimizer parameters,
+        #            and training hyperparameters.
+
+        # Returns:
+        #     tuple: A tuple containing:
+        #         - reward_module: FSDP-wrapped reward model
+        #         - ref_module: FSDP-wrapped reference model
+        #         - reward_optimizer: AdamW optimizer for reward model training
+        #         - reward_lr_scheduler: Learning rate scheduler with warmup
+
+        # Note:
+        #     The method applies monkey patching for Ulysses sequence parallelism and flash attention,
+        #     configures mixed precision training, and sets up FSDP sharding strategy based on
+        #     the device mesh configuration.
+        # """
+        
         # the following line is necessary
         from torch import optim
         from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, MixedPrecision
@@ -237,6 +260,18 @@ class PRIMERewardModelWorker(Worker):
 
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def init_model(self):
+        # """Initialize the PRIME reward model and related components.
+
+        # This method sets up the complete reward modeling pipeline including:
+        # - Loading external libraries if specified
+        # - Building reward and reference models with FSDP
+        # - Creating the data-parallel PRIME reward model wrapper
+        # - Setting up FLOP counter and checkpoint manager
+        # - Handling parameter/optimizer offloading if configured
+
+        # The method initializes both the reward model (to be trained) and reference model
+        # (kept frozen for comparison), along with all necessary training infrastructure.
+        # """
         # This is used to import external_lib into the huggingface systems
         import_external_libs(self.config.model.get("external_lib", None))
 
@@ -269,6 +304,25 @@ class PRIMERewardModelWorker(Worker):
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_rm_score(self, data: DataProto):
+        # """Compute reward model scores for given input data.
+
+        # This method performs forward pass through the reward model to compute scores
+        # for preference-based reinforcement learning. It handles data preprocessing,
+        # model inference with Ulysses sequence parallelism, and computes DPO accuracy metrics.
+
+        # Args:
+        #     data (DataProto): Input data containing prompts, responses, and metadata
+        #                      for reward model scoring.
+
+        # Returns:
+        #     DataProto: Output containing reward model scores, Q-values, and metrics
+        #               including DPO accuracy calculations.
+
+        # Note:
+        #     The method computes both regular DPO accuracy and absolute DPO accuracy
+        #     based on the reward model predictions and ground truth preferences.
+        #     It uses Ulysses sharding manager for efficient sequence-parallel computation.
+        # """
         data = data.to("cuda")
 
         if self._is_offload_param:
@@ -304,6 +358,25 @@ class PRIMERewardModelWorker(Worker):
 
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def update_rm(self, data: DataProto):
+        # """Update the reward model parameters using preference-based learning.
+
+        # This method performs a training step for the reward model using DPO (Direct Preference Optimization)
+        # or similar preference-based objectives. It handles gradient computation, optimizer updates,
+        # learning rate scheduling, and computes training metrics.
+
+        # Args:
+        #     data (DataProto): Training data containing prompts, responses, preferences,
+        #                      and other metadata for reward model training.
+
+        # Returns:
+        #     DataProto: Output containing updated reward model scores and training metrics
+        #               including learning rate and DPO accuracy before update.
+
+        # Note:
+        #     The method updates the learning rate scheduler after each training step and
+        #     computes pre-update DPO accuracy metrics for monitoring training progress.
+        #     It uses Ulysses sequence parallelism for efficient distributed training.
+        # """
         data = data.to("cuda")
         if self._is_offload_param:
             load_fsdp_model_to_gpu(self.ref_module)

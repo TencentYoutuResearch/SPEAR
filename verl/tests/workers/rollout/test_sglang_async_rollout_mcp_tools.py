@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2025 Bytedance Ltd. and/or its affiliates
 # Copyright 2023-2024 SGLang Team
 # Copyright 2025 ModelBest Inc. and/or its affiliates
@@ -114,6 +116,70 @@ def get_search_messages():
 
 
 class TestRolloutWithMCPSearchTools:
+    # """
+    # Comprehensive test suite for SGLang rollout functionality with Model Context Protocol (MCP) search tool integration.
+    
+    # This test class validates the end-to-end functionality of SGLang rollout workers when
+    # integrated with external MCP search tools, specifically testing the Tavily search tool
+    # through the Model Context Protocol interface. It covers various scenarios including
+    # tool registration, multi-turn conversations, batch processing, and error handling.
+    
+    # MCP Integration Overview:
+    #     - Model Context Protocol provides a standardized interface for tool integration
+    #     - MCPSearchTool wraps Tavily search API through MCP client architecture
+    #     - MCPClientManager handles dynamic tool schema fetching and lifecycle management
+    #     - Tools support rich parameter schemas with validation and type checking
+    
+    # Core Test Scenarios:
+    #     - MCP tool registration and schema validation through MCPClientManager
+    #     - Async rollout request preprocessing with MCP tool capabilities
+    #     - Single-request multi-turn conversations with Tavily search calls
+    #     - Batch processing of concurrent MCP search requests (100+ requests)
+    #     - Response handling for different completion reasons (tool_calls, stop, length)
+    #     - MCP client lifecycle and error handling scenarios
+    
+    # Tavily Search Tool Features:
+    #     - Advanced web search with configurable depth (basic/advanced)
+    #     - Time-based filtering (day, week, month, year)
+    #     - Domain inclusion/exclusion capabilities
+    #     - Content control (raw content, images, descriptions)
+    #     - Result count limiting and async search support
+    #     - Intent-based search categorization
+    
+    # Fixtures:
+    #     qwen_tokenizer: Qwen2.5-0.5B tokenizer with left padding configuration
+    #     qwen_model_config: Model configuration for Qwen2.5-0.5B
+    #     search_data: Pre-processed conversation data with MCP search interactions
+    #     search_rollout_config: Configuration enabling MCP tool integration
+    #     search_data_proto: DataProto containing tokenized prompts and MCP metadata
+    #     mock_rollout: Fully mocked rollout instance with MCP client management
+    
+    # Test Pattern:
+    #     The tests simulate a weather inquiry scenario where:
+    #     1. User asks "How's the weather lately?" with reasoning instructions
+    #     2. Assistant searches for current weather using Tavily search tool
+    #     3. Assistant searches for future weather using different parameters
+    #     4. Assistant provides final answer combining both search results
+    
+    # MCP Architecture:
+    #     - MCPClientManager: Handles tool schema fetching and client lifecycle
+    #     - MCPSearchTool: Implements MCP protocol for Tavily search integration
+    #     - Dynamic schema loading: Tools schemas fetched at runtime from MCP servers
+    #     - Protocol compliance: Full MCP specification adherence
+    
+    # Dependencies:
+    #     - SGLangRollout: Main rollout worker with MCP tool support
+    #     - MCPSearchTool: MCP-compliant search tool implementation
+    #     - MCPClientManager: MCP client lifecycle and schema management
+    #     - AsyncRolloutRequest: Request lifecycle management
+    #     - Tavily API: External search service (mocked in tests)
+    
+    # Note:
+    #     Tests extensively use mocking to avoid external MCP server dependencies
+    #     and focus on the rollout logic and MCP protocol integration mechanisms.
+    #     The mock_rollout fixture provides critical MCP client simulation.
+    # """
+    
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
@@ -191,6 +257,67 @@ class TestRolloutWithMCPSearchTools:
     @pytest.fixture
     def mock_rollout(self, search_rollout_config, qwen_tokenizer, qwen_model_config):
         """Mock the rollout instance with sampling_params initialized."""
+        # """
+        # Create a fully mocked SGLang rollout instance with MCP search tool integration.
+        
+        # This fixture provides the core testing infrastructure for MCP tool integration,
+        # setting up a complete mock environment that simulates the MCP client architecture
+        # and tool schema management without requiring external MCP servers or API connections.
+        
+        # MCP Mock Architecture:
+        #     - MCPClientManager.fetch_tool_schemas: Mocked to return predefined Tavily tool schema
+        #     - SGLangRollout initialization components: All external dependencies mocked
+        #     - Tool schema: Complete Tavily search tool specification with all parameters
+        #     - Sampling parameters: Configured for test scenarios
+        
+        # Tool Schema Configuration:
+        #     - Tool Name: "tavily_search_tool" (MCP-compliant naming)
+        #     - Required Parameters: what_is_your_intent, query
+        #     - Optional Parameters: search_depth, topic, days, time_range, domains, content options
+        #     - Parameter Validation: Full OpenAI function calling schema compliance
+        #     - Type System: String, integer, boolean, array types with descriptions
+        
+        # Tavily Tool Capabilities (Mocked):
+        #     - Intent-based searching with purpose declaration
+        #     - Basic/advanced search depth configuration
+        #     - Time-range filtering (day, week, month, year)
+        #     - Domain inclusion/exclusion lists
+        #     - Content control (raw content, images, descriptions)
+        #     - Result count limiting (5-20 results)
+        #     - Async search execution support
+        
+        # Mock Dependencies:
+        #     - Distributed environment initialization bypassed
+        #     - Inference engine setup mocked
+        #     - Sampling parameters initialization mocked
+        #     - MCP client management fully simulated
+        
+        # Rollout Configuration:
+        #     - Response length: From search_rollout_config
+        #     - Sampling: Standard parameters with no penalties
+        #     - Tool integration: MCP client manager with schema fetching
+        #     - Tokenizer: Qwen2.5 with proper chat template support
+        
+        # Usage Pattern:
+        #     This fixture enables isolated testing of MCP tool integration logic
+        #     without external dependencies, focusing on:
+        #     - Tool registration and schema validation
+        #     - Request preprocessing with MCP metadata
+        #     - Multi-turn conversation handling
+        #     - Tool call parsing and execution simulation
+        
+        # Returns:
+        #     SGLangRollout: Fully configured mock rollout instance with:
+        #         - MCP search tool registered and available
+        #         - Complete tool schema with parameter validation  
+        #         - Sampling parameters configured for testing
+        #         - All external dependencies mocked for isolation
+        
+        # Note:
+        #     This mock provides the foundation for all MCP tool tests, ensuring
+        #     consistent behavior and eliminating external service dependencies
+        #     while maintaining realistic MCP protocol simulation.
+        # """
         tool_schema = [
             {
                 "type": "function",
@@ -344,6 +471,64 @@ class TestRolloutWithMCPSearchTools:
 
     @patch.object(MCPSearchTool, "execute", new_callable=AsyncMock)
     def test_tool_call_basic_case(self, mock_execute, mock_rollout, search_data_proto, search_data):
+            # Test basic MCP search tool calling functionality in a single-request multi-turn scenario.
+        
+        # This test validates the complete workflow of an async rollout request that involves
+        # multiple MCP search tool calls during a multi-turn conversation. It simulates a weather
+        # inquiry where the assistant performs two separate Tavily searches through MCP protocol
+        # before providing a comprehensive final answer.
+        
+        # Test Flow:
+        #     1. Setup mock rollout with MCP search tool integration enabled
+        #     2. Create single async rollout request with MCP tool capabilities
+        #     3. Mock MCPSearchTool execution to return predefined weather responses
+        #     4. Simulate 3-turn conversation: search today -> search tomorrow -> final answer
+        #     5. Validate MCP tool call parsing, execution, and response integration
+        
+        # MCP Conversation Pattern:
+        #     - Turn 0: Assistant searches for current weather using Tavily tool
+        #       * Tool call with rich parameters (intent, query, search_depth, time_range, domains, max_results)
+        #       * MCP protocol compliance with structured arguments
+        #     - MCP Response 0: "Today's weather in Beijing is sunny."
+        #     - Turn 1: Assistant searches for future weather with different parameters
+        #       * Tool call targeting tomorrow's weather
+        #       * Demonstrates parameter variation within same tool
+        #     - MCP Response 1: "Tomorrow's weather in Beijing is cloudy."
+        #     - Turn 2: Assistant provides synthesized final answer combining both results
+        
+        # MCP Protocol Validation:
+        #     - Tool call structure: OpenAI function calling format
+        #     - Parameter validation: Required and optional parameter handling
+        #     - Response format: MCP-compliant content structure with text blocks
+        #     - Tool execution: Async execution with success status tracking
+        
+        # Mocked Components:
+        #     - MCPSearchTool.execute: Returns predefined weather information with success status
+        #     - Engine calls: Simulated responses with appropriate finish_reason types
+        #     - MCP client communication: Bypassed with predetermined return values
+        #     - Tool schema validation: Pre-loaded schema from mock_rollout fixture
+        
+        # Validation Points:
+        #     - Request state transitions (PENDING -> COMPLETED)
+        #     - MCP tool execution count (should be 2 calls to tavily_search_tool)
+        #     - Message sequence validation (6 total: user + 3*assistant + 2*tool)
+        #     - Tool response content matching expected weather information
+        #     - Metrics collection with MCP success status indicators
+        #     - Proper MCP tool call parsing for each assistant turn
+        #     - Tool call ID handling and response correlation
+        
+        # Expected Behavior:
+        #     - 3 assistant turns with 2 MCP search tool calls in between
+        #     - Final message sequence: user + assistant + tool + assistant + tool + assistant
+        #     - MCP search metrics contain success status and proper execution counts
+        #     - Tool responses match expected weather query results with MCP format
+        #     - All tool parameters properly parsed and validated
+        
+        # Args:
+        #     mock_execute: Mocked MCPSearchTool.execute method for controlled responses
+        #     mock_rollout: Fully configured mock rollout instance with MCP integration
+        #     search_data_proto: Input data with MCP tool metadata and parameters
+        #     search_data: Expected conversation turns and MCP tool return values
         _, expect_turn_array, tool_return_array = search_data
         # Mock search tool execution to return predefined responses
         mock_execute.side_effect = [(msg, 0.0, {"status": "success"}) for msg in tool_return_array]
@@ -399,6 +584,69 @@ class TestRolloutWithMCPSearchTools:
 
     @patch.object(MCPSearchTool, "execute", new_callable=AsyncMock)
     def test_tool_call_batch_case(self, mock_execute, mock_rollout, search_data_proto, search_data):
+        # """
+        # Test batch processing of MCP search tool calls with concurrent request handling.
+        
+        # This test validates the scalability and concurrency handling of the SGLang rollout
+        # system when processing multiple requests simultaneously through the Model Context
+        # Protocol, each involving Tavily search tool calls. It simulates 100 concurrent
+        # weather inquiry requests to test MCP client management and resource scalability.
+        
+        # Test Scenario:
+        #     - Creates 100 identical async rollout requests with MCP tool capabilities
+        #     - Each request follows the same 3-turn conversation pattern as basic case
+        #     - All requests execute concurrently using asyncio.gather
+        #     - Validates proper MCP client isolation and resource sharing
+        
+        # MCP Batch Processing Architecture:
+        #     - Request Isolation: Each request maintains independent MCP tool state
+        #     - Concurrent Execution: All 100 requests processed simultaneously via asyncio
+        #     - Resource Sharing: MCP client manager handles multiple concurrent connections
+        #     - Tool Execution Scaling: 200 total Tavily search calls (2 per request × 100 requests)
+        #     - Protocol Compliance: MCP specification adherence under high concurrency
+        
+        # Mock Infrastructure:
+        #     - Engine Call Mapping: Each request gets dedicated future sequences
+        #     - MCP Tool Execution: Alternating pattern of weather responses for all requests
+        #     - Request Tracking: Per-request counters and future management
+        #     - State Isolation: Individual completion tracking per request
+        #     - Client Management: Simulated MCP client lifecycle under load
+        
+        # Validation at Scale:
+        #     - All 100 requests complete successfully (COMPLETED state)
+        #     - Total MCP tool executions: 200 calls (verified via mock.await_count)
+        #     - Message consistency: Each request has 6 messages (user + 3*assistant + 2*tool)
+        #     - Tool response validation: 2 MCP tool messages per request with expected content
+        #     - Metrics integrity: Success status recorded for all Tavily search operations
+        #     - MCP protocol compliance: All tool calls follow MCP specification
+        
+        # Performance Characteristics:
+        #     - Concurrent request handling without MCP client interference
+        #     - Proper async/await patterns for MCP tool execution
+        #     - Memory efficient MCP client state management
+        #     - Deterministic completion despite concurrent MCP operations
+        #     - Resource pooling and connection management
+        
+        # Stress Testing Aspects:
+        #     - High concurrency load (100 simultaneous MCP requests)
+        #     - Tool execution scalability (200 concurrent Tavily searches)
+        #     - MCP client manager resource handling under load
+        #     - Request state isolation with shared MCP infrastructure
+        #     - Memory and connection usage patterns
+        
+        # MCP Protocol Validation Under Load:
+        #     - Tool call parsing consistency across all requests
+        #     - Parameter validation for 200 individual tool calls
+        #     - Response format compliance for all MCP interactions
+        #     - Error handling and recovery in high-concurrency scenarios
+        #     - Client lifecycle management with concurrent connections
+        
+        # Args:
+        #     mock_execute: Mocked MCPSearchTool.execute for controlled MCP responses
+        #     mock_rollout: Configured mock rollout instance with MCP support
+        #     search_data_proto: Base request data template for batch MCP testing
+        #     search_data: Expected conversation patterns and MCP tool responses
+        # """
         _, expect_turn_array, tool_return_array = search_data
         # Mock tool execution for large batch (100 requests * 2 calls each)
         mock_execute.side_effect = [

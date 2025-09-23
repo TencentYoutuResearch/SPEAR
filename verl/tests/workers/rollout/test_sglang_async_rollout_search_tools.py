@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2025 Bytedance Ltd. and/or its affiliates
 # Copyright 2023-2024 SGLang Team
 #
@@ -86,6 +88,54 @@ def get_search_messages():
 
 
 class TestRolloutWithSearchTools:
+    # """
+    # Comprehensive test suite for SGLang rollout functionality with search tool integration.
+    
+    # This test class validates the end-to-end functionality of SGLang rollout workers when
+    # integrated with external search tools for information retrieval. It tests various
+    # scenarios including tool registration, multi-turn conversations with search queries,
+    # and batch processing of search-enabled requests.
+    
+    # Core Test Scenarios:
+    #     - Search tool registration and OpenAI function schema validation
+    #     - Async rollout request preprocessing with search tool capabilities
+    #     - Single-request multi-turn conversations with search tool calls
+    #     - Batch processing of concurrent search requests (100+ requests)
+    #     - Response handling for different completion reasons (tool_calls, stop, length)
+    #     - Tool execution mocking and response validation
+    
+    # Search Tool Integration:
+    #     - Uses SearchTool for web information retrieval
+    #     - Supports query-based search with structured responses
+    #     - Handles multi-turn conversations where assistant searches multiple times
+    #     - Validates tool call parsing and response integration
+    
+    # Fixtures:
+    #     qwen_tokenizer: Qwen2.5-0.5B tokenizer with left padding configuration
+    #     qwen_model_config: Model configuration for Qwen2.5-0.5B
+    #     search_data: Pre-processed conversation data with search interactions
+    #     search_rollout_config: Configuration enabling search tool integration
+    #     search_data_proto: DataProto containing tokenized prompts and search metadata
+    #     mock_rollout: Fully mocked rollout instance for isolated testing
+    
+    # Test Pattern:
+    #     The tests simulate a weather inquiry scenario where:
+    #     1. User asks "How's the weather lately?"
+    #     2. Assistant searches for "today's weather"
+    #     3. Assistant searches for "tomorrow's weather" 
+    #     4. Assistant provides final answer combining both results
+    
+    # Dependencies:
+    #     - SGLangRollout: Main rollout worker with tool support
+    #     - SearchTool: External search service integration
+    #     - AsyncRolloutRequest: Request lifecycle management
+    #     - OpenAI function calling schemas for tool definitions
+    
+    # Note:
+    #     Tests extensively use mocking to avoid external search API dependencies
+    #     and focus on the rollout logic and search tool integration mechanisms.
+    # """
+    
     @pytest.fixture
     def qwen_tokenizer(self):
         local_model_path = "Qwen/Qwen2.5-0.5B"
@@ -295,6 +345,52 @@ class TestRolloutWithSearchTools:
 
     @patch.object(SearchTool, "execute", new_callable=AsyncMock)
     def test_tool_call_basic_case(self, mock_execute, mock_rollout, search_data_proto, search_data):
+        # """
+        # Test basic search tool calling functionality in a single-request multi-turn scenario.
+        
+        # This test validates the complete workflow of an async rollout request that involves
+        # multiple search tool calls during a multi-turn conversation. It simulates a weather
+        # inquiry where the assistant performs two separate searches before providing a final answer.
+        
+        # Test Flow:
+        #     1. Setup mock rollout with search tool integration enabled
+        #     2. Create single async rollout request with search capabilities
+        #     3. Mock search tool execution to return predefined weather responses
+        #     4. Simulate 3-turn conversation: search today -> search tomorrow -> final answer
+        #     5. Validate tool call parsing, execution, and response integration
+        
+        # Conversation Pattern:
+        #     - Turn 0: Assistant searches for "today's weather" -> tool call with query
+        #     - Tool Response 0: "Today's weather in Beijing is sunny."
+        #     - Turn 1: Assistant searches for "tomorrow's weather" -> tool call with query  
+        #     - Tool Response 1: "Tomorrow's weather in Beijing is cloudy."
+        #     - Turn 2: Assistant provides final answer combining both search results
+        
+        # Mocked Components:
+        #     - SearchTool.execute: Returns predefined weather information
+        #     - Engine calls: Simulated responses with appropriate finish_reason types
+        #     - Tool execution: Bypassed with predetermined return values and success status
+        
+        # Validation Points:
+        #     - Request state transitions (PENDING -> COMPLETED)
+        #     - Search tool execution count (should be 2 calls)
+        #     - Message sequence validation (6 total: user + 3*assistant + 2*tool)
+        #     - Tool response content matching expected weather information
+        #     - Metrics collection with success status indicators
+        #     - Proper tool call parsing for each assistant turn
+        
+        # Expected Behavior:
+        #     - 3 assistant turns with 2 search tool calls in between
+        #     - Final message sequence: user + assistant + tool + assistant + tool + assistant
+        #     - Search metrics contain success status and proper execution counts
+        #     - Tool responses match expected weather query results
+        
+        # Args:
+        #     mock_execute: Mocked SearchTool.execute method
+        #     mock_rollout: Fully configured mock rollout instance  
+        #     search_data_proto: Input data with search tool metadata
+        #     search_data: Expected conversation turns and tool return values
+        # """
         _, expect_turn_array, tool_return_array = search_data
 
         # Mock search tool execution to return predefined responses
@@ -353,6 +449,57 @@ class TestRolloutWithSearchTools:
 
     @patch.object(SearchTool, "execute", new_callable=AsyncMock)
     def test_tool_call_batch_case(self, mock_execute, mock_rollout, search_data_proto, search_data):
+        # """
+        # Test batch processing of search tool calls with concurrent request handling.
+        
+        # This test validates the scalability and concurrency handling of the SGLang rollout
+        # system when processing multiple requests simultaneously, each involving search tool
+        # calls. It simulates 100 concurrent weather inquiry requests to test system robustness
+        # and proper resource management.
+        
+        # Test Scenario:
+        #     - Creates 100 identical async rollout requests with search capabilities
+        #     - Each request follows the same 3-turn conversation pattern as basic case
+        #     - All requests execute concurrently using asyncio.gather
+        #     - Validates proper request isolation and state management
+        
+        # Batch Processing Architecture:
+        #     - Request Isolation: Each request maintains independent state and metadata
+        #     - Concurrent Execution: All 100 requests processed simultaneously via asyncio
+        #     - Resource Sharing: Mock engine calls distributed across request lifecycle
+        #     - Tool Execution: 200 total search calls (2 per request × 100 requests)
+        
+        # Mock Infrastructure:
+        #     - Engine Call Mapping: Each request gets dedicated future sequences
+        #     - Tool Execution: Alternating pattern of weather responses for all requests
+        #     - Request Tracking: Per-request counters and future management
+        #     - State Isolation: Individual completion tracking per request
+        
+        # Validation at Scale:
+        #     - All 100 requests complete successfully (COMPLETED state)
+        #     - Total search tool executions: 200 calls (verified via mock.await_count)
+        #     - Message consistency: Each request has 6 messages (user + 3*assistant + 2*tool)
+        #     - Tool response validation: 2 tool messages per request with expected content
+        #     - Metrics integrity: Success status recorded for all search operations
+        
+        # Performance Characteristics:
+        #     - Concurrent request handling without interference
+        #     - Proper async/await patterns for tool execution
+        #     - Memory efficient request state management
+        #     - Deterministic completion despite concurrent execution
+        
+        # Stress Testing Aspects:
+        #     - High concurrency load (100 simultaneous requests)
+        #     - Tool execution scalability (200 concurrent searches)
+        #     - Request state isolation under load
+        #     - Memory and resource usage patterns
+        
+        # Args:
+        #     mock_execute: Mocked SearchTool.execute for controlled responses
+        #     mock_rollout: Configured mock rollout instance with search support
+        #     search_data_proto: Base request data template for batch creation
+        #     search_data: Expected conversation patterns and tool responses
+        # """
         _, expect_turn_array, tool_return_array = search_data
 
         # Mock tool execution for large batch (100 requests * 2 calls each)

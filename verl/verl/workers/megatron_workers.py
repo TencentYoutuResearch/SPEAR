@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -88,6 +90,22 @@ class ActorRolloutRefWorker(MegatronWorker, DistProfilerExtension):
     """
 
     def __init__(self, config: DictConfig, role: str, **kwargs):
+        # """Initialize the ActorRolloutRefWorker.
+
+        # Args:
+        #     config (DictConfig): 
+        #         The main configuration object containing all settings for the worker.
+        #         This includes model configuration, training parameters, rollout settings,
+        #         actor/critic configurations, and distributed training parameters.
+        #         It controls the behavior of actor, rollout, reference model, and critic components.
+        #     role (str): 
+        #         The role this worker should perform. Must be one of:
+        #         - "actor": Handles policy model training and updates
+        #         - "rollout": Manages sequence generation and inference
+        #         - "ref": Provides reference policy for KL divergence calculations
+        #         - "actor_rollout": Combines actor and rollout functionality
+        #         - "actor_rollout_ref": Combines actor, rollout, and reference model functionality
+        # """
         MegatronWorker.__init__(self)
         self.config = config
 
@@ -274,6 +292,31 @@ class ActorRolloutRefWorker(MegatronWorker, DistProfilerExtension):
         return actor_module, actor_optimizer, actor_optimizer_scheduler, self.hf_config, optim_config
 
     def _build_rollout(self, trust_remote_code=False):
+        # """Build and configure the rollout component for sequence generation.
+
+        # This method initializes the rollout engine based on the configuration, supporting
+        # different inference backends like vLLM and SGLang. It handles device mesh setup,
+        # model weight sharding between actor and rollout, and creates the appropriate
+        # sharding manager for weight synchronization.
+
+        # Args:
+        #     trust_remote_code (bool, optional): Whether to trust remote code when loading
+        #         models from HuggingFace. Defaults to False.
+
+        # Returns:
+        #     tuple: A tuple containing:
+        #         - rollout: The initialized rollout engine (vLLMRollout or SGLangRollout)
+        #         - sharding_manager: The corresponding sharding manager for weight synchronization
+
+        # Raises:
+        #     NotImplementedError: If the configured rollout name is not supported.
+
+        # Note:
+        #     The function performs weight resharding between actor and rollout models when
+        #     using different tensor parallel configurations. For vLLM, it supports both
+        #     'customized' and 'spmd' modes, while SGLang uses CPU-based device mesh for
+        #     inference engine initialization.
+        # """
         from torch.distributed.device_mesh import init_device_mesh
 
         layer_name_mapping = {

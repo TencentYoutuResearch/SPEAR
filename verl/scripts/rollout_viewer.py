@@ -290,6 +290,40 @@ class JsonLineViewer(App):
                 self.selected_sample_index = offset
 
     async def update_content(self, search_keyword: Optional[str] = None):
+
+        # """Update the content display with the currently selected sample data.
+
+        # This method renders the content of the currently selected sample from the
+        # selected training step, applying field filtering and search highlighting.
+        # It supports two rendering modes: rich table format and plain text format.
+
+        # The method dynamically updates the field selection widget when new keys
+        # appear in the data, ensuring all available fields become selectable without
+        # requiring a restart of the viewer.
+
+        # Args:
+        #     search_keyword (Optional[str]): Keyword to highlight in the content.
+        #         If provided, matching text will be highlighted with a purple background.
+        #         Defaults to None (no highlighting).
+
+        # Note:
+        #     - This method is called whenever the selected step, sample, or field
+        #       selection changes
+        #     - It handles asynchronous data loading by showing progress information
+        #       when data is not yet available
+        #     - Field filtering is applied to reduce visual clutter in large samples
+        #     - Search highlighting works in both table and text rendering modes
+        #     - Exceptions during rendering are caught and displayed as formatted
+        #       traceback information
+
+        # Implementation Details:
+        #     1. Retrieves the selected sample data from the loaded dataset
+        #     2. Dynamically discovers and adds new fields to the selection widget
+        #     3. Applies field filtering based on user selection
+        #     4. Renders content in either table or text format with optional highlighting
+        #     5. Handles KeyError for missing data and general exceptions gracefully
+        #     6. Updates the content display widget with the rendered result
+        # """
         content = ""
         try:
             samples = self.data[self.selected_step_index].get("samples", [])

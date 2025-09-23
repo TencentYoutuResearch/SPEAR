@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 import logging
 import os
 import time

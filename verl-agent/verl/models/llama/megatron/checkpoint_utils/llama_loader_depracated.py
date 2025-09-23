@@ -1,3 +1,5 @@
+# pylint: disable=line-too-long, function-name-too-long
+
 # Copyright 2024 Bytedance Ltd. and/or its affiliates
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,6 +56,36 @@ def load_state_dict_to_megatron_llama(
     state_dict, wrapped_models, config, params_dtype, is_value_model=False, tie_word_embeddings=False
 ):
     """Load merged state_dict to sharded Megatron module in training."""
+
+    # """
+    # Load merged state_dict to sharded Megatron module in training.
+    
+    # This function distributes a unified state dictionary to a sharded Megatron model across
+    # multiple parallel processes (data parallel, tensor parallel, and pipeline parallel).
+    # It handles the complex tensor sharding and broadcasting required for distributed training.
+    
+    # Args:
+    #     state_dict (dict): The unified state dictionary containing all model weights.
+    #     wrapped_models (list or single model): List of wrapped Megatron models for virtual pipeline parallelism.
+    #     config: Model configuration object containing architecture parameters.
+    #     params_dtype (torch.dtype): Data type for model parameters.
+    #     is_value_model (bool, optional): Whether this is a value model (for RL training). Defaults to False.
+    #     tie_word_embeddings (bool, optional): Whether to tie word embeddings. Defaults to False.
+        
+    # Note:
+    #     - Only data parallel rank 0 processes actually load and broadcast the weights
+    #     - Tensor parallel sharding is handled automatically based on the parameter type
+    #     - Pipeline parallel distribution maps layers to appropriate pipeline stages
+    #     - For value models, special handling is applied to the language model head
+        
+    # The function performs the following steps:
+    #     1. Load embedding weights with tensor parallel sharding
+    #     2. Load transformer layers distributed across pipeline stages
+    #     3. Load final layer normalization
+    #     4. Load language model head (with special handling for value models)
+    #     5. Broadcast parameters within data parallel groups
+    # """
+
     from megatron.core import DistributedDataParallel as LocalDDP, mpu
     from megatron.core.transformer.module import Float16Module
     from torch.nn.parallel import DistributedDataParallel as torchDDP
