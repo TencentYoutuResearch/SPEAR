@@ -23,8 +23,7 @@ os.environ["NCCL_DEBUG"] = "WARN"
 
 import ray
 import torch
-from megatron.core import parallel_state as mpu
-from megatron.core import tensor_parallel
+from megatron.core import parallel_state as mpu, tensor_parallel
 from megatron.core.models.gpt.gpt_model import ModelType
 from omegaconf import OmegaConf
 from tensordict import TensorDict

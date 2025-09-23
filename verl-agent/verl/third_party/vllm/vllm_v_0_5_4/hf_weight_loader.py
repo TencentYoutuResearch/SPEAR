@@ -13,7 +13,6 @@
 # limitations under the License.
 # Adapted from https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/models
 
-from typing import Dict
 
 import torch.nn as nn
 from vllm.model_executor.model_loader.utils import set_default_torch_dtype
@@ -24,8 +23,8 @@ def update_hf_weight_loader():
     return
 
 
-def load_hf_weights(actor_weights: Dict, vllm_model: nn.Module):
-    assert isinstance(actor_weights, Dict)
+def load_hf_weights(actor_weights: dict, vllm_model: nn.Module):
+    assert isinstance(actor_weights, dict)
     with set_default_torch_dtype(next(vllm_model.parameters()).dtype):  # TODO
         if vllm_model.config.tie_word_embeddings and "lm_head.weight" in actor_weights:
             del actor_weights["lm_head.weight"]

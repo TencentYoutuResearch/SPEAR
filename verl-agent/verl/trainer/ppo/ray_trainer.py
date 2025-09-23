@@ -20,26 +20,27 @@ This trainer supports model-agonistic model initialization with huggingface
 
 import json
 import os
-import uuid
+import random
 from collections import defaultdict
 from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass, field
 from enum import Enum
 from pprint import pprint
-from typing import Dict, Optional, Type
-import random
+from typing import Optional
+
 import numpy as np
 import ray
 import torch
+from agent_system.multi_turn_rollout import TrajectoryCollector, adjust_batch
 from codetiming import Timer
+from gigpo import core_gigpo
 from omegaconf import OmegaConf, open_dict
 from torch.utils.data import Dataset, Sampler
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
-from PIL import Image
+
 from verl import DataProto
-from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
 from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
 from verl.single_controller.ray.base import create_colocated_worker_cls
@@ -49,7 +50,6 @@ from verl.trainer.ppo.metric_utils import (
     compute_data_metrics,
     compute_throughout_metrics,
     compute_timing_metrics,
-    process_validation_metrics,
 )
 from verl.trainer.ppo.reward import compute_reward, compute_reward_async
 from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path
@@ -60,11 +60,8 @@ from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seql
 from verl.utils.torch_functional import masked_mean
 from verl.utils.tracking import ValidationGenerationsLogger
 from verl.workers.rollout.async_server import AsyncLLMServerManager
-from gigpo import core_gigpo
 
-from agent_system.multi_turn_rollout import TrajectoryCollector, adjust_batch
-
-WorkerType = Type[Worker]
+WorkerType = type[Worker]
 
 
 class Role(Enum):
@@ -218,7 +215,7 @@ def apply_invalid_action_penalty(data: DataProto, invalid_action_penalty_coef=fl
 
         if 'step_rewards' in data.batch.keys():
             step_rewards[i] -= invalid_action_penalty_coef * action_invalids
-    
+
     valid_action_ratio = np.mean(data.non_tensor_batch['is_action_valid'].astype(np.float32)).item()
     metrics = {'valid_action_ratio': valid_action_ratio}
     return data, metrics
@@ -372,7 +369,7 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
 
 
 @contextmanager
-def _timer(name: str, timing_raw: Dict[str, float]):
+def _timer(name: str, timing_raw: dict[str, float]):
     """Context manager for timing code execution.
 
     This utility function measures the execution time of code within its context
@@ -529,7 +526,7 @@ class RayPPOTrainer:
                         save_msg.append({
                             "role": msg["role"],
                             "content": msg["content"],
-                        })                    
+                        })
                 else:
                     if msg.tool_calls:
                         tool_calls = []
@@ -557,7 +554,7 @@ class RayPPOTrainer:
                         "content": msg.content,
                         "tool_calls": tool_calls
                     })
-            
+
             save_dict["messages"] = list(save_msg)
             save_list.append(save_dict)
         return save_list
@@ -758,7 +755,7 @@ class RayPPOTrainer:
             "step": [self.global_steps] * n,
             "groundtruth": ground_truth_scores,
         }
-        
+
         for k, v in reward_extra_infos_dict.items():
             if len(v) == n:
                 base_data[k] = v
@@ -782,7 +779,7 @@ class RayPPOTrainer:
         import numpy as np
 
         # Create tuples of (input, output, score) and sort by input text
-        samples = list(zip(inputs, outputs, scores))
+        samples = list(zip(inputs, outputs, scores, strict=False))
         samples.sort(key=lambda x: x[0])  # Sort by input text
 
         # Use fixed random seed for deterministic shuffling
@@ -1139,16 +1136,16 @@ class RayPPOTrainer:
         # 移除轨迹应该按照uid来移除 而不是 traj移除
         uid_list = batch.non_tensor_batch["uid"]
         traj_uid_list = batch.non_tensor_batch["traj_uid"]
-        reward_by_uid_traj_uid = {}     
+        reward_by_uid_traj_uid = {}
         idx2uid = {}
         idx = 0
         rm_scores = reward_tensor.sum(dim=-1)
-        for uid, traj_uid, rm_score in zip(uid_list, traj_uid_list, rm_scores):
+        for uid, traj_uid, rm_score in zip(uid_list, traj_uid_list, rm_scores, strict=False):
             idx2uid[idx] = uid
-            if not (uid in reward_by_uid_traj_uid):
+            if uid not in reward_by_uid_traj_uid:
                 reward_by_uid_traj_uid[uid] = {}
-            if not (traj_uid in reward_by_uid_traj_uid[uid]):
-                reward_by_uid_traj_uid[uid][traj_uid] = []            
+            if traj_uid not in reward_by_uid_traj_uid[uid]:
+                reward_by_uid_traj_uid[uid][traj_uid] = []
             reward_by_uid_traj_uid[uid][traj_uid].append(rm_score.item())
             idx += 1
 
@@ -1161,7 +1158,7 @@ class RayPPOTrainer:
                 reward_traj_rwscore.append(np.mean(reward_traj[traj_uid]))
             reward_by_uid_mean.append([uid, float(np.mean(reward_traj_rwscore))])
             reward_by_uid_std.append([uid, float(np.std(reward_traj_rwscore))])
-        
+
         # import pdb;pdb.set_trace();
         in_group_std = np.mean([item[1] for item in reward_by_uid_std])
         in_group_max = np.max([item[1] for item in reward_by_uid_mean])
@@ -1210,7 +1207,7 @@ class RayPPOTrainer:
         random.shuffle(valid_idxs)
         valid_idxs_valid = valid_idxs[:num_rollout_valid_traj]
         for idx in valid_idxs:
-            if not (idx in valid_idxs_valid):
+            if idx not in valid_idxs_valid:
                 mask[idx] = False
         batch.batch = batch.batch[mask]
         reward_tensor = reward_tensor[mask]
@@ -1218,13 +1215,13 @@ class RayPPOTrainer:
             if isinstance(value, np.ndarray):
                 batch.non_tensor_batch[key] = value[mask]
             else:
-                batch.non_tensor_batch[key] = [v for v, m in zip(value, mask) if m]
+                batch.non_tensor_batch[key] = [v for v, m in zip(value, mask, strict=False) if m]
         print(">>> Rollout bs before filtering ", len(mask), " after filtering ", len(reward_tensor))
         for key, value in batch.meta_info.items():
             if isinstance(value, np.ndarray):
                 batch.meta_info[key] = value[mask]
             elif isinstance(value, list):
-                batch.meta_info[key] = [v for v, m in zip(value, mask) if m]
+                batch.meta_info[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 batch.meta_info[key] = value
 
@@ -1233,7 +1230,7 @@ class RayPPOTrainer:
             if isinstance(value, np.ndarray):
                 reward_extra_infos_dict[key] = value[mask]
             else:
-                reward_extra_infos_dict[key] = [v for v, m in zip(value, mask) if m]
+                reward_extra_infos_dict[key] = [v for v, m in zip(value, mask, strict=False) if m]
 
         std_chosen_values = [float(item[1]) for item in std_chosen]
         mean_chosen_values = [float(item[1]) for item in mean_chosen]
@@ -1264,7 +1261,7 @@ class RayPPOTrainer:
                                                     envs=self.envs,
                                                     is_train=True,
                                                     )
-            
+
         if self.config.algorithm.adv_estimator == AdvantageEstimator.REMAX:
             with _timer("gen_max", timing_raw):
                 gen_baseline_batch = deepcopy(gen_batch)
@@ -1294,7 +1291,7 @@ class RayPPOTrainer:
                 gamma=self.config.algorithm.gamma
             )
             batch.batch['step_rewards'] = step_rewards_tensor
-        
+
         batch = adjust_batch(self.config, batch)
         batch.meta_info["global_steps"] = self.global_steps
         batch.meta_info["use_toolcall_reward"] = self.config.algorithm.use_toolcall_reward
@@ -1328,7 +1325,7 @@ class RayPPOTrainer:
                 reward_tensor, reward_extra_infos_dict = compute_reward(batch, self.reward_fn)
                 batch, metrics_update, reward_tensor, reward_extra_infos_dict = self._filter_rollout(batch, reward_tensor, reward_extra_infos_dict)
                 metrics.update(metrics_update)
-        
+
         return timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward
 
 
@@ -1382,7 +1379,7 @@ class RayPPOTrainer:
             with _timer("values", timing_raw):
                 values = self.critic_wg.compute_values(batch)
                 batch = batch.union(values)
-        
+
         return timing_raw, batch, metrics
 
 
@@ -1433,7 +1430,7 @@ class RayPPOTrainer:
             )
         return timing_raw, batch, metrics,\
             future_reward, reward_tensor, reward_extra_infos_dict
-            
+
 
     def log_rollout(self, timing_raw, batch, reward_extra_infos_dict):
         rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)

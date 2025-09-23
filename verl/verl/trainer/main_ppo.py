@@ -15,6 +15,7 @@
 Note that we don't combine the main with ray_trainer as ray_trainer is used by other main.
 """
 
+import logging
 import os
 import socket
 
@@ -29,8 +30,6 @@ from verl.trainer.ppo.ray_trainer_hybrid import RayPPOSFTTrainer
 from verl.trainer.ppo.reward import load_reward_manager
 from verl.utils.device import is_cuda_available
 from verl.utils.import_utils import load_extern_type
-
-import logging
 
 logging.basicConfig(level=logging.INFO)
 logging.info("This is an info message")
@@ -80,7 +79,7 @@ def run_ppo(config) -> None:
         runner = TaskRunner.options(runtime_env={"nsight": nsight_options}).remote()
     else:
         runner = TaskRunner.remote()
-    
+
     ray.get(runner.run.remote(config))
 
     # [Optional] get the path of the timeline trace file from the configuration, default to None

@@ -19,7 +19,7 @@ import os
 import threading
 from contextlib import ExitStack
 from enum import Enum
-from typing import Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 from uuid import uuid4
 
 import ray
@@ -213,7 +213,7 @@ class SearchTool(BaseTool):
         logger.debug(f"Search result for instance {instance_id}: {result_text}")
         return result_text, metadata
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> Tuple[str, float, dict]:
+    async def execute(self, instance_id: str, parameters: dict[str, Any], **kwargs) -> tuple[str, float, dict]:
         """Execute the search tool.
 
         Args:

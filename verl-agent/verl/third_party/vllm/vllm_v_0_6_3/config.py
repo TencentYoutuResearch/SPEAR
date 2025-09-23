@@ -16,7 +16,7 @@
 import enum
 import json
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, List, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from transformers import PretrainedConfig
 
@@ -73,8 +73,8 @@ class LoadConfig:
 
     load_format: Union[str, LoadFormat, "BaseModelLoader"] = LoadFormat.AUTO
     download_dir: Optional[str] = None
-    model_loader_extra_config: Optional[Union[str, dict]] = field(default_factory=dict)
-    ignore_patterns: Optional[Union[List[str], str]] = None
+    model_loader_extra_config: Optional[str | dict] = field(default_factory=dict)
+    ignore_patterns: Optional[list[str] | str] = None
 
     def __post_init__(self):
         model_loader_extra_config = self.model_loader_extra_config or {}
@@ -94,7 +94,7 @@ class LoadConfig:
         load_format = self.load_format.lower()
         self.load_format = LoadFormat(load_format)
 
-        rocm_not_supported_load_format: List[str] = []
+        rocm_not_supported_load_format: list[str] = []
         if is_hip() and load_format in rocm_not_supported_load_format:
             rocm_supported_load_format = [f for f in LoadFormat.__members__ if (f not in rocm_not_supported_load_format)]
             raise ValueError(f"load format '{load_format}' is not supported in ROCm. Supported load formats are {rocm_supported_load_format}")

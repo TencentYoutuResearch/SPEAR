@@ -18,7 +18,7 @@ import socket
 import sys
 import tempfile
 from contextlib import asynccontextmanager
-from typing import Any, Dict
+from typing import Any
 
 import aiohttp
 import fastapi
@@ -26,13 +26,13 @@ import numpy as np
 import ray
 import uvicorn
 from datasets import load_dataset
+from examples.ppo_trainer.naive_chat_scheduler import NaiveChatCompletionScheduler
 from omegaconf import OmegaConf
 from openai.types.chat.chat_completion import ChatCompletion
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-
-from examples.ppo_trainer.naive_chat_scheduler import NaiveChatCompletionScheduler
 from tests.workers.rollout.async_rollout_utils import init_async_rollout_manager
+
 from verl.protocol import DataProto
 
 
@@ -111,7 +111,7 @@ class ToolChatCompletionScheduler(NaiveChatCompletionScheduler):
         self.sandbox_address = sandbox_address
         self.system_prompt = system_prompt
 
-    async def sandbox_code_execution(self, code: str) -> Dict[str, Any]:
+    async def sandbox_code_execution(self, code: str) -> dict[str, Any]:
         """Execute python code in sandbox."""
         try:
             session = aiohttp.ClientSession()
@@ -146,7 +146,7 @@ class ToolChatCompletionScheduler(NaiveChatCompletionScheduler):
 
         max_turns = 3
 
-        async def callback(completions: ChatCompletion, info: Dict[str, Any], exception: Exception):
+        async def callback(completions: ChatCompletion, info: dict[str, Any], exception: Exception):
             batch_conversations, batch_index, turn = (
                 info["batch_conversations"],
                 info["batch_index"],

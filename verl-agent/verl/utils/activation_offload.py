@@ -445,7 +445,7 @@ class ActivationHandler:
         if len(kwarg_keys) == 0:
             return flat_args, {}
         args = flat_args[: -len(kwarg_keys)]
-        kwargs = dict(zip(kwarg_keys, flat_args[-len(kwarg_keys) :]))
+        kwargs = dict(zip(kwarg_keys, flat_args[-len(kwarg_keys) :], strict=False))
         return args, kwargs
 
     def _ckpt_forward(self, forward_method, *args, **kwargs):
@@ -541,7 +541,7 @@ def enable_activation_offloading(model, strategy, enable_ckpt=False):
     if enable_ckpt:
         # The implementation of activation checkpointing in transformers library
         # is incompatible with activation offloading,
-        # so it will be disabled, but this implementation supports 
+        # so it will be disabled, but this implementation supports
         # another version of activation checkpointing, so that
         # these two features can be enabled at the same time.
         for module in model.modules():

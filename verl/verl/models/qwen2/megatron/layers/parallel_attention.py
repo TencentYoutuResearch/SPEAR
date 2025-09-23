@@ -30,8 +30,7 @@ if is_flash_attn_2_available():
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 import torch
 from flash_attn.layers.rotary import apply_rotary_emb
-from megatron.core import ModelParallelConfig, tensor_parallel
-from megatron.core import parallel_state as mpu
+from megatron.core import ModelParallelConfig, parallel_state as mpu, tensor_parallel
 from torch import nn
 from transformers import Qwen2Config
 

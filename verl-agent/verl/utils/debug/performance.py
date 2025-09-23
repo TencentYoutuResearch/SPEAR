@@ -12,23 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from typing import Tuple
-
-import logging
-from typing import Tuple
-
 import datetime
 import inspect
+import logging
 from typing import Any
-import torch
+
 import torch.distributed as dist
 
-from verl.utils.logger.aggregate_logger import DecoratorLoggerBase
 from verl.utils.device import get_torch_device
+from verl.utils.logger.aggregate_logger import DecoratorLoggerBase
 
 
-def _get_current_mem_info(unit: str = "GB", precision: int = 2) -> Tuple[str]:
+def _get_current_mem_info(unit: str = "GB", precision: int = 2) -> tuple[str]:
     """Get current memory usage."""
     assert unit in ["GB", "MB", "KB"]
     divisor = 1024**3 if unit == "GB" else 1024**2 if unit == "MB" else 1024

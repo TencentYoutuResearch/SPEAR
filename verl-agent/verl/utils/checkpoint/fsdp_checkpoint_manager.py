@@ -14,13 +14,18 @@
 
 import os
 import warnings
-from typing import Optional, Union
+from typing import Optional
 
 import torch
 import torch.distributed
 from accelerate import init_empty_weights
-from torch.distributed.fsdp import FullStateDictConfig, ShardedOptimStateDictConfig, ShardedStateDictConfig, StateDictType
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import (
+    FullStateDictConfig,
+    FullyShardedDataParallel as FSDP,
+    ShardedOptimStateDictConfig,
+    ShardedStateDictConfig,
+    StateDictType,
+)
 from transformers import GenerationConfig, PreTrainedTokenizer, ProcessorMixin
 
 from verl.utils.device import is_cuda_available
@@ -53,7 +58,7 @@ class FSDPCheckpointManager(BaseCheckpointManager):
         model: FSDP,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: torch.optim.lr_scheduler.LRScheduler,
-        processing_class: Union[PreTrainedTokenizer, ProcessorMixin] = None,
+        processing_class: PreTrainedTokenizer | ProcessorMixin = None,
         checkpoint_contents: Optional[list] = None,
         **kwargs,
     ):

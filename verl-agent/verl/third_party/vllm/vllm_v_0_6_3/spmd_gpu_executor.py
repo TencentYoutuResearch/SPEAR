@@ -15,7 +15,7 @@
 
 import os
 import socket
-from typing import Iterable, List, Optional, Set, Tuple
+from typing import Iterable, Optional
 
 import torch
 from vllm.config import (
@@ -111,7 +111,7 @@ class SPMDGPUExecutor(ExecutorBase):
         self.worker.init_device()
         self.worker.load_model()
 
-    def determine_num_available_blocks(self) -> Tuple[int, int]:
+    def determine_num_available_blocks(self) -> tuple[int, int]:
         """Determine the number of available KV blocks.
 
         This invokes `determine_num_available_blocks` on each worker and takes
@@ -155,7 +155,7 @@ class SPMDGPUExecutor(ExecutorBase):
     def free_cache_engine(self) -> None:
         self.worker.free_cache_engine()
 
-    def execute_model(self, execute_model_req) -> List[SamplerOutput]:
+    def execute_model(self, execute_model_req) -> list[SamplerOutput]:
         all_outputs = self.worker.execute_model(execute_model_req=execute_model_req)
 
         # NOTE(sgm):
@@ -171,7 +171,7 @@ class SPMDGPUExecutor(ExecutorBase):
         assert lora_id > 0, "lora_id must be greater than 0."
         return self.worker.remove_lora(lora_id=lora_id)
 
-    def list_loras(self) -> Set[int]:
+    def list_loras(self) -> set[int]:
         return self.worker.list_loras()
 
     def check_health(self) -> None:
@@ -186,7 +186,7 @@ class SPMDGPUExecutor(ExecutorBase):
         assert prompt_adapter_request.prompt_adapter_id > 0, "prompt_adapter_id must be greater than 0."
         return self.worker.add_prompt_adapter(prompt_adapter_request)
 
-    def list_prompt_adapters(self) -> Set[int]:
+    def list_prompt_adapters(self) -> set[int]:
         return self.worker.list_prompt_adapters()
 
     def pin_lora(self, lora_id: int) -> bool:
@@ -213,7 +213,7 @@ def initialize_cluster(
     parallel_config: ParallelConfig,
     engine_use_ray: bool = False,
     ray_address: Optional[str] = None,
-) -> Tuple[str, Optional[None]]:
+) -> tuple[str, Optional[None]]:
     """Initialize the distributed cluster probably with Ray.
 
     Args:
@@ -240,7 +240,7 @@ def get_open_port():
 
 # TODO(sgm): not implemented async executor yet
 class SPMDGPUExecutorAsync(SPMDGPUExecutor, ExecutorAsyncBase):
-    async def execute_model_async(self, execute_model_req: ExecuteModelRequest) -> List[SamplerOutput]:
+    async def execute_model_async(self, execute_model_req: ExecuteModelRequest) -> list[SamplerOutput]:
         """Executes one model step on the given sequences."""
         raise NotImplementedError
 

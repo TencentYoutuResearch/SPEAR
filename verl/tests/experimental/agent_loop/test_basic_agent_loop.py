@@ -19,9 +19,9 @@ import numpy as np
 import pytest
 import ray
 from omegaconf import DictConfig
+from tests.experimental.agent_loop.agent_utils import init_agent_loop_manager
 from transformers.utils import get_json_schema
 
-from tests.experimental.agent_loop.agent_utils import init_agent_loop_manager
 from verl.experimental.agent_loop.agent_loop import get_trajectory_info
 from verl.protocol import DataProto
 from verl.tools.base_tool import BaseTool, OpenAIFunctionToolSchema

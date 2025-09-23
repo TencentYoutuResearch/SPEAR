@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import Any
 
 
 class BaseMemory(ABC):
@@ -40,7 +40,7 @@ class BaseMemory(ABC):
         pass
 
     @abstractmethod
-    def store(self, record: Dict[str, List[Any]]):
+    def store(self, record: dict[str, list[Any]]):
         """
         Stores a new batch of records into memory.
         """

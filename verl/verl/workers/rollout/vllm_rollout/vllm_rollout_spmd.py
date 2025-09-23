@@ -254,7 +254,7 @@ class vLLMRollout(BaseRollout):
         eos_token_id = prompts.meta_info["eos_token_id"]
 
         batch_size = idx.size(0)
-        
+
         non_tensor_batch = prompts.non_tensor_batch
         if "raw_prompt_ids" not in non_tensor_batch:
             non_tensor_batch["raw_prompt_ids"] = np.array(

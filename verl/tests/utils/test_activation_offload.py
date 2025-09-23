@@ -20,8 +20,7 @@ import torch
 import torch.distributed
 import torch.multiprocessing as mp
 from torch.distributed import init_device_mesh
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import MixedPrecision, ShardingStrategy
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, MixedPrecision, ShardingStrategy
 from transformers import AutoModelForCausalLM, AutoTokenizer, Qwen2Config
 
 from verl.utils.activation_offload import enable_activation_offloading

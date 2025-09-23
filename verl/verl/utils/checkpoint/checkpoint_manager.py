@@ -21,10 +21,9 @@ import torch
 import torch.distributed
 from omegaconf import DictConfig
 from transformers import PreTrainedTokenizer, ProcessorMixin
-from verl.utils.device import is_cuda_available, is_npu_available
 
 from verl.trainer.config import CheckpointConfig
-from verl.utils.device import get_device_name, get_torch_device
+from verl.utils.device import get_device_name, get_torch_device, is_cuda_available, is_npu_available
 
 
 class BaseCheckpointManager:
@@ -160,7 +159,7 @@ class BaseCheckpointManager:
         torch.set_rng_state(rng_state["cpu"])
         np.random.set_state(rng_state["numpy"])
         random.setstate(rng_state["random"])
-        
+
         if is_cuda_available:
             torch.cuda.set_rng_state(rng_state["cuda"])
         elif is_npu_available:

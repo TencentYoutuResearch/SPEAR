@@ -15,7 +15,7 @@
 
 import warnings
 from enum import IntEnum
-from typing import Dict, Optional, Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -58,7 +58,7 @@ class BatchType(IntEnum):
 class ModelRunner(ModelRunner):
     def __init__(
         self,
-        model: Union[nn.Module, Dict],  # [verl] model itself or its parameter dict
+        model: nn.Module | dict,  # [verl] model itself or its parameter dict
         model_config: ModelConfig,
         parallel_config: ParallelConfig,
         scheduler_config: SchedulerConfig,

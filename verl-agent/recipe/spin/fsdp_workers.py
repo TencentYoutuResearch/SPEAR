@@ -34,7 +34,15 @@ from verl.utils.checkpoint.fsdp_checkpoint_manager import FSDPCheckpointManager
 from verl.utils.debug import log_gpu_memory_usage
 from verl.utils.flops_counter import FlopsCounter
 from verl.utils.fs import copy_to_local
-from verl.utils.fsdp_utils import get_fsdp_wrap_policy, get_init_weight_context_manager, init_fn, load_fsdp_model_to_gpu, load_fsdp_optimizer, offload_fsdp_model_to_cpu, offload_fsdp_optimizer
+from verl.utils.fsdp_utils import (
+    get_fsdp_wrap_policy,
+    get_init_weight_context_manager,
+    init_fn,
+    load_fsdp_model_to_gpu,
+    load_fsdp_optimizer,
+    offload_fsdp_model_to_cpu,
+    offload_fsdp_optimizer,
+)
 from verl.utils.import_utils import import_external_libs
 from verl.utils.model import compute_position_id_with_mask
 from verl.workers.fsdp_workers import ActorRolloutRefWorker
@@ -65,7 +73,7 @@ def get_sharding_strategy(device_mesh):
     return sharding_strategy
 
 class SPINRolloutRefWorker(ActorRolloutRefWorker):
-    
+
     @register(dispatch_mode=Dispatch.ONE_TO_ALL)
     def init_model(self):
         from recipe.spin.dp_actor import SPINDataParallelPPOActor as DataParallelPPOActor
@@ -145,7 +153,7 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
                 lr_scheduler=self.actor_lr_scheduler,
                 processing_class=self.processor if self.processor is not None else self.tokenizer,
                 checkpoint_contents=self.config.actor.checkpoint.contents)
-    
+
     @register(dispatch_mode=Dispatch.DP_COMPUTE_PROTO)
     def compute_ref_log_prob(self, data: DataProto):
         assert self._is_ref
@@ -265,7 +273,7 @@ class SPINRolloutRefWorker(ActorRolloutRefWorker):
             offload_fsdp_optimizer(optimizer=self.actor_optimizer)
 
         return output
-    
+
 
 
 # TODO(sgm): we may need to extract it to dp_reward_model.py
@@ -307,8 +315,7 @@ class RewardModelWorker(Worker):
 
     def _build_model(self, config):
         # the following line is necessary
-        from torch.distributed.fsdp import CPUOffload
-        from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+        from torch.distributed.fsdp import CPUOffload, FullyShardedDataParallel as FSDP
         from transformers import AutoConfig, AutoModelForTokenClassification
 
         # download the checkpoint from hdfs

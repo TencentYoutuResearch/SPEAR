@@ -25,8 +25,7 @@ import torch
 import torch.nn.functional as F
 from einops import rearrange
 from flash_attn.layers.rotary import apply_rotary_emb
-from megatron.core import ModelParallelConfig, tensor_parallel
-from megatron.core import parallel_state as mpu
+from megatron.core import ModelParallelConfig, parallel_state as mpu, tensor_parallel
 from torch import nn
 from transformers import LlamaConfig
 from transformers.utils import is_flash_attn_2_available

@@ -22,7 +22,7 @@ import logging
 import os
 import pickle
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Union
+from typing import Callable, Optional
 
 import numpy as np
 import pandas as pd
@@ -133,7 +133,7 @@ def list_of_dict_to_dict_of_list(list_of_dict: list[dict]):
     for dict_item in list_of_dict:
         dict_keys = dict_item.keys()
         for dict_key in dict_keys:
-            if not (dict_key in keys_by_count):
+            if dict_key not in keys_by_count:
                 keys_by_count[dict_key] = 0
             keys_by_count[dict_key] += 1
     keys_valid = []
@@ -148,7 +148,7 @@ def list_of_dict_to_dict_of_list(list_of_dict: list[dict]):
     for data in list_of_dict:
         for key, item in data.items():
             # assert key in output
-            if not (key in output):
+            if key not in output:
                 continue
             output[key].append(item)
     return output
@@ -210,8 +210,8 @@ def collate_fn(x: list["DataProtoItem"]):
 class DataProtoItem:
     # TODO(zhangchi.usc1992) add consistency check
     batch: TensorDict = None
-    non_tensor_batch: Dict = field(default_factory=dict)
-    meta_info: Dict = field(default_factory=dict)
+    non_tensor_batch: dict = field(default_factory=dict)
+    meta_info: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -224,8 +224,8 @@ class DataProto:
     """
 
     batch: TensorDict = None
-    non_tensor_batch: Dict = field(default_factory=dict)
-    meta_info: Dict = field(default_factory=dict)
+    non_tensor_batch: dict = field(default_factory=dict)
+    meta_info: dict = field(default_factory=dict)
 
     def __post_init__(self):
         # perform necessary checking
@@ -355,7 +355,7 @@ class DataProto:
                 assert val.shape[0] == batch_size, f"key {key} length {len(val)} is not equal to batch size {batch_size}"
 
     @classmethod
-    def from_single_dict(cls, data: Dict[str, Union[torch.Tensor, np.ndarray]], meta_info=None, auto_padding=False):
+    def from_single_dict(cls, data: dict[str, torch.Tensor | np.ndarray], meta_info=None, auto_padding=False):
         """Create a DataProto from a dict of tensors and non_tensors"""
         tensors = {}
         non_tensors = {}
@@ -371,7 +371,7 @@ class DataProto:
         return cls.from_dict(tensors=tensors, non_tensors=non_tensors, meta_info=meta_info, auto_padding=auto_padding)
 
     @classmethod
-    def from_dict(cls, tensors: Optional[Dict[str, torch.Tensor]] = None, non_tensors=None, meta_info=None, num_batch_dims=1, auto_padding=False):
+    def from_dict(cls, tensors: Optional[dict[str, torch.Tensor]] = None, non_tensors=None, meta_info=None, num_batch_dims=1, auto_padding=False):
         """Create a DataProto from a dict of tensors. This assumes that
         1. All the tensor in tensors have the same dim0
         2. Only dim0 is the batch dim
@@ -642,7 +642,7 @@ class DataProto:
         else:
             generator = None
 
-        assert isinstance(dataloader_kwargs, Dict)
+        assert isinstance(dataloader_kwargs, dict)
         train_dataloader = DataLoader(dataset=self, batch_size=mini_batch_size, collate_fn=collate_fn, generator=generator, **dataloader_kwargs)
 
         def get_data():
@@ -677,7 +677,7 @@ class DataProto:
         self.batch = padded_dp.batch
         self.non_tensor_batch = padded_dp.non_tensor_batch
 
-    def chunk(self, chunks: int) -> List["DataProto"]:
+    def chunk(self, chunks: int) -> list["DataProto"]:
         """Split the batch among dim=0 into chunks. The meta_info is passed to each DataProto after split.
 
         Args:
@@ -715,7 +715,7 @@ class DataProto:
         return output
 
     @staticmethod
-    def concat(data: List["DataProto"]) -> "DataProto":
+    def concat(data: list["DataProto"]) -> "DataProto":
         """Concat a list of DataProto. The batch is concatenated among dim=0.
         The meta_info is assumed to be identical and will use the first one.
 
@@ -784,7 +784,7 @@ class DataProto:
             meta_info=self.meta_info,
         )
 
-    def unfold_column_chunks(self, n_split: int, split_keys: Optional[List[str]] = None):
+    def unfold_column_chunks(self, n_split: int, split_keys: Optional[list[str]] = None):
         """Split along the second dim into `n_split`, unfold it to the first dim (batch dim)
         Useful in passing grouped tensors that doesn't want to be shuffled in dataset.
         keys not in split_keys are repeated to match the shape
@@ -881,15 +881,15 @@ class DataProtoFuture:
     """
 
     collect_fn: Callable
-    futures: List[ray.ObjectRef]
+    futures: list[ray.ObjectRef]
     dispatch_fn: Callable = None
 
     @staticmethod
-    def concat(data: List[ray.ObjectRef]) -> "DataProtoFuture":
+    def concat(data: list[ray.ObjectRef]) -> "DataProtoFuture":
         output = DataProtoFuture(collect_fn=DataProto.concat, futures=data)
         return output
 
-    def chunk(self, chunks: int) -> List["DataProtoFuture"]:
+    def chunk(self, chunks: int) -> list["DataProtoFuture"]:
         from functools import partial
 
         arg_future_lst = []

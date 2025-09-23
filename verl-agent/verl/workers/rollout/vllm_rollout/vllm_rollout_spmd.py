@@ -30,7 +30,7 @@ import logging
 import os
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import Any, Dict, List, Union
+from typing import Any
 
 import numpy as np
 import torch
@@ -39,6 +39,7 @@ from omegaconf import DictConfig, OmegaConf
 from tensordict import TensorDict
 from vllm import LLM, SamplingParams
 from vllm.distributed import parallel_state as vllm_ps
+from vllm.lora.request import LoRARequest
 from vllm.worker.worker_base import WorkerWrapperBase
 
 from verl import DataProto
@@ -46,7 +47,6 @@ from verl.third_party.vllm import vllm_version
 from verl.utils.debug import GPUMemoryLogger
 from verl.utils.torch_functional import get_response_mask, pad_2d_list_to_length
 from verl.workers.rollout.base import BaseRollout
-from vllm.lora.request import LoRARequest
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
@@ -58,7 +58,7 @@ logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
 
 
 # NOTE(sgm): add for verl. We can optimize it by making the dataloader yield List[int] without padding.
-def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> List[int]:
+def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> list[int]:
     # remove the left padding in the prompt token_id
     # pad_token_id = self.llm_engine.tokenizer.pad_token_id if self.llm_engine.tokenizer.pad_token_id
     # is not None else self.llm_engine.tokenizer.eos_token_id
@@ -67,7 +67,7 @@ def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> List[in
     return token_ids
 
 
-def _repeat_interleave(value: Union[torch.Tensor, np.ndarray], repeats: int) -> Union[torch.Tensor, List[Any]]:
+def _repeat_interleave(value: torch.Tensor | np.ndarray, repeats: int) -> torch.Tensor | list[Any]:
     if isinstance(value, torch.Tensor):
         return value.repeat_interleave(repeats, dim=0)
     else:
@@ -243,7 +243,7 @@ class vLLMRollout(BaseRollout):
 
         if "multi_modal_data" in non_tensor_batch:
             vllm_inputs = []
-            for raw_prompt_ids, multi_modal_data in zip(non_tensor_batch.pop("raw_prompt_ids"), non_tensor_batch.pop("multi_modal_data")):
+            for raw_prompt_ids, multi_modal_data in zip(non_tensor_batch.pop("raw_prompt_ids"), non_tensor_batch.pop("multi_modal_data"), strict=False):
                 vllm_inputs.append({"prompt_token_ids": raw_prompt_ids, "multi_modal_data": multi_modal_data})
         else:
             vllm_inputs = [{"prompt_token_ids": raw_prompt_ids} for raw_prompt_ids in non_tensor_batch.pop("raw_prompt_ids")]
@@ -374,7 +374,7 @@ class vLLMAsyncRollout:
         self.sharding_manager = None
         self.is_sleep = False
 
-    def init_worker(self, all_kwargs: List[Dict[str, Any]]):
+    def init_worker(self, all_kwargs: list[dict[str, Any]]):
         """Initialize worker engine."""
         all_kwargs[0]["rank"] = int(os.environ["RANK"])
         all_kwargs[0]["local_rank"] = 0
@@ -404,7 +404,7 @@ class vLLMAsyncRollout:
         self.sharding_manager.__enter__()  # pylint: disable=C2801
         self.is_sleep = False
 
-    def execute_method(self, method: Union[str, bytes], *args, **kwargs):
+    def execute_method(self, method: str | bytes, *args, **kwargs):
         if method == "init_worker":
             return self.init_worker(*args, **kwargs)
         elif method == "load_model":

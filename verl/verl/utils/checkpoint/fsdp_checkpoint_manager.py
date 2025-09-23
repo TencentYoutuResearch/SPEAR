@@ -23,8 +23,12 @@ import torch
 import torch.distributed
 from accelerate import init_empty_weights
 from omegaconf import DictConfig
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import ShardedOptimStateDictConfig, ShardedStateDictConfig, StateDictType
+from torch.distributed.fsdp import (
+    FullyShardedDataParallel as FSDP,
+    ShardedOptimStateDictConfig,
+    ShardedStateDictConfig,
+    StateDictType,
+)
 from transformers import GenerationConfig, PreTrainedTokenizer, ProcessorMixin
 
 from verl.utils.device import is_cuda_available

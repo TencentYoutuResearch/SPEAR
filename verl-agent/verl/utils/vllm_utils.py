@@ -46,7 +46,6 @@ try:
 except ImportError:
     pass
 
-from typing import List
 
 from msgspec import field
 from packaging import version as vs
@@ -104,7 +103,7 @@ class TensorLoRARequest(LoRARequest):
     lora_tensors:dict = field(default=None)
 
 
-class VLLMHijack():
+class VLLMHijack:
     @staticmethod
     def hijack():
         def hijack__load_adapter(self, lora_request: TensorLoRARequest) -> LoRAModel:
@@ -120,7 +119,7 @@ class VLLMHijack():
                     self._adapter_manager.supported_lora_modules)
                 packed_modules_mapping = (
                     self._adapter_manager.packed_modules_mapping)
-                expected_lora_modules: List[str] = []
+                expected_lora_modules: list[str] = []
                 for module in supported_lora_modules:
                     if module in packed_modules_mapping:
                         expected_lora_modules.extend(

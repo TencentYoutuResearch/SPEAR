@@ -125,7 +125,7 @@ def compute_onlinedpo_pref(
     # print(f"---- [DEBUG] Exiting compute_onlinedpo_pref ----")
 
     return output_preference_mask
-    
+
 
 
 def compute_online_dpo_loss(
@@ -138,7 +138,7 @@ def compute_online_dpo_loss(
     loss_type: str = "sigmoid",
     reference_free: bool = False,
 ) -> torch.Tensor:
-    
+
     import torch.nn.functional as F
     pi_logratios = policy_chosen_logps - policy_rejected_logps
     ref_logratios = reference_chosen_logps - reference_rejected_logps
@@ -177,21 +177,21 @@ def get_batch_logps(logits: torch.FloatTensor, labels: torch.LongTensor, average
     # Shift so that tokens < n predict n
     shift_logits = logits[..., :-1, :].contiguous()
     shift_labels = labels[..., 1:].contiguous()
-    
-    # Calculate per token log probability    
+
+    # Calculate per token log probability
     loss_fct = torch.nn.CrossEntropyLoss(ignore_index=-100, reduction='none')
     per_token_logps = -loss_fct(shift_logits.view(-1, shift_logits.size(-1)), shift_labels.view(-1))
     per_token_logps = per_token_logps.view(shift_logits.size(0), shift_logits.size(1)) # Reshape back to (batch_size, seq_len-1)
-    
+
     # Create a mask for the labels that are not -100
     loss_mask = (shift_labels != -100)
-    
+
     # Apply the mask to the per token log probabilities
     masked_logps = per_token_logps * loss_mask
-    
+
     # Calculate the sum or average log probability per sequence
     sequence_logps = masked_logps.sum(dim=-1)
-    
+
     if average_log_prob:
         # Avoid division by zero for sequences with no valid tokens
         num_valid_tokens = loss_mask.sum(dim=-1)

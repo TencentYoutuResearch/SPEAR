@@ -16,12 +16,12 @@ Contains commonly used utilities for ray
 """
 
 import concurrent.futures
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import ray
 
 
-def parallel_put(data_list: List[Any], max_workers: Optional[int] = None):
+def parallel_put(data_list: list[Any], max_workers: Optional[int] = None):
     """
     Puts a list of data into the Ray object store in parallel using a thread pool.
 

@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from dataclasses import dataclass
-from typing import List, Optional, Tuple, Union
+from typing import Optional
 
 import torch
 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import (
@@ -33,7 +33,7 @@ def forward_for_ppo(
     input_ids: torch.LongTensor = None,
     attention_mask: Optional[torch.Tensor] = None,
     position_ids: Optional[torch.LongTensor] = None,
-    past_key_values: Optional[List[torch.FloatTensor]] = None,
+    past_key_values: Optional[list[torch.FloatTensor]] = None,
     inputs_embeds: Optional[torch.FloatTensor] = None,
     labels: Optional[torch.LongTensor] = None,
     use_cache: Optional[bool] = None,
@@ -49,7 +49,7 @@ def forward_for_ppo(
     second_per_grid_ts: Optional[torch.Tensor] = None,
     temperature: float = 1.0,
     **loss_kwargs,
-) -> Union[Tuple, Qwen2_5_VLCausalLMOutputForPPO]:
+) -> tuple | Qwen2_5_VLCausalLMOutputForPPO:
     r"""
     Copy paste Qwen2_5_VL's forward
     https://github.com/linkedin/Liger-Kernel/blob/main/src/liger_kernel/transformers/model/qwen2_5_vl.py

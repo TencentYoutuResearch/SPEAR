@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-from typing import Any, Dict
+from typing import Any
 
 import ray
 from omegaconf import DictConfig
@@ -24,7 +24,7 @@ from verl.workers.fsdp_workers import AsyncActorRolloutRefWorker
 from verl.workers.rollout.async_server import AsyncLLMServerManager
 
 
-def init_async_rollout_manager(config: DictConfig, scheduler_kwargs: Dict[str, Any] = None) -> AsyncLLMServerManager:
+def init_async_rollout_manager(config: DictConfig, scheduler_kwargs: dict[str, Any] = None) -> AsyncLLMServerManager:
     # make openai client happy
     os.environ["no_proxy"] = ""
     os.environ["http_proxy"] = ""

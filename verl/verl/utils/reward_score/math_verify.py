@@ -13,12 +13,13 @@
 # limitations under the License.
 
 # try:
-from math_verify.errors import TimeoutException
-from math_verify.metric import math_metric
-from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
 # except ImportError:
 #     print("To use Math-Verify, please install it first by running `pip install math-verify`.")
 import json
+
+from math_verify.errors import TimeoutException
+from math_verify.metric import math_metric
+from math_verify.parser import ExprExtractionConfig, LatexExtractionConfig
 
 
 def compute_score(model_output: str, ground_truth: str, timeout_score: float = 0, is_debug=False) -> bool:
@@ -44,7 +45,7 @@ def compute_score(model_output: str, ground_truth: str, timeout_score: float = 0
         if ret_score_verify > 0:
             acc = True
             ret_score = 1.0
-        
+
     except Exception:
         predictions_str = "FailedVerification"
         pass

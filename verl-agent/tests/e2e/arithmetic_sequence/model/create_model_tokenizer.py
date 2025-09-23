@@ -18,9 +18,8 @@ Create a random model and tokenizer for PPO training
 import os
 
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaConfig
-
 from tests.e2e.envs.digit_completion import CharTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer, LlamaConfig
 
 tokenizer = CharTokenizer(
     characters=["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", ":"],

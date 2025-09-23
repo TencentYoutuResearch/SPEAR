@@ -12,30 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
-
-import torch
-
-from verl import DataProto
-from verl.utils.reward_score import _default_compute_score
 import os
-from tqdm import tqdm
-from verl.workers.reward_manager import register
-import numpy as np
-
-from collections import Counter
-from collections import defaultdict
-import numpy as np
-import torch
-
-from verl import DataProto
-from verl.utils.reward_score import _default_compute_score
-import os
-from tqdm import tqdm
-from verl.workers.reward_manager import register
+from collections import Counter, defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+import numpy as np
+import torch
 from tqdm import tqdm
 
+from verl import DataProto
+from verl.utils.reward_score import _default_compute_score
+from verl.workers.reward_manager import register
 
 
 def has_repeated_ngrams(words, n=20, threshold=10):
@@ -55,11 +42,11 @@ def get_file_path(download_dir):
         except:
             print(f"Failed to convert download_dir from {type(download_dir)} to str")
             return None
-            
+
     try:
         not_downloaded_files = ["prompt.jsonl"]
         file_names = os.listdir(download_dir)
-        # assert len(file_names) <= len(not_downloaded_files) + 1, 
+        # assert len(file_names) <= len(not_downloaded_files) + 1,
         # f"Expected at most 1 downloaded file, got {len(file_names)}"
         if len(file_names) == 0:
             return None
@@ -68,7 +55,7 @@ def get_file_path(download_dir):
             if name not in not_downloaded_files:
                 file_path = os.path.join(download_dir, name)
                 break
-        
+
         return file_path
     except Exception as e:
         # Print error details including variable types and values
@@ -89,7 +76,7 @@ class AgentConcurrentRewardManager:
         self.compute_score = compute_score or _default_compute_score
         self.reward_fn_key = reward_fn_key
         self.reward_kwargs = reward_kwargs
-    
+
     def process_data_item(self, data_item, i):
         """
         data_item: DataProtoItem
@@ -105,7 +92,7 @@ class AgentConcurrentRewardManager:
             tools = data_item.non_tensor_batch["messages"]['tools']
         else:
             tools = None
-        
+
         global_steps = float(data_item.meta_info["global_steps"])
         use_toolcall_reward = data_item.meta_info["use_toolcall_reward"]
         max_toolcall_steps = data_item.meta_info["max_toolcall_steps"]
@@ -118,7 +105,7 @@ class AgentConcurrentRewardManager:
         response_ids = data_item.batch["responses"]
         valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
         valid_response_ids = response_ids[:valid_response_length]
-        
+
         # decode
         prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
         response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
@@ -131,7 +118,7 @@ class AgentConcurrentRewardManager:
             user_query = data_item.non_tensor_batch["extra_info"]["question"]
         else:
             user_query = ""
-            
+
         if "download_list" in data_item.non_tensor_batch:
             download_dir = data_item.non_tensor_batch["download_list"]
             if data_source in ["web_download"]:
@@ -141,7 +128,7 @@ class AgentConcurrentRewardManager:
         else:
             download_dir = None
             file_path = None
-        
+
         extra_info = data_item.non_tensor_batch.get("extra_info", {})
         num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
         extra_info["num_turns"] = num_turns
@@ -213,13 +200,13 @@ class AgentConcurrentRewardManager:
             if isinstance(score, dict):
                 score["score"] = np.float64(score["score"])
                 reward = score["score"]
-                if not ("is_incomplete" in score):
+                if "is_incomplete" not in score:
                     score["is_incomplete"] = is_incomplete
-                if not ("is_overlong" in score):
+                if "is_overlong" not in score:
                     score["is_overlong"] = is_overlong
-                if not ("is_repetitive" in score):
+                if "is_repetitive" not in score:
                     score["is_repetitive"] = is_repetitive
-                if not ("is_unreadable" in score):
+                if "is_unreadable" not in score:
                     score["is_unreadable"] = is_unreadable
                 # Store the information including original reward
                 for key, value in score.items():
@@ -231,7 +218,7 @@ class AgentConcurrentRewardManager:
                 reward_extra_info["is_overlong"].append(is_overlong)
                 reward_extra_info["is_repetitive"].append(is_repetitive)
                 reward_extra_info["is_unreadable"].append(is_unreadable)
-                
+
             reward_tensor[i, valid_response_length - 1] = reward
 
             if data_source not in already_print_data_sources:

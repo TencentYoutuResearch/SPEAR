@@ -239,10 +239,10 @@ class FSDPModelMerger(BaseModelMerger):
         collected_keys = set(state_dict.keys())
 
         missing_keys = hf_model_keys - collected_keys
-        assert len(missing_keys) == 0, f"Missing keys in collected state dict: {list(sorted(missing_keys))}"
+        assert len(missing_keys) == 0, f"Missing keys in collected state dict: {sorted(missing_keys)}"
 
         extra_keys = collected_keys - hf_model_keys
-        assert len(extra_keys) == 0, f"Extra keys in collected state dict: {list(sorted(extra_keys))}"
+        assert len(extra_keys) == 0, f"Extra keys in collected state dict: {sorted(extra_keys)}"
 
         for key in hf_model_keys:
             hf_shape = hf_state_dict[key].shape

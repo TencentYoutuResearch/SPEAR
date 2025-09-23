@@ -18,11 +18,14 @@ Core functions to implement GiGPO algorithms.
 The function implemented in this file should be used by trainer with different distributed strategies to implement GiGPO
 """
 
+import uuid
+from collections import Counter, defaultdict
+
 import numpy as np
 import torch
-from collections import defaultdict, Counter
+
 from verl import DataProto
-import uuid
+
 
 # ---------------------------------------------------------- #
 # --------------- General Functions of GiGPO --------------- #
@@ -63,7 +66,7 @@ def summarize_group_size(group_size: list):
     for size, (cnt, prop) in summary.items():
         if prop:
             print(f"{size:>4} | {cnt:>5} | {prop:>9.2%}")
-            
+
 
 def compute_step_discounted_returns(batch: DataProto, gamma: float):
     rewards = batch.non_tensor_batch['rewards'].astype(np.float32)
@@ -74,31 +77,31 @@ def compute_step_discounted_returns(batch: DataProto, gamma: float):
     for uid in unique_traj_uids:
         # Get indices for this trajectory
         traj_indices = np.where(traj_uids == uid)[0]
-        
+
         # Extract rewards and masks for this trajectory
         traj_rewards = rewards[traj_indices]
         traj_active_masks = active_masks[traj_indices]
         assert traj_active_masks.all(), "active_masks should be all 1s for the same trajectory"
-        
+
         # Calculate returns
         traj_returns = np.zeros_like(traj_rewards)
         running_return = 0
-        
+
         # Calculate returns from the end to the start
         for t in reversed(range(len(traj_rewards))):
             running_return = traj_rewards[t] + gamma * running_return
             traj_returns[t] = running_return
-        
+
         # Store the results
         returns_by_traj[uid] = traj_returns
-    
+
     # Recombine the returns into the original batch order
     all_returns = np.zeros_like(rewards)
     for i, uid in enumerate(traj_uids):
         traj_indices = np.where(traj_uids == uid)[0]
         idx_in_traj = np.where(traj_indices == i)[0][0]  # Find position of i in its trajectory
         all_returns[i] = returns_by_traj[uid][idx_in_traj]
-    
+
     all_returns = torch.tensor(all_returns, dtype=torch.float32, device=batch.batch['input_ids'].device)
     return all_returns
 
@@ -116,17 +119,17 @@ def compute_gigpo_outcome_advantage(token_level_rewards: torch.Tensor,
                                    step_advantage_w: float = 1.0,
                                    mode: str = "mean_norm"
                                    ):
-    
+
     if mode == "mean_std_norm":
         remove_std = False
     elif mode == "mean_norm":
         remove_std = True
     else:
         raise ValueError(f"Unknown mode: {mode}")
-    
+
     # Compute episode-level group reward
     episode_advantages = episode_norm_reward(token_level_rewards, response_mask, index, traj_index, epsilon, remove_std)
-    
+
     # Compute step_group_uids
     step_group_uids = build_step_group(anchor_obs, index)
 
@@ -227,7 +230,7 @@ def build_step_group(anchor_obs: np.array, index: np.array, summarize: bool = Fa
     """
     # Initialize the result array with placeholder values
     step_group_uids = np.empty(len(anchor_obs), dtype=object)
-    
+
     # Get unique indices
     unique_indices = np.unique(index)
 
@@ -237,17 +240,17 @@ def build_step_group(anchor_obs: np.array, index: np.array, summarize: bool = Fa
         # Get all observations for this index using np.where
         indices = np.where(index == idx)[0]
         obs_group = anchor_obs[indices]
-        
+
         # Create clusters for identical observations
         clusters = defaultdict(list)
         for i, obs in enumerate(obs_group):
             clusters[to_hashable(obs)].append(indices[i])  # Store the original index position
-        
+
         # Assign unique step_group_uid to each cluster
         for obs, original_indices in clusters.items():
             # Generate a UUID for this cluster
             uid = str(uuid.uuid4())
-            
+
             # Assign the same step_group_uid to all elements in this cluster
             group_size.append(len(original_indices))
             for original_idx in original_indices:
@@ -313,6 +316,6 @@ def step_norm_reward(step_rewards: torch.Tensor,
             else:
                 scores[i] = (scores[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)
         step_advantages = scores.unsqueeze(-1).tile([1, response_length]) * response_mask
-    
+
     return step_advantages
 

@@ -19,7 +19,7 @@
 # limitations under the License.
 """PyTorch LLaMA model with Megatron-style acceleration."""
 
-from typing import Optional, Tuple, Union
+from typing import Optional
 
 import torch
 import torch.utils.checkpoint
@@ -29,8 +29,7 @@ from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.models.llama.configuration_llama import LlamaConfig
 from transformers.models.llama.modeling_llama import CausalLMOutputWithPast
 
-from verl.utils.megatron import sequence_parallel as sp_utils
-from verl.utils.megatron import tensor_parallel as tp_utils
+from verl.utils.megatron import sequence_parallel as sp_utils, tensor_parallel as tp_utils
 from verl.utils.megatron_utils import TransformerConfig, convert_config
 
 from .layers import ParallelLlamaDecoderLayer, ParallelLlamaDecoderLayerRmPad, ParallelLlamaRMSNorm
@@ -117,7 +116,7 @@ class ParallelLlamaModel(nn.Module):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+    ) -> tuple | BaseModelOutputWithPast:
         """
 
         Args:
@@ -176,7 +175,7 @@ class ParallelLlamaForCausalLM(nn.Module):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    ) -> tuple | CausalLMOutputWithPast:
         r"""
         Args:
             labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -243,7 +242,7 @@ class ParallelLlamaModelRmPad(nn.Module):
         indices: torch.Tensor = None,
         cu_seqlens: int = None,
         max_seqlen_in_batch: int = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+    ) -> tuple | BaseModelOutputWithPast:
         """
 
         Args:
@@ -313,7 +312,7 @@ class ParallelLlamaForCausalLMRmPad(nn.Module):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    ) -> tuple | CausalLMOutputWithPast:
         r"""
         Args:
             labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -388,7 +387,7 @@ class ParallelLlamaForValueRmPad(ParallelLlamaForCausalLMRmPad):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    ) -> tuple | CausalLMOutputWithPast:
         output = super().forward(input_ids, attention_mask, position_ids)
         output.logits = torch.squeeze(output.logits, dim=-1)
         return output
@@ -469,7 +468,7 @@ class ParallelLlamaModelRmPadPP(nn.Module):
         indices: torch.Tensor = None,
         cu_seqlens: int = None,
         max_seqlen_in_batch: int = None,
-    ) -> Union[Tuple, BaseModelOutputWithPast]:
+    ) -> tuple | BaseModelOutputWithPast:
         """
 
         Args:
@@ -573,7 +572,7 @@ class ParallelLlamaForCausalLMRmPadPP(nn.Module):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    ) -> tuple | CausalLMOutputWithPast:
         r"""
         Args:
             labels (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
@@ -653,7 +652,7 @@ class ParallelLlamaForValueRmPadPP(ParallelLlamaForCausalLMRmPadPP):
         input_ids: torch.LongTensor = None,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Union[Tuple, CausalLMOutputWithPast]:
+    ) -> tuple | CausalLMOutputWithPast:
         output = super().forward(input_ids=input_ids, attention_mask=attention_mask, position_ids=position_ids)
         if self.post_process:
             output.logits = torch.squeeze(output.logits, dim=-1)

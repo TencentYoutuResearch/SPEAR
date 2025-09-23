@@ -14,7 +14,7 @@
 # limitations under the License.
 
 from enum import Enum
-from typing import Any, Dict, List, Literal, Optional
+from typing import Any, Literal, Optional
 
 import torch
 from pydantic import BaseModel
@@ -46,7 +46,7 @@ class FinishReasonTypeEnum(str, Enum):
 class Message(BaseModel):
     role: str
     content: str
-    tool_calls: Optional[List[OpenAIFunctionToolCall]] = None
+    tool_calls: Optional[list[OpenAIFunctionToolCall]] = None
 
 
 class AsyncRolloutRequestStateEnum(str, Enum):
@@ -66,25 +66,25 @@ class AsyncRolloutRequest(BaseModel):
     rollout_offset: int = 0
     request_id: str
     state: AsyncRolloutRequestStateEnum
-    messages: List[Message]
-    tools: Optional[List[OpenAIFunctionToolSchema]] = None
-    tools_kwargs: Dict[str, Any] = {}
-    input_ids: List[int]
-    prompt_ids: List[int]
-    response_ids: List[int]
-    attention_mask: List[int]
-    prompt_attention_mask: List[int]
-    response_attention_mask: List[int]
-    position_ids: List[int]
-    prompt_position_ids: List[int]
-    response_position_ids: List[int]
-    loss_mask: List[int]
-    prompt_loss_mask: List[int]
-    response_loss_mask: List[int]
-    reward_scores: Dict[str, float]
+    messages: list[Message]
+    tools: Optional[list[OpenAIFunctionToolSchema]] = None
+    tools_kwargs: dict[str, Any] = {}
+    input_ids: list[int]
+    prompt_ids: list[int]
+    response_ids: list[int]
+    attention_mask: list[int]
+    prompt_attention_mask: list[int]
+    response_attention_mask: list[int]
+    position_ids: list[int]
+    prompt_position_ids: list[int]
+    response_position_ids: list[int]
+    loss_mask: list[int]
+    prompt_loss_mask: list[int]
+    response_loss_mask: list[int]
+    reward_scores: dict[str, float]
     max_response_len: int = 8192
     max_model_len: int = 32768
-    metrics: Dict[str, List[Any]] = {}
+    metrics: dict[str, list[Any]] = {}
 
     format_config: dict = {
         "chatml": {
@@ -116,7 +116,7 @@ class AsyncRolloutRequest(BaseModel):
         self,
         tokenizer: PreTrainedTokenizer,
         content: str,
-        tool_calls: Optional[List[OpenAIFunctionToolCall]] = None,
+        tool_calls: Optional[list[OpenAIFunctionToolCall]] = None,
         format: Literal["chatml", "qwen"] = "chatml",
         already_over_long: bool = False,
     ) -> None:
@@ -216,7 +216,7 @@ class AsyncRolloutRequest(BaseModel):
     def finalize(
         self,
         tokenizer: PreTrainedTokenizer,
-        reward_scores: Dict[str, float],
+        reward_scores: dict[str, float],
         finish_reason_type: FinishReasonTypeEnum = FinishReasonTypeEnum.STOP,
     ) -> None:
         self.state = AsyncRolloutRequestStateEnum.COMPLETED

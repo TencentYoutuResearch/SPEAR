@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from megatron.core.optimizer import OptimizerConfig
-from megatron.core.optimizer import get_megatron_optimizer as get_megatron_optimizer_native
+from megatron.core.optimizer import OptimizerConfig, get_megatron_optimizer as get_megatron_optimizer_native
 
 
 def get_megatron_optimizer(

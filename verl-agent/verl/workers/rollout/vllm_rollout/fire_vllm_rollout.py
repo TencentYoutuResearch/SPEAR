@@ -26,7 +26,6 @@ When working with Megatron:
 """
 
 from contextlib import contextmanager
-from typing import List
 
 import torch
 import torch.distributed
@@ -46,7 +45,7 @@ from verl.workers.rollout.vllm_rollout.vllm_rollout import vLLMRollout
 
 
 # NOTE(sgm): add for verl. We can optimize it by making the dataloader yield List[int] without padding.
-def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> List[int]:
+def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> list[int]:
     # remove the left padding in the prompt token_id
     # pad_token_id = self.llm_engine.tokenizer.pad_token_id if self.llm_engine.tokenizer.pad_token_id is not None else self.llm_engine.tokenizer.eos_token_id
     non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][0]

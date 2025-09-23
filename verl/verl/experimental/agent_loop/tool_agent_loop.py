@@ -123,7 +123,7 @@ class ToolAgentLoop(AgentLoopBase):
                 tool_responses = await asyncio.gather(*tasks)
             if any(isinstance(item, Exception) for item in tool_responses):
                 break
-            
+
             messages_full["messages"] += tool_responses
             # append tool_response_ids
             tool_response_ids = await self.loop.run_in_executor(
@@ -145,7 +145,7 @@ class ToolAgentLoop(AgentLoopBase):
 
         response_ids = prompt_ids[-len(response_mask) :]
         prompt_ids = prompt_ids[: len(prompt_ids) - len(response_mask)]
-        
+
         output = AgentLoopOutput(
             prompt_ids=prompt_ids,
             response_ids=response_ids[: self.response_length],

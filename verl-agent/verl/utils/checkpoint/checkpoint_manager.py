@@ -15,7 +15,7 @@ import os
 import random
 import shutil
 import tempfile
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import torch
@@ -46,7 +46,7 @@ class BaseCheckpointManager:
         model,
         optimizer: torch.optim.Optimizer,
         lr_scheduler: torch.optim.lr_scheduler.LRScheduler = None,
-        processing_class: Union[PreTrainedTokenizer, ProcessorMixin] = None,
+        processing_class: PreTrainedTokenizer | ProcessorMixin = None,
         checkpoint_contents: Optional[list] = None,
     ):
         if checkpoint_contents is None:

@@ -15,8 +15,7 @@
 import os
 
 import torch
-from torch.distributed.fsdp import CPUOffload, MixedPrecision
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import CPUOffload, FullyShardedDataParallel as FSDP, MixedPrecision
 from torch.distributed.fsdp.api import ShardedStateDictConfig, ShardingStrategy, StateDictType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from vllm import LLM, SamplingParams
@@ -54,7 +53,7 @@ def are_lists_similar(a, b):
     total_length = 0
     total_diff = 0
 
-    for s1, s2 in zip(a, b):
+    for s1, s2 in zip(a, b, strict=False):
         max_len = max(len(s1), len(s2))
         total_length += max_len
         diff = levenshtein(s1, s2)

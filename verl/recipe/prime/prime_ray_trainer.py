@@ -131,7 +131,7 @@ def compute_timing_metrics(batch, timing_raw):
 
     num_tokens_of_section = {
         "gen": num_response_tokens,
-        **{name: num_overall_tokens for name in ["ref", "values", "adv", "update_critic", "update_actor"]},
+        **dict.fromkeys(["ref", "values", "adv", "update_critic", "update_actor"], num_overall_tokens),
     }
 
     return {

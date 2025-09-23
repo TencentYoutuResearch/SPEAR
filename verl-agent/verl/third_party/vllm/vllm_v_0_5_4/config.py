@@ -16,7 +16,7 @@
 import enum
 import json
 from dataclasses import dataclass, field
-from typing import List, Optional, Union
+from typing import Optional
 
 import torch
 from transformers import PretrainedConfig
@@ -108,7 +108,7 @@ class ModelConfig(ModelConfig):
         hf_config: PretrainedConfig,
         tokenizer_mode: str,
         trust_remote_code: bool,
-        dtype: Union[str, torch.dtype],
+        dtype: str | torch.dtype,
         seed: int,
         revision: Optional[str] = None,
         code_revision: Optional[str] = None,
@@ -124,7 +124,7 @@ class ModelConfig(ModelConfig):
         max_logprobs: int = 20,
         disable_sliding_window: bool = False,
         skip_tokenizer_init: bool = False,
-        served_model_name: Optional[Union[str, List[str]]] = None,
+        served_model_name: Optional[str | list[str]] = None,
         multimodal_config: Optional[MultiModalConfig] = None,
     ) -> None:
         self.model = hf_config._name_or_path
@@ -218,10 +218,10 @@ class LoadConfig:
 
     """
 
-    load_format: Union[str, LoadFormat, BaseModelLoader] = LoadFormat.AUTO
+    load_format: str | LoadFormat | BaseModelLoader = LoadFormat.AUTO
     download_dir: Optional[str] = None
-    model_loader_extra_config: Optional[Union[str, dict]] = field(default_factory=dict)
-    ignore_patterns: Optional[Union[List[str], str]] = None
+    model_loader_extra_config: Optional[str | dict] = field(default_factory=dict)
+    ignore_patterns: Optional[list[str] | str] = None
 
     def __post_init__(self):
         model_loader_extra_config = self.model_loader_extra_config or {}
@@ -241,7 +241,7 @@ class LoadConfig:
         load_format = self.load_format.lower()
         self.load_format = LoadFormat(load_format)
 
-        rocm_not_supported_load_format: List[str] = []
+        rocm_not_supported_load_format: list[str] = []
         if is_hip() and load_format in rocm_not_supported_load_format:
             rocm_supported_load_format = [f for f in LoadFormat.__members__ if (f not in rocm_not_supported_load_format)]
             raise ValueError(f"load format '{load_format}' is not supported in ROCm. Supported load formats are {rocm_supported_load_format}")

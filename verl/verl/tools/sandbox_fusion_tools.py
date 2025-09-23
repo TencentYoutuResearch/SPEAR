@@ -19,7 +19,7 @@ from contextlib import ExitStack
 from enum import Enum
 from typing import Any, Callable, Optional, TypeVar
 from uuid import uuid4
-import re
+
 import ray
 
 from verl.tools.base_tool import BaseTool

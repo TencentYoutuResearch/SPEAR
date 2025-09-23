@@ -19,13 +19,12 @@
 import gc
 import os
 import warnings
-from typing import Any, Dict
+from typing import Any
 
 import torch
 import torch.nn.functional as F
 from megatron.core import ModelParallelConfig, mpu, tensor_parallel
-from megatron.core.distributed import DistributedDataParallel as DDP
-from megatron.core.distributed import DistributedDataParallelConfig
+from megatron.core.distributed import DistributedDataParallel as DDP, DistributedDataParallelConfig
 from megatron.core.enums import ModelType
 from megatron.core.optimizer import ChainedOptimizer, OptimizerConfig
 from megatron.core.transformer import TransformerConfig
@@ -96,11 +95,7 @@ def get_model(
     # Print number of parameters.
     if mpu.get_data_parallel_rank() == 0:
         print(
-            " > number of parameters on (tensor, pipeline) model parallel rank ({}, {}): {}".format(
-                mpu.get_tensor_model_parallel_rank(),
-                mpu.get_pipeline_model_parallel_rank(),
-                sum([sum([p.nelement() for p in model_module.parameters()]) for model_module in model]),
-            ),
+            f" > number of parameters on (tensor, pipeline) model parallel rank ({mpu.get_tensor_model_parallel_rank()}, {mpu.get_pipeline_model_parallel_rank()}): {sum([sum([p.nelement() for p in model_module.parameters()]) for model_module in model])}",
             flush=True,
         )
 
@@ -198,7 +193,7 @@ def convert_config(hf_config: PretrainedConfig, megatron_config) -> TransformerC
     return transformer_config
 
 
-def init_megatron_optim_config(optim_config: Dict) -> OptimizerConfig:
+def init_megatron_optim_config(optim_config: dict) -> OptimizerConfig:
     config = OptimizerConfig(
         optimizer="adam",
         lr=optim_config.get("lr"),
@@ -789,7 +784,7 @@ def per_tensor_generator(actor_module, model_config, weight_converter, transform
             global_expert_ids = [num_experts_per_rank * ep_rank + local_expert_id for ep_rank in range(ep_size)]
             global_expert_names = [f"{name_prefix}.weight{expert_id}" for expert_id in global_expert_ids]
 
-            for name, param in zip(global_expert_names, infer_params):
+            for name, param in zip(global_expert_names, infer_params, strict=False):
                 if etp_size > 1:
                     # gather etp
                     etp_params = [torch.empty_like(param) for _ in range(etp_size)]
@@ -803,7 +798,7 @@ def per_tensor_generator(actor_module, model_config, weight_converter, transform
                     merge_params = [merge_params]
                 converted_names, converted_params = weight_converter.convert_param(name, merge_params)
 
-                yield from zip(converted_names, converted_params)
+                yield from zip(converted_names, converted_params, strict=False)
             continue
 
         # tp all gather
@@ -822,7 +817,7 @@ def per_tensor_generator(actor_module, model_config, weight_converter, transform
             infer_params = [infer_params]
         converted_names, converted_params = weight_converter.convert_param(cur_name, infer_params)
 
-        yield from zip(converted_names, converted_params)
+        yield from zip(converted_names, converted_params, strict=False)
 
 
 def get_transformer_layer_offset(pipeline_rank, vp_rank, config: TransformerConfig):

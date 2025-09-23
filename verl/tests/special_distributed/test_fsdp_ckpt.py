@@ -18,8 +18,7 @@ import tempfile
 import torch
 import torch.distributed
 from torch.distributed import init_device_mesh
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import MixedPrecision, ShardingStrategy
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, MixedPrecision, ShardingStrategy
 from transformers import AutoModelForCausalLM, AutoTokenizer, Qwen2Config
 
 from verl.utils.checkpoint.fsdp_checkpoint_manager import FSDPCheckpointManager

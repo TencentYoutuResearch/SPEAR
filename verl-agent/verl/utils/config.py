@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Dict
 
 from omegaconf import DictConfig
 
 
-def update_dict_with_config(dictionary: Dict, config: DictConfig):
+def update_dict_with_config(dictionary: dict, config: DictConfig):
     for key in dictionary:
         if hasattr(config, key):
             dictionary[key] = getattr(config, key)

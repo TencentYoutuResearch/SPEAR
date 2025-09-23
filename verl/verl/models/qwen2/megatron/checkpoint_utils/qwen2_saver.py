@@ -112,9 +112,7 @@ def merge_megatron_ckpt_qwen2(wrapped_models, config, dtype, is_value_model=Fals
     for i, wrapped_model in enumerate(wrapped_models):
         models[i] = unwrap_model(wrapped_model, (torchDDP, LocalDDP, Float16Module))
         assert len(models[i].model.layers) == num_layers_per_model, (
-            "len model layers {} not equal to num_layers_per_model {}".format(
-                len(models[i].model.layers), num_layers_per_model
-            )
+            f"len model layers {len(models[i].model.layers)} not equal to num_layers_per_model {num_layers_per_model}"
         )
 
     state_dict = dict()

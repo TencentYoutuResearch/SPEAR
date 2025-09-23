@@ -17,14 +17,15 @@ Multi-turn SFT dataset that supports training on conversation data with multiple
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
-from tqdm import tqdm
+from copy import deepcopy
+from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+from tqdm import tqdm
 from transformers import PreTrainedTokenizer
-from copy import deepcopy
 
 from verl.utils import hf_tokenizer
 from verl.utils.fs import copy_local_path_from_hdfs
@@ -104,14 +105,14 @@ class MultiTurnSFTDataset(Dataset):
                         {
                             "role": role,
                             "content": content
-                        }   
+                        }
                     )
             else:
                 messages_new.append(
                     {
                         "role": role,
                         "content": content
-                    }      
+                    }
                 )
         while messages_new[-1]["role"] != "assistant":
             messages_new.pop(-1)
@@ -164,7 +165,7 @@ class MultiTurnSFTDataset(Dataset):
                 logging.error(f"===========\n\nError applying chat template: {e}\n\n\nMessages: {messages_reform}\nTools: {tools}\n\n===========")
                 # import pdb;pdb.set_trace();
                 continue
-        
+
         print("数据集总量", len(self.messages), " 工具总量", len(self.tools))
 
         assert(len(self.messages) == len(self.tools))
@@ -276,7 +277,7 @@ class MultiTurnSFTDataset(Dataset):
         Returns:
             Tuple of (input_ids, loss_mask, attention_mask) as tensors
         """
-        
+
         full_tokens_list = full_tokens.tolist()
         if len(concat_tokens) != len(full_tokens_list) or not all(
             a == b for a, b in zip(concat_tokens, full_tokens_list, strict=True)
@@ -341,7 +342,7 @@ class MultiTurnSFTDataset(Dataset):
                     cur_messages.pop("tool_calls")
                 else:
                     cur_messages["tool_calls"] = cur_messages["tool_calls"].tolist()
-            
+
             if cur_messages["role"] == "assistant":
                 # Process assistant message
                 tokens, loss_mask, attention_mask = self._process_message_tokens(

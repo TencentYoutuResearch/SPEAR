@@ -16,17 +16,14 @@
 """
 Single Process Actor
 """
-from contextlib import nullcontext
 import logging
 import os
-from typing import Tuple
-from itertools import zip_longest
-from copy import deepcopy
+
+import numpy as np
 import torch
 from torch import nn
 from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.nn.functional import softmax
-import numpy as np
+
 import verl.utils.torch_functional as verl_F
 from verl import DataProto
 from verl.trainer.ppo.core_algos import agg_loss, get_policy_loss_fn, kl_penalty
@@ -36,17 +33,13 @@ from verl.utils.profiler import GPUMemoryLogger
 from verl.utils.py_functional import append_to_dict
 from verl.utils.seqlen_balancing import prepare_dynamic_batch, restore_dynamic_batch
 from verl.utils.torch_functional import logprobs_from_logits
-from verl.utils.ulysses import gather_outputs_and_unpad, ulysses_pad, ulysses_pad_and_slice_inputs
-from verl.workers.actor import BasePPOActor
-from verl.workers.config import ActorConfig
-from verl.utils.device import get_nccl_backend, get_torch_device
 from verl.utils.ulysses import (
     gather_outputs_and_unpad,
-    get_ulysses_sequence_parallel_world_size,
+    ulysses_pad,
     ulysses_pad_and_slice_inputs,
 )
-from verl.workers.sharding_manager.fsdp_ulysses import FSDPUlyssesShardingManager
-from verl.utils.tracking import Tracking
+from verl.workers.actor import BasePPOActor
+from verl.workers.config import ActorConfig
 
 if is_cuda_available:
     from flash_attn.bert_padding import index_first_axis, pad_input, rearrange, unpad_input
@@ -398,7 +391,7 @@ class DataParallelPPOActor(BasePPOActor):
         print("self.config.ppo_mini_batch_size (might be normalized)", self.config.ppo_mini_batch_size)
         print("📕 RL total batch size", len(data.batch))
         mini_batches = data.split(self.config.ppo_mini_batch_size)
-        
+
         if data_replay.batch is not None:
             # move from cpu tensors to gpu tensors
             data_replay.batch = data_replay.batch.to(data.batch.device)
@@ -429,7 +422,7 @@ class DataParallelPPOActor(BasePPOActor):
                             self.config.ppo_mini_batch_size // self.config.ppo_micro_batch_size_per_gpu
                         )
                         micro_batches = mini_batch.split(self.config.ppo_micro_batch_size_per_gpu)
-            
+
                     self.actor_optimizer.zero_grad()
                     for micro_batch_idx, micro_batch in enumerate(micro_batches):
                         print(f"🏋️ Update microbatch-Default loss with {micro_batch_idx}-th default batch with batchsize of ",\
@@ -579,7 +572,7 @@ class DataParallelPPOActor(BasePPOActor):
                             loss = policy_loss * (response_mask.shape[0] / self.config.ppo_mini_batch_size)
                         else:
                             loss = policy_loss / self.gradient_accumulation
-                        
+
                         max_replay_loss_steps = self.config.max_replay_loss_steps
                         if global_steps <= max_replay_loss_steps:
                             loss *= self.config.replay_loss_coef * (-np.cos((global_steps / max_replay_loss_steps) * np.pi) + 1)/2
@@ -601,7 +594,7 @@ class DataParallelPPOActor(BasePPOActor):
                     mini_batch_metrics = {"actor/grad_norm_replay": grad_norm.detach().item()}
                     append_to_dict(metrics, mini_batch_metrics)
 
- 
-        
+
+
         self.actor_optimizer.zero_grad()
         return metrics

@@ -55,8 +55,7 @@ def _megatron_calc_layer_map(config):
 
 def load_state_dict_to_megatron_gptmodel(state_dict, wrapped_models, config, params_dtype, is_value_model=False):
     """Load merged state_dict to sharded Megatron module in training."""
-    from megatron.core import DistributedDataParallel as LocalDDP
-    from megatron.core import mpu
+    from megatron.core import DistributedDataParallel as LocalDDP, mpu
     from megatron.core.transformer.module import Float16Module
     from torch.nn.parallel import DistributedDataParallel as torchDDP
 

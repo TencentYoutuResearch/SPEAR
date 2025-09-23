@@ -24,8 +24,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 from accelerate import init_empty_weights
-from megatron.core import dist_checkpointing
-from megatron.core import parallel_state as mpu
+from megatron.core import dist_checkpointing, parallel_state as mpu
 from megatron.core.dist_checkpointing.mapping import ShardedTensor
 from megatron.core.dist_checkpointing.serialization import StrictHandling
 from megatron.core.models.gpt.gpt_model import ModelType

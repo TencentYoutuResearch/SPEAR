@@ -28,8 +28,7 @@ from torch import nn
 from verl import DataProto
 from verl.models.mcore.weight_converter import McoreToHFWeightConverterBase
 from verl.protocol import all_gather_data_proto
-from verl.third_party.vllm import LLM
-from verl.third_party.vllm import parallel_state as vllm_ps
+from verl.third_party.vllm import LLM, parallel_state as vllm_ps
 from verl.utils.device import get_torch_device
 from verl.utils.megatron_utils import load_megatron_model_to_gpu, offload_megatron_model_to_cpu, per_tensor_generator
 from verl.utils.memory_utils import aggressive_empty_cache

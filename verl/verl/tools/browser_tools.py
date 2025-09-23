@@ -1,13 +1,14 @@
 
 import logging
 import traceback
+
 # import contextlib
-from typing import Optional, Any, Tuple
+from typing import Any, Optional
 from uuid import uuid4
 
 from .base_tool import BaseTool
-from .schemas import OpenAIFunctionToolSchema
 from .browser_mcp_client import BrowserToolkitClient
+from .schemas import OpenAIFunctionToolSchema
 
 logger = logging.getLogger("browser_toolkit")
 
@@ -39,7 +40,7 @@ class BrowserTool(BaseTool):
         }
         return instance_id
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], download_path: Optional[str] = None, **kwargs) -> Tuple[str, float, dict]:
+    async def execute(self, instance_id: str, parameters: dict[str, Any], download_path: Optional[str] = None, **kwargs) -> tuple[str, float, dict]:
         """Execute the tool.
         Args:
             download_path: `_download_path` for MCP server

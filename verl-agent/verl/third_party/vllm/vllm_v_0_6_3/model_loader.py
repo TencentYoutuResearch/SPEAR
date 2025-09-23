@@ -14,7 +14,7 @@
 # Adapted from https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/models
 """Utilities for selecting and loading models."""
 
-from typing import Dict, Optional, Union
+from typing import Optional
 
 import torch
 import torch.nn as nn
@@ -33,7 +33,7 @@ from .megatron_weight_loaders import load_megatron_weights, update_megatron_weig
 
 
 def get_model(
-    actor_model: Union[PreTrainedModel, Dict],
+    actor_model: PreTrainedModel | dict,
     model_config: ModelConfig,
     load_config: LoadConfig,
     device_config: DeviceConfig,
@@ -99,7 +99,7 @@ def get_model_loader(load_config: LoadConfig) -> BaseModelLoader:
         update_dtensor_weight_loader()
         return DummyModelLoader(load_config)
 
-    raise ValueError("load format not supported in verl: {}, only support {} and {}".format(load_config.load_format, LoadFormat.MEGATRON, LoadFormat.HF))
+    raise ValueError(f"load format not supported in verl: {load_config.load_format}, only support {LoadFormat.MEGATRON} and {LoadFormat.HF}")
 
 
 class DummyModelLoader(BaseModelLoader):
@@ -142,7 +142,7 @@ class MegatronLoader(BaseModelLoader):
     def download_model(self, model_config: ModelConfig) -> None:
         pass  # Nothing to download
 
-    def _get_weights_iterator(actor_model: Union[PreTrainedModel, Dict]):
+    def _get_weights_iterator(actor_model: PreTrainedModel | dict):
         # NOTE(shengguangming) Load the weights from the actor model
         pass
         # if isinstance(actor_model, nn.Module):
@@ -153,7 +153,7 @@ class MegatronLoader(BaseModelLoader):
 
     def load_model(
         self,
-        actor_model: Union[PreTrainedModel, Dict],
+        actor_model: PreTrainedModel | dict,
         model_config: ModelConfig,
         device_config: DeviceConfig,
         lora_config: Optional[LoRAConfig],
@@ -195,8 +195,8 @@ class HFLoader(BaseModelLoader):
     def download_model(self, model_config: ModelConfig) -> None:
         pass  # Nothing to download
 
-    def _get_weights_iterator(self, actor_model: Union[PreTrainedModel, Dict]):
-        if isinstance(actor_model, Dict):
+    def _get_weights_iterator(self, actor_model: PreTrainedModel | dict):
+        if isinstance(actor_model, dict):
             return actor_model.items()
         elif isinstance(actor_model, nn.Module):
             return dict(actor_model.named_parameters()).items()
@@ -205,7 +205,7 @@ class HFLoader(BaseModelLoader):
 
     def load_model(
         self,
-        actor_model: Union[PreTrainedModel, Dict],
+        actor_model: PreTrainedModel | dict,
         model_config: ModelConfig,
         device_config: DeviceConfig,
         lora_config: Optional[LoRAConfig],
@@ -242,7 +242,7 @@ class DTensorLoader(BaseModelLoader):
     def download_model(self, model_config: ModelConfig) -> None:
         pass  # Nothing to download
 
-    def _get_weights_iterator(actor_model: Union[PreTrainedModel, Dict]):
+    def _get_weights_iterator(actor_model: PreTrainedModel | dict):
         # NOTE(shengguangming) Load the weights from the actor model
         pass
         # if isinstance(actor_model, nn.Module):
@@ -253,7 +253,7 @@ class DTensorLoader(BaseModelLoader):
 
     def load_model(
         self,
-        actor_model: Union[PreTrainedModel, Dict],
+        actor_model: PreTrainedModel | dict,
         model_config: ModelConfig,
         device_config: DeviceConfig,
         lora_config: Optional[LoRAConfig],

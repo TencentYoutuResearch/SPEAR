@@ -13,7 +13,7 @@
 # limitations under the License.
 # Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/engine/llm_engine.py
 
-from typing import Dict, Iterable, Optional, Type, Union
+from typing import Iterable, Optional
 
 from torch import nn
 from vllm.config import (
@@ -85,7 +85,7 @@ class LLMEngine(LLMEngine):
     def __init__(
         self,
         # NOTE(sgm): first two arguments are added for verl
-        model: Union[nn.Module, Dict],  # model itself or its parameter dict
+        model: nn.Module | dict,  # model itself or its parameter dict
         tokenizer: nn.Module,
         # NOTE(sgm): vllm original arguments
         model_config: ModelConfig,
@@ -100,10 +100,10 @@ class LLMEngine(LLMEngine):
         decoding_config: Optional[DecodingConfig],
         observability_config: Optional[ObservabilityConfig],
         prompt_adapter_config: Optional[PromptAdapterConfig],
-        executor_class: Type[ExecutorBase],
+        executor_class: type[ExecutorBase],
         log_stats: bool,
         usage_context: UsageContext = UsageContext.ENGINE_CONTEXT,
-        stat_loggers: Optional[Dict[str, StatLoggerBase]] = None,
+        stat_loggers: Optional[dict[str, StatLoggerBase]] = None,
     ) -> None:
         logger.info(
             "Initializing an LLM engine (v%s) with config: "
@@ -281,7 +281,7 @@ class LLMEngine(LLMEngine):
     # NOTE(sgm): currently, we only support GPU executor
     # The GPUExecutor remove the Ray dependency
     @classmethod
-    def _get_executor_cls(cls, engine_config: EngineConfig) -> Type[ExecutorBase]:
+    def _get_executor_cls(cls, engine_config: EngineConfig) -> type[ExecutorBase]:
         assert engine_config.device_config.device_type == "cuda", "Currently, the vllm in verl only support running on GPU"
 
         if engine_config.parallel_config.world_size == 1:
@@ -299,7 +299,7 @@ class LLMEngine(LLMEngine):
         tokenizer,
         engine_args: EngineArgs,
         usage_context: UsageContext = UsageContext.ENGINE_CONTEXT,
-        stat_loggers: Optional[Dict[str, StatLoggerBase]] = None,
+        stat_loggers: Optional[dict[str, StatLoggerBase]] = None,
     ) -> "LLMEngine":
         """Creates an LLM engine from the engine arguments."""
         # Create the engine configs.

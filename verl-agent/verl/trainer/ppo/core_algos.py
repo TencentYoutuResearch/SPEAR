@@ -19,23 +19,14 @@ implement PPO
 """
 
 from collections import defaultdict
-
-import numpy as np
-import torch
-
-import verl.utils.torch_functional as verl_F
-
-from collections import defaultdict
-from enum import Enum
-from typing import Any, Callable, Optional
+from copy import deepcopy
+from typing import Callable, Optional
 
 import numpy as np
 import torch
 from omegaconf import DictConfig
-from copy import deepcopy
-from verl.utils.import_utils import deprecated
 
-
+import verl.utils.torch_functional as verl_F
 
 PolicyLossFn = Callable[
     [
@@ -244,7 +235,7 @@ def compute_grpo_outcome_advantage(
                     id2std[index[i]] = custom_std[i]
                 else:
                     id2std[index[i]] = custom_std
-        
+
         for i in range(bsz):
             if norm_adv_by_std_in_grpo:
                 scores[i] = (scores[i] - id2mean[index[i]]) / (id2std[index[i]] + epsilon)

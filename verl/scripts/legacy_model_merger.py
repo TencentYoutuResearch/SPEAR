@@ -44,7 +44,7 @@ from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import torch
@@ -235,7 +235,7 @@ class FSDPModelMerger(BaseModelMerger):
             if match:
                 return int(match.group(1))
         raise FileNotFoundError(
-            f"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}"
+            rf"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}"
         )
 
     def _load_rank_zero_state_dict(self, world_size: int) -> dict:
@@ -389,10 +389,10 @@ class FSDPModelMerger(BaseModelMerger):
         collected_keys = set(state_dict.keys())
 
         missing_keys = hf_model_keys - collected_keys
-        assert len(missing_keys) == 0, f"Missing keys in collected state dict: {list(sorted(missing_keys))}"
+        assert len(missing_keys) == 0, f"Missing keys in collected state dict: {sorted(missing_keys)}"
 
         extra_keys = collected_keys - hf_model_keys
-        assert len(extra_keys) == 0, f"Extra keys in collected state dict: {list(sorted(extra_keys))}"
+        assert len(extra_keys) == 0, f"Extra keys in collected state dict: {sorted(extra_keys)}"
 
         for key in hf_model_keys:
             hf_shape = hf_state_dict[key].shape
@@ -492,7 +492,7 @@ class MegatronModelMerger(BaseModelMerger):
         config: PretrainedConfig,
         tp_size: int,
         is_value_model: bool = False,
-    ) -> Union[torch.Tensor, list[torch.Tensor]]:
+    ) -> torch.Tensor | list[torch.Tensor]:
         if "linear_fc1.weight" in key:
             # if the tensor is gate and proj
             gate_lst = []
@@ -621,7 +621,7 @@ class MegatronModelMerger(BaseModelMerger):
                         state_dict[hf_name] = merged
                     elif len(merged) == 3:
                         # split qkv
-                        for n, d in zip(["q", "k", "v"], merged):
+                        for n, d in zip(["q", "k", "v"], merged, strict=False):
                             state_dict[hf_name.replace("qkv", n)] = d
                     elif len(merged) == 2:
                         # split gate up

@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
 import sys
-from typing import Callable, List, Optional, Tuple, Union
+from dataclasses import dataclass
+from typing import Callable, Optional, Union
 
 import torch
 
@@ -48,9 +48,9 @@ def llama_flash_attn_forward(
     output_attentions: bool = False,
     use_cache: bool = False,
     cache_position: Optional[torch.LongTensor] = None,
-    position_embeddings: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,  # will become mandatory in v4.46
+    position_embeddings: Optional[tuple[torch.Tensor, torch.Tensor]] = None,  # will become mandatory in v4.46
     **kwargs,
-) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor]]]:
     """
     Adapted from transformers 4.47.1 to support Ulysses sequence parallelism.
 
@@ -165,12 +165,12 @@ def llama_flash_attn_forward(
 def llama_attn_forward(
     self,
     hidden_states: torch.Tensor,
-    position_embeddings: Tuple[torch.Tensor, torch.Tensor],
+    position_embeddings: tuple[torch.Tensor, torch.Tensor],
     attention_mask: Optional[torch.Tensor],
     past_key_value: Optional[Cache] = None,
     cache_position: Optional[torch.LongTensor] = None,
     **kwargs,
-) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor]]]:
     """
     Adapted from transformers 4.49.0 to support Ulysses sequence parallelism for transformers >= 4.48.0.
 
@@ -243,7 +243,7 @@ def forward_for_ppo(
     input_ids: torch.LongTensor = None,
     attention_mask: Optional[torch.Tensor] = None,
     position_ids: Optional[torch.LongTensor] = None,
-    past_key_values: Optional[Union["Cache", List[torch.FloatTensor]]] = None,
+    past_key_values: Optional[Union["Cache", list[torch.FloatTensor]]] = None,
     inputs_embeds: Optional[torch.FloatTensor] = None,
     labels: Optional[torch.LongTensor] = None,
     use_cache: Optional[bool] = None,
@@ -251,10 +251,10 @@ def forward_for_ppo(
     output_hidden_states: Optional[bool] = None,
     return_dict: Optional[bool] = None,
     cache_position: Optional[torch.LongTensor] = None,
-    logits_to_keep: Union[int, torch.Tensor] = 0,
+    logits_to_keep: int | torch.Tensor = 0,
     temperature: float = 1.0,
     **loss_kwargs,
-) -> Union[Tuple, CausalLMOutputForPPO]:
+) -> tuple | CausalLMOutputForPPO:
     r"""
     Copy paste LLaMa's forward
     https://github.com/linkedin/Liger-Kernel/blob/main/src/liger_kernel/transformers/model/llama.py

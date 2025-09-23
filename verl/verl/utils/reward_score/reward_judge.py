@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import json
 import logging
 import traceback
 from copy import deepcopy
+
 # from .utils import check_correctness
 from openai import OpenAI
 
@@ -70,18 +70,18 @@ def compute_score(solution_str, ground_truth, user_query, timeout=10):
             try:
                 messages = [
                     {"role":"user", "content":prompt}
-                ]                
+                ]
                 generation_kwargs = {
                     "max_tokens":16,
                     "temperature":0,
                     "stream":False,
                 }
                 response = client.with_options(timeout=timeout).chat.completions.create(
-                                            model=reward_model_name,  
+                                            model=reward_model_name,
                                             messages=messages,
                                             **generation_kwargs
                                             )
-                
+
                 response = response.to_dict()
                 assert "choices" in response
                 result = response["choices"][0]["message"]["content"]
@@ -109,7 +109,7 @@ def compute_score(solution_str, ground_truth, user_query, timeout=10):
 
 
 if __name__ == "__main__":
-    
+
     user_query = "Who is the current chair of the VALSE常务AC委员会（LACC）?"
     ground_truth = "白翔（华中科技大学）"
     # solution_str = "白翔老师"

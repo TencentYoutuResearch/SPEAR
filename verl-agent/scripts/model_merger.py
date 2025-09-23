@@ -168,7 +168,7 @@ class FSDPModelMerger(BaseModelMerger):
             match = re.match(r"model_world_size_(\d+)_rank_0\.pt", filename)
             if match:
                 return int(match.group(1))
-        raise FileNotFoundError(f"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}")
+        raise FileNotFoundError(rf"Could not determine world size. No file matching 'model_world_size_(\d+)_rank_0.pt' found in {self.config.local_dir}")
 
     def _load_rank_zero_state_dict(self, world_size: int) -> dict:
         return torch.load(Path(self.config.local_dir) / f"model_world_size_{world_size}_rank_0.pt", map_location="cpu", weights_only=False)
@@ -313,10 +313,10 @@ class FSDPModelMerger(BaseModelMerger):
         collected_keys = set(state_dict.keys())
 
         missing_keys = hf_model_keys - collected_keys
-        assert len(missing_keys) == 0, f"Missing keys in collected state dict: {list(sorted(missing_keys))}"
+        assert len(missing_keys) == 0, f"Missing keys in collected state dict: {sorted(missing_keys)}"
 
         extra_keys = collected_keys - hf_model_keys
-        assert len(extra_keys) == 0, f"Extra keys in collected state dict: {list(sorted(extra_keys))}"
+        assert len(extra_keys) == 0, f"Extra keys in collected state dict: {sorted(extra_keys)}"
 
         for key in hf_model_keys:
             hf_shape = hf_state_dict[key].shape
@@ -460,7 +460,7 @@ class MegatronModelMerger(BaseModelMerger):
                         state_dict[new_key] = merged
                     elif len(merged) == 3:
                         # split qkv
-                        for n, d in zip(["q", "k", "v"], merged):
+                        for n, d in zip(["q", "k", "v"], merged, strict=False):
                             state_dict[new_key.replace("linear_qkv", f"linear_{n}")] = d
                     elif len(merged) == 2:
                         # split gate up

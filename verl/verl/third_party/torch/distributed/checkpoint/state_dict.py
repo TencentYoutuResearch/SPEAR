@@ -107,14 +107,12 @@ from torch.distributed.algorithms._checkpoint.checkpoint_wrapper import (
 from torch.distributed.fsdp import (
     FullOptimStateDictConfig,
     FullStateDictConfig,
+    FullyShardedDataParallel as FSDP,
     OptimStateDictConfig,
     ShardedOptimStateDictConfig,
     ShardedStateDictConfig,
     StateDictConfig,
     StateDictType,
-)
-from torch.distributed.fsdp import (
-    FullyShardedDataParallel as FSDP,
 )
 from torch.distributed.fsdp._common_utils import (
     FSDP_WRAPPED_MODULE,

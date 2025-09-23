@@ -151,7 +151,7 @@ def apply_monkey_patch(
         num_attention_heads, num_key_value_heads = model.config.num_attention_heads, model.config.num_key_value_heads
     except AttributeError:
         num_attention_heads, num_key_value_heads = model.config.text_config.num_attention_heads, model.config.text_config.num_key_value_heads
-    
+
     assert num_attention_heads % ulysses_sp_size == 0, f"num_attention_heads {num_attention_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}"
     assert num_key_value_heads % ulysses_sp_size == 0 or ulysses_sp_size % num_key_value_heads == 0, (
         f"num_key_value_heads {num_key_value_heads} must be divisible by ulysses_sp_size {ulysses_sp_size}or vise versa. Upon ulysses_sp_size % num_key_value_heads == 0,kv heads are repeated to ensure correctness."
@@ -219,9 +219,9 @@ def apply_monkey_patch(
             module.KimiVLForConditionalGeneration._merge_with_image_features = _merge_with_image_features
             module.DeepseekV3FlashAttention2.forward = _ulysses_flash_attn_forward
             print("Monkey patch FlashAttention2.forward in KimiVL")
-            
+
         if use_fused_kernels:
-            print(f"Not support fused kernels for KimiVL")
+            print("Not support fused kernels for KimiVL")
 
         return
 

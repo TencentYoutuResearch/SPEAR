@@ -27,7 +27,12 @@ def get_weight_loader(arch: str):
 
 
 def get_weight_saver(arch: str):
-    from verl.models.mcore.saver import merge_megatron_ckpt_gptmodel, merge_megatron_ckpt_gptmodel_dpskv3, merge_megatron_ckpt_gptmodel_mixtral, merge_megatron_ckpt_gptmodel_qwen_moe
+    from verl.models.mcore.saver import (
+        merge_megatron_ckpt_gptmodel,
+        merge_megatron_ckpt_gptmodel_dpskv3,
+        merge_megatron_ckpt_gptmodel_mixtral,
+        merge_megatron_ckpt_gptmodel_qwen_moe,
+    )
 
     _MODEL_WEIGHT_MEGATRON_SAVER_REGISTRY = {
         "LlamaForCausalLM": merge_megatron_ckpt_gptmodel,

@@ -13,7 +13,7 @@
 # limitations under the License.
 # Adapted from https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/model_loader
 
-from typing import Dict, Iterable
+from typing import Iterable
 
 import torch
 import torch.nn as nn
@@ -25,7 +25,7 @@ from vllm.model_executor.models import ModelRegistry
 # NOTE(shengguangming): replace the origin weight loader function in the class
 def parallel_weight_loader(self, param: torch.Tensor, loaded_weight: torch.Tensor) -> None:
     """Parallel Linear weight loader."""
-    assert param.size() == loaded_weight.size(), "the parameter size is not align with the loaded weight size, param size: {}, loaded_weight size: {}".format(param.size(), loaded_weight.size())
+    assert param.size() == loaded_weight.size(), f"the parameter size is not align with the loaded weight size, param size: {param.size()}, loaded_weight size: {loaded_weight.size()}"
     assert param.data.dtype == loaded_weight.data.dtype, "if we want to shared weights, the data type should also be the same"
 
     param.data = loaded_weight.data
@@ -39,7 +39,7 @@ def default_weight_loader(param: torch.Tensor, loaded_weight: torch.Tensor) -> N
     param.data = loaded_weight.data
 
 
-def gpt2_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def gpt2_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     params_dict = dict(vllm_model.named_parameters(remove_duplicate=False))
     for name, loaded_weight in actor_weights.items():
         if "lm_head.weight" in name:
@@ -67,7 +67,7 @@ def gpt2_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
         weight_loader(param, loaded_weight)
 
 
-def llama_megatron_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def llama_megatron_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     # NOTE(shengguangming): the megatron llama may have this prefix
     params_dict = dict(vllm_model.named_parameters())
     for name, loaded_weight in actor_weights.items():
@@ -79,7 +79,7 @@ def llama_megatron_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> 
             weight_loader(param, loaded_weight)
 
 
-def qwen2_megatron_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def qwen2_megatron_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     params_dict = dict(vllm_model.named_parameters())
     for name, loaded_weight in actor_weights.items():
         if "rotary_emb.inv_freq" in name:
@@ -91,7 +91,7 @@ def qwen2_megatron_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> 
         weight_loader(param, loaded_weight)
 
 
-def llama_megatron_core_te_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def llama_megatron_core_te_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     params_mapping = [
         # (megatron core gpt model name, vllm model name)
         ("embedding.word_embeddings", "model.embed_tokens"),
@@ -122,7 +122,7 @@ def llama_megatron_core_te_weight_loader(actor_weights: Dict, vllm_model: nn.Mod
             weight_loader(param, loaded_weight)
 
 
-def llama_megatron_core_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def llama_megatron_core_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     params_mapping = [
         # (megatron core gpt model name, vllm model name)
         ("embedding.word_embeddings", "model.embed_tokens"),

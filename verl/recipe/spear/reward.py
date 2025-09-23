@@ -1,9 +1,11 @@
 import sys
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).parent))
 
 import re
 from collections import Counter
+
 import numpy as np
 
 
@@ -72,7 +74,7 @@ def default_compute_score_enforce_toolcall_posneg_decay(data_source, solution_st
     positive-negative: both contribute to the tool-call reward by the number of toolcall turns
     """
     res = default_compute_score(data_source, solution_str, ground_truth, user_query, file_path, tools=tools, messages=messages,\
-        extra_info=extra_info, sandbox_fusion_url=sandbox_fusion_url, concurrent_semaphore=concurrent_semaphore, global_steps=global_steps)    
+        extra_info=extra_info, sandbox_fusion_url=sandbox_fusion_url, concurrent_semaphore=concurrent_semaphore, global_steps=global_steps)
     res_toolcall = 0.0
     if tools is not None:
         for message in messages:
@@ -82,7 +84,7 @@ def default_compute_score_enforce_toolcall_posneg_decay(data_source, solution_st
             else:
                 if message.role == "assistant" and (message.tool_calls is not None):
                     res_toolcall += 0.1
-    
+
     # if res_toolcall == 0:
     #     print("tools", tools, "messages", messages)
     #     print(f"⚠️🔧 warning: the assistant message does not contain any tool calls")
@@ -126,7 +128,7 @@ def default_compute_score_enforce_toolcall_posneg_decay_qwen3(data_source, solut
     positive-negative: both contribute to the tool-call reward by the number of toolcall turns
     """
     res = default_compute_score(data_source, solution_str, ground_truth, user_query, file_path, tools=tools, messages=messages,\
-        extra_info=extra_info, sandbox_fusion_url=sandbox_fusion_url, concurrent_semaphore=concurrent_semaphore, global_steps=global_steps)    
+        extra_info=extra_info, sandbox_fusion_url=sandbox_fusion_url, concurrent_semaphore=concurrent_semaphore, global_steps=global_steps)
     res_toolcall = 0.0
     if tools is not None:
         for message in messages:
@@ -136,7 +138,7 @@ def default_compute_score_enforce_toolcall_posneg_decay_qwen3(data_source, solut
             else:
                 if message.role == "assistant" and (message.tool_calls is not None):
                     res_toolcall += 0.1
-    
+
     # if res_toolcall == 0:
     #     print("tools", tools, "messages", messages)
     #     print(f"⚠️🔧 warning: the assistant message does not contain any tool calls")

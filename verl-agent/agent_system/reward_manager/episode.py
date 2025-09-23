@@ -13,15 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from verl import DataProto
-import torch
-import numpy as np
-from collections import defaultdict
 import re
-from collections import Counter
-import os
-from tqdm import tqdm
+from collections import Counter, defaultdict
 
+import numpy as np
+import torch
+
+from verl import DataProto
 
 
 def has_repeated_ngrams(words, n=20, threshold=10):
@@ -61,7 +59,7 @@ def is_think_action_valid(solution_str):
         answer_candidate = (solution_str[solution_str.rfind("</think>")+len("</think>"):]).strip()
     else:
         answer_candidate = solution_str
-    
+
     # Extract think content using XML-style tags
     action_pattern = r'<action>(.*?)</action>'
     matches_action = list(re.finditer(action_pattern, answer_candidate, re.DOTALL))

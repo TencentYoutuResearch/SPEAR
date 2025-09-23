@@ -16,7 +16,7 @@
 
 import gc
 import os
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Optional
 
 import torch
 import torch.distributed
@@ -61,7 +61,7 @@ class Worker(Worker):
 
     def __init__(
         self,
-        model: Union[nn.Module, Dict],  # model itself or its parameter dict
+        model: nn.Module | dict,  # model itself or its parameter dict
         model_config: ModelConfig,
         parallel_config: ParallelConfig,
         scheduler_config: SchedulerConfig,
@@ -76,7 +76,7 @@ class Worker(Worker):
         speculative_config: Optional[SpeculativeConfig] = None,
         prompt_adapter_config: Optional[PromptAdapterConfig] = None,
         is_driver_worker: bool = False,
-        model_runner_cls: Optional[Type[GPUModelRunnerBase]] = None,
+        model_runner_cls: Optional[type[GPUModelRunnerBase]] = None,
     ) -> None:
         # self.model = model  # will be replaced in the init_model
         self.model_config = model_config
@@ -107,7 +107,7 @@ class Worker(Worker):
         speculative_args = {} if speculative_config is None or (speculative_config.draft_model_config.model == model_config.model) or (speculative_config.draft_model_config.hf_config.model_type not in ["medusa", "mlp_speculator"]) else {"return_hidden_states": True}
 
         # TODO(sgm): set correct model runner class
-        ModelRunnerClass: Type[GPUModelRunnerBase] = ModelRunner
+        ModelRunnerClass: type[GPUModelRunnerBase] = ModelRunner
         if model_runner_cls is not None:
             ModelRunnerClass = model_runner_cls
         elif self.model_config.embedding_mode:
@@ -130,9 +130,9 @@ class Worker(Worker):
 
         # Uninitialized cache engine. Will be initialized by
         # initialize_cache.
-        self.cache_engine: List[CacheEngine] = None
+        self.cache_engine: list[CacheEngine] = None
         # Initialize gpu_cache as embedding models don't initialize kv_caches
-        self.gpu_cache: Optional[List[List[torch.Tensor]]] = None
+        self.gpu_cache: Optional[list[list[torch.Tensor]]] = None
 
         # NOTE(sgm): [VERL] For offloading inference engine params
         self.cpu_model = None
@@ -173,7 +173,7 @@ class Worker(Worker):
         # self.model = get_model(actor_model=self.model, model_config=self.model_config)
 
     @torch.inference_mode()
-    def determine_num_available_blocks(self) -> Tuple[int, int]:
+    def determine_num_available_blocks(self) -> tuple[int, int]:
         """Profiles the peak memory usage of the model to determine how many
         KV blocks may be allocated without OOMs.
 
@@ -236,7 +236,7 @@ class Worker(Worker):
         self.gpu_cache = None
 
     # NOTE(sgm): [VERL]: adapt from _execute_model_spmd()
-    def execute_model(self, execute_model_req: ExecuteModelRequest, intermediate_tensors: Optional[IntermediateTensors] = None) -> Optional[List[SamplerOutput]]:
+    def execute_model(self, execute_model_req: ExecuteModelRequest, intermediate_tensors: Optional[IntermediateTensors] = None) -> Optional[list[SamplerOutput]]:
         """
         Execute model in Single Program Multiple Data (SPMD) fashion.
         All workers take the same request, prepare the input and
@@ -261,7 +261,7 @@ class Worker(Worker):
         )
 
     # assume the input is .state_dict()
-    def sync_model_weights(self, actor_weights: Dict, load_format: str):
+    def sync_model_weights(self, actor_weights: dict, load_format: str):
         if load_format in [LoadFormat.MEGATRON, LoadFormat.AUTO]:
             load_megatron_weights(actor_weights, self.model_runner.model)
         elif load_format == LoadFormat.HF:

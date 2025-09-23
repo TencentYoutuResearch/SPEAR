@@ -18,12 +18,12 @@ the class for Worker
 import os
 import socket
 from dataclasses import dataclass
-from typing import Dict
 
 import ray
 
-from .decorator import Dispatch, Execute, register
 from verl.utils.device import get_torch_device
+
+from .decorator import Dispatch, Execute, register
 
 
 @dataclass
@@ -203,7 +203,7 @@ class Worker(WorkerHelper):
         """
         return self.fused_worker_dict.get(worker_name, None)
 
-    def _configure_with_store(self, store: Dict):
+    def _configure_with_store(self, store: dict):
         """
         This function should only be called inside by WorkerGroup
         """

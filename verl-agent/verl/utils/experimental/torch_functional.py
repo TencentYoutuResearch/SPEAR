@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import Optional, Tuple
+from typing import Optional
+
 import torch
 
 
@@ -21,7 +22,7 @@ def _fused_linear_for_ppo_fwd(
     vocab_weights: torch.FloatTensor,
     input_ids: torch.LongTensor,
     temperature: float = 1.0
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> tuple[torch.FloatTensor, torch.FloatTensor]:
     logits = (hidden_states @ vocab_weights.t()) / temperature
     orig_dtype = logits.dtype
     logits = logits.to(torch.float32)
@@ -43,7 +44,7 @@ def _fused_linear_for_ppo_bwd(
     vocab_weights: torch.FloatTensor,
     input_ids: torch.LongTensor,
     temperature: float = 1.0,
-) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+) -> tuple[torch.FloatTensor, torch.FloatTensor]:
     logits = (hidden_states @ vocab_weights.t()) / temperature
     orig_dtype = logits.dtype
     logits = logits.to(torch.float32)
@@ -81,7 +82,7 @@ class FusedLinearForPPOFunction(torch.autograd.Function):
         input_ids: torch.LongTensor,
         temperature: float = 1.0,
         chunk_size: int = 512,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
         ctx.set_materialize_grads(False)
 
         # Cast to a 2D tensor of the shape [T, D] for ease of working
@@ -206,7 +207,7 @@ class FusedLinearForPPO(torch.nn.Module):
         vocab_weights: torch.FloatTensor,
         input_ids: torch.LongTensor,
         temperature: float = 1.0,
-    ) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+    ) -> tuple[torch.FloatTensor, torch.FloatTensor]:
         input_ids = input_ids.to(torch.int64)
         return FusedLinearForPPOFunction.apply(
             hidden_states,

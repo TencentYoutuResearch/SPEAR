@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 def collate_fn(data_list: list[dict]) -> dict:
-    """
+    r"""
     Collate a batch of sample dicts into batched tensors and arrays.
 
     Args:
@@ -310,7 +310,7 @@ class RLHFDataset(Dataset):
         # encode prompts without chat template
         if self.return_raw_chat:
             row_dict["raw_prompt"] = messages
-        
+
         # get prompts with chat template
         if self.return_full_prompt:
             row_dict["full_prompts"] = raw_prompt # array of strings

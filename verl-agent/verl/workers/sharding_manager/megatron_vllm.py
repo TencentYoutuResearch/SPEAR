@@ -22,8 +22,7 @@ import os
 import torch
 import torch.distributed
 import torch.distributed as dist
-from megatron.core import DistributedDataParallel as LocalDDP
-from megatron.core import parallel_state as mpu
+from megatron.core import DistributedDataParallel as LocalDDP, parallel_state as mpu
 from megatron.core.transformer.module import Float16Module
 from torch import nn
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
@@ -31,8 +30,7 @@ from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
 from verl import DataProto
 from verl.models.mcore.weight_converter import McoreToHFWeightConverterBase
 from verl.protocol import all_gather_data_proto
-from verl.third_party.vllm import LLM, vllm_version
-from verl.third_party.vllm import parallel_state as vllm_ps
+from verl.third_party.vllm import LLM, parallel_state as vllm_ps, vllm_version
 from verl.utils.debug import GPUMemoryLogger
 from verl.utils.megatron_utils import (
     get_model,

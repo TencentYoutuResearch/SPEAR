@@ -7,9 +7,9 @@ Basic client for MCP server. See [examples] for usage.
 updated: @2025-06-13
 """
 import logging
-from typing import Any
-from datetime import timedelta
 from contextlib import AsyncExitStack
+from datetime import timedelta
+from typing import Any
 
 import mcp.types as types
 from mcp.client.session import ClientSession
@@ -33,13 +33,13 @@ class BrowserToolkitClient:
     session: ClientSession | None = None
     session_id: str | None = None
     _exit_stack: AsyncExitStack | None = None
-    
+
     def __init__(self, mcp_url: str) -> None:
         self.mcp_url = mcp_url
 
     async def _start(self) -> None:
         if self._exit_stack is not None:
-            return 
+            return
         logger.info("Starting BrowserToolkitClient...")
         self._exit_stack = AsyncExitStack()
         (read_stream, write_stream, get_session_id) = await self._exit_stack.enter_async_context(
@@ -83,11 +83,11 @@ class BrowserToolkitClient:
         return res
 
     # DONE: expose the download information? or, identify by session_id? -- letter one
-    
+
     async def __aenter__(self):
         await self._start()
         return self
-        
+
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             await self._stop()
