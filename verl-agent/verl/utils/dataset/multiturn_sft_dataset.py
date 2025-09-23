@@ -15,7 +15,6 @@
 Multi-turn SFT dataset that supports training on conversation data with multiple turns
 """
 
-from typing import List, Union
 
 import pandas as pd
 import torch
@@ -31,7 +30,7 @@ class MultiTurnSFTDataset(Dataset):
     Dataset for multi-turn conversations where each assistant response should be trained
     """
 
-    def __init__(self, parquet_files: Union[str, List[str]], tokenizer, config=None):
+    def __init__(self, parquet_files: str | list[str], tokenizer, config=None):
         # Set defaults and extract parameters from config if provided
         config = config or {}
         self.truncation = config.get("truncation", "error")
@@ -42,7 +41,7 @@ class MultiTurnSFTDataset(Dataset):
 
         assert self.truncation in ["error", "left", "right"]
 
-        if not isinstance(parquet_files, List):
+        if not isinstance(parquet_files, list):
             parquet_files = [parquet_files]
 
         self.parquet_files = parquet_files

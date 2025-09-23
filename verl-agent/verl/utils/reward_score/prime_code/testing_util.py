@@ -12,18 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import ast
 import faulthandler
-import json
 import platform
 
 # to run the solution files we're using a timing based approach
-import signal
 import sys
-import traceback
 
 # used for debugging to time steps
-from datetime import datetime
 from enum import Enum
 
 # for capturing the stdout
@@ -31,9 +26,6 @@ from io import StringIO
 
 # used for testing the code that reads from input
 from unittest.mock import mock_open, patch
-
-import numpy as np
-from pyext import RuntimeModule
 
 
 def truncatefn(s, length=300):

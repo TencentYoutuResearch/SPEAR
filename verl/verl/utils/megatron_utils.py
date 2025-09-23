@@ -24,8 +24,7 @@ from typing import Any
 import torch
 import torch.nn.functional as F
 from megatron.core import ModelParallelConfig, mpu, tensor_parallel
-from megatron.core.distributed import DistributedDataParallel as DDP
-from megatron.core.distributed import DistributedDataParallelConfig
+from megatron.core.distributed import DistributedDataParallel as DDP, DistributedDataParallelConfig
 from megatron.core.enums import ModelType
 from megatron.core.optimizer import ChainedOptimizer, OptimizerConfig
 from megatron.core.transformer import TransformerConfig
@@ -109,11 +108,7 @@ def get_model(
     # Print number of parameters.
     if mpu.get_data_parallel_rank() == 0:
         print(
-            " > number of parameters on (tensor, pipeline) model parallel rank ({}, {}): {}".format(
-                mpu.get_tensor_model_parallel_rank(),
-                mpu.get_pipeline_model_parallel_rank(),
-                sum([sum([p.nelement() for p in model_module.parameters()]) for model_module in model]),
-            ),
+            f" > number of parameters on (tensor, pipeline) model parallel rank ({mpu.get_tensor_model_parallel_rank()}, {mpu.get_pipeline_model_parallel_rank()}): {sum([sum([p.nelement() for p in model_module.parameters()]) for model_module in model])}",
             flush=True,
         )
 

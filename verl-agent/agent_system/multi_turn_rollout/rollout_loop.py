@@ -13,20 +13,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
+import os
+import uuid
+from copy import deepcopy
+
 import numpy as np
+import torch
+from agent_system.environments import EnvironmentManagerBase
+from agent_system.multi_turn_rollout.utils import filter_group_data, process_image, to_list_of_dict, torch_to_numpy
+from transformers import PreTrainedTokenizer
+
+import verl.utils.torch_functional as verl_F
 from verl import DataProto
+from verl.models.transformers.qwen2_vl import get_rope_index
 from verl.utils.dataset.rl_dataset import collate_fn
 from verl.utils.model import compute_position_id_with_mask
-import verl.utils.torch_functional as verl_F
-from transformers import PreTrainedTokenizer
-import uuid
-from verl.models.transformers.qwen2_vl import get_rope_index
-from agent_system.multi_turn_rollout.utils import process_image, to_list_of_dict, torch_to_numpy, filter_group_data
-from agent_system.environments import EnvironmentManagerBase
-from typing import List, Dict
-from copy import deepcopy
-import os
 
 
 class TrajectoryCollector:
@@ -48,7 +49,7 @@ class TrajectoryCollector:
         self,
         item: int,
         gen_batch: DataProto,
-        obs: Dict,
+        obs: dict,
     ):
         """
         Process a single observation sample, organizing environment observations (text and/or images) 
@@ -71,7 +72,7 @@ class TrajectoryCollector:
         """
         raw_prompt = gen_batch.non_tensor_batch['raw_prompt'][item]
         data_source = gen_batch.non_tensor_batch['data_source'][item]
-        
+
         # Get observation components
         obs_texts = obs.get('text', None)
         obs_images = obs.get('image', None)
@@ -85,7 +86,7 @@ class TrajectoryCollector:
 
         # Build chat structure
         # obs_content = raw_prompt[0]['content']
-        # if '<image>' in obs_content: 
+        # if '<image>' in obs_content:
         #     obs_content = obs_content.replace('<image>', '')
 
         # Build chat structure
@@ -93,20 +94,20 @@ class TrajectoryCollector:
         if obs_text is not None:
             obs_content += obs_text
         else:
-            print(f"Warning: No text observation found!")
+            print("Warning: No text observation found!")
 
         chat = np.array([{
             "content": obs_content,
             "role": "user",
         }])
-        
+
         # Apply chat template
         prompt_with_chat_template = self.tokenizer.apply_chat_template(
             chat,
             add_generation_prompt=True,
             tokenize=False
         )
-        
+
         # Initialize return dict
         row_dict = {}
         # Process multimodal data
@@ -136,15 +137,15 @@ class TrajectoryCollector:
 
         else:
             raw_prompt = prompt_with_chat_template
-        
+
         input_ids, attention_mask = verl_F.tokenize_and_postprocess_data(prompt=prompt_with_chat_template,
                                                                             tokenizer=self.tokenizer,
                                                                             max_length=self.config.data.max_prompt_length,
                                                                             pad_token_id=self.tokenizer.pad_token_id,
                                                                             left_pad=True,
                                                                             truncation=self.config.data.truncation,)
-        
-        
+
+
 
         if is_multi_modal:
 
@@ -183,13 +184,13 @@ class TrajectoryCollector:
 
         if self.config.data.get('return_raw_chat', False):
             row_dict['raw_prompt'] = chat.tolist()
-        
+
         return row_dict
 
     def preprocess_batch(
         self,
-        gen_batch: DataProto, 
-        obs: Dict, 
+        gen_batch: DataProto,
+        obs: dict,
     ) -> DataProto:
         """
         Process a batch of observation samples, converting environment observations into model-processable format.
@@ -206,7 +207,7 @@ class TrajectoryCollector:
         """
         batch_size = len(gen_batch.batch['input_ids'])
         processed_samples = []
-        
+
         # Process each sample in parallel
         for item in range(batch_size):
             # Extract per-sample observations
@@ -216,10 +217,10 @@ class TrajectoryCollector:
                 obs=obs,
             )
             processed_samples.append(processed)
-        
+
         # Aggregate batch data
         batch = collate_fn(processed_samples)
-        
+
         # Create DataProto with preserved metadata
         new_batch = DataProto.from_single_dict(
             data=batch,
@@ -231,10 +232,10 @@ class TrajectoryCollector:
 
     def gather_rollout_data(
             self,
-            total_batch_list: List[List[Dict]],
+            total_batch_list: list[list[dict]],
             episode_rewards: np.ndarray,
             episode_lengths: np.ndarray,
-            success: Dict[str, np.ndarray],
+            success: dict[str, np.ndarray],
             traj_uid: np.ndarray,
             ) -> DataProto:
         """
@@ -263,7 +264,7 @@ class TrajectoryCollector:
         success_rate = {}
         for key, value in success.items():
             success_rate[key] = np.mean(value)
-        
+
         effective_batch = []
         for bs in range(batch_size):
             # sum the rewards for each data in total_batch_list[bs]
@@ -285,7 +286,7 @@ class TrajectoryCollector:
                         data[key] = value
 
                     effective_batch.append(data)
-            
+
         # Convert trajectory data to DataProto format
         gen_batch_output = DataProto.from_single_dict(
             data=collate_fn(effective_batch)
@@ -294,8 +295,8 @@ class TrajectoryCollector:
 
     def vanilla_multi_turn_loop(
             self,
-            gen_batch: DataProto, 
-            actor_rollout_wg, 
+            gen_batch: DataProto,
+            actor_rollout_wg,
             envs: EnvironmentManagerBase,
             ) -> DataProto:
         """
@@ -323,7 +324,7 @@ class TrajectoryCollector:
 
         batch_size = len(gen_batch.batch['input_ids'])
         batch_output = None
-        
+
         if self.config.env.rollout.n > 0: # env grouping
             uid_batch = []
             for i in range(batch_size):
@@ -347,7 +348,7 @@ class TrajectoryCollector:
             os.makedirs(val_data_root, exist_ok=True)
         else:
             val_data_root = None
-        
+
 
         for _step in range(self.config.env.max_steps):
             active_masks = np.logical_not(is_done)
@@ -361,7 +362,7 @@ class TrajectoryCollector:
                 multi_modal_data = deepcopy(batch.non_tensor_batch["multi_modal_data"])
                 non_tensor_batch_keys_to_pop.append("multi_modal_data")
                 if val_data_root:
-                    for multi_modal_data_item, uid_item, traj_item in zip(multi_modal_data, uid_batch, traj_uid):
+                    for multi_modal_data_item, uid_item, traj_item in zip(multi_modal_data, uid_batch, traj_uid, strict=False):
                         val_data_root_uid_traj_id = os.path.join(val_data_root, f"{uid_item}", f"{traj_item}")
                         os.makedirs(val_data_root_uid_traj_id, exist_ok=True)
                         images_item = multi_modal_data_item['image']
@@ -378,16 +379,16 @@ class TrajectoryCollector:
             )
             batch_input.meta_info = gen_batch.meta_info
 
-            batch_output = actor_rollout_wg.generate_sequences(batch_input)            
+            batch_output = actor_rollout_wg.generate_sequences(batch_input)
             batch.non_tensor_batch['uid'] = uid_batch
             batch.non_tensor_batch['traj_uid'] = traj_uid
 
             batch = batch.union(batch_output)
-            
+
             text_actions = self.tokenizer.batch_decode(batch.batch['responses'], skip_special_tokens=True)
-            
+
             next_obs, rewards, dones, infos = envs.step(text_actions)
-            
+
             if len(rewards.shape) == 2:
                 rewards = rewards.squeeze(1)
             if len(dones.shape) == 2:
@@ -406,7 +407,7 @@ class TrajectoryCollector:
             assert len(rewards) == batch_size, f"env should return rewards for all environments, got {len(rewards)} rewards for {batch_size} environments"
             batch.non_tensor_batch['rewards'] = torch_to_numpy(rewards, is_object=True)
             batch.non_tensor_batch['active_masks'] = torch_to_numpy(active_masks, is_object=True)
-            
+
             # Update episode lengths for active environments
             batch_list: list[dict] = to_list_of_dict(batch)
 
@@ -416,27 +417,27 @@ class TrajectoryCollector:
 
             # Update done states
             is_done = np.logical_or(is_done, dones)
-                
+
             # Update observations for next step
             obs = next_obs
 
             # Break if all environments are done
             if is_done.all():
                 break
-        
-        success: Dict[str, np.ndarray] = envs.success_evaluator(
+
+        success: dict[str, np.ndarray] = envs.success_evaluator(
                     total_infos=total_infos,
                     total_batch_list=total_batch_list,
-                    episode_rewards=episode_rewards, 
+                    episode_rewards=episode_rewards,
                     episode_lengths=episode_lengths,
                     )
-        
+
         return total_batch_list, episode_rewards, episode_lengths, success, traj_uid
-    
+
     def dynamic_multi_turn_loop(
             self,
-            gen_batch: DataProto, 
-            actor_rollout_wg, 
+            gen_batch: DataProto,
+            actor_rollout_wg,
             envs: EnvironmentManagerBase,
             ) -> DataProto:
         """
@@ -476,14 +477,14 @@ class TrajectoryCollector:
                 envs=envs,
             )
             batch_list, episode_rewards, episode_lengths, success, traj_uid = filter_group_data(batch_list=batch_list,
-                                                                                                episode_rewards=episode_rewards, 
-                                                                                                episode_lengths=episode_lengths, 
-                                                                                                success=success, 
-                                                                                                traj_uid=traj_uid, 
+                                                                                                episode_rewards=episode_rewards,
+                                                                                                episode_lengths=episode_lengths,
+                                                                                                success=success,
+                                                                                                traj_uid=traj_uid,
                                                                                                 config=self.config,
                                                                                                 last_try=(try_count == max_try_count),
                                                                                                 )
-            
+
             total_batch_list += batch_list
             total_episode_rewards.append(episode_rewards)
             total_episode_lengths.append(episode_lengths)
@@ -499,8 +500,8 @@ class TrajectoryCollector:
 
     def multi_turn_loop(
             self,
-            gen_batch: DataProto, 
-            actor_rollout_wg, 
+            gen_batch: DataProto,
+            actor_rollout_wg,
             envs: EnvironmentManagerBase,
             is_train: bool = True,
             ) -> DataProto:
@@ -526,7 +527,7 @@ class TrajectoryCollector:
                 envs=envs,
             )
         else:
-            # Vanilla Sampling   
+            # Vanilla Sampling
             total_batch_list, total_episode_rewards, total_episode_lengths, total_success, total_traj_uid = \
                 self.vanilla_multi_turn_loop(
                 gen_batch=gen_batch,
@@ -536,7 +537,7 @@ class TrajectoryCollector:
         assert len(total_batch_list) == len(total_episode_rewards)
         assert len(total_batch_list) == len(total_episode_lengths)
         assert len(total_batch_list) == len(total_traj_uid)
-        
+
 
         # Create trajectory data
         gen_batch_output: DataProto = self.gather_rollout_data(
@@ -553,9 +554,9 @@ class TrajectoryCollector:
         output_texts = [self.tokenizer.decode(ids, skip_special_tokens=False) for ids in output_ids_wo_padding]
         messages = []
         assert(len(raw_prompt_list) == len(output_texts))
-        for raw_prompt, output_text in zip(raw_prompt_list, output_texts):
+        for raw_prompt, output_text in zip(raw_prompt_list, output_texts, strict=False):
             raw_prompt_cp = deepcopy(raw_prompt)
-            if not type(raw_prompt_cp) is list:
+            if type(raw_prompt_cp) is not list:
                 raw_prompt_cp = raw_prompt_cp.tolist()
             assert(raw_prompt_cp[-1]["role"] == "user")
             raw_prompt_cp.append({

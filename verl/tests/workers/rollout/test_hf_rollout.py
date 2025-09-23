@@ -16,8 +16,7 @@ import os
 
 import torch
 from omegaconf import OmegaConf
-from torch.distributed.fsdp import CPUOffload, MixedPrecision
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+from torch.distributed.fsdp import CPUOffload, FullyShardedDataParallel as FSDP, MixedPrecision
 from torch.distributed.fsdp.api import ShardedStateDictConfig, ShardingStrategy, StateDictType
 from transformers import AutoModelForCausalLM, AutoTokenizer
 

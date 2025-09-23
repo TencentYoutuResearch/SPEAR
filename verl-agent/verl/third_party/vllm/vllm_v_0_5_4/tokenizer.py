@@ -13,7 +13,7 @@
 # limitations under the License.
 # Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/transformers_utils/tokenizer_group/tokenizer_group.py
 
-from typing import List, Optional
+from typing import Optional
 
 from transformers import PreTrainedTokenizer
 from vllm.lora.request import LoRARequest
@@ -38,11 +38,11 @@ class TokenizerGroup:
         """Get the maximum input length for the LoRA request."""
         return self.max_input_length
 
-    def encode(self, prompt: str, request_id: Optional[str] = None, lora_request: Optional[LoRARequest] = None) -> List[int]:
+    def encode(self, prompt: str, request_id: Optional[str] = None, lora_request: Optional[LoRARequest] = None) -> list[int]:
         tokenizer = self.get_lora_tokenizer(lora_request)
         return tokenizer.encode(prompt)
 
-    async def encode_async(self, prompt: str, request_id: Optional[str] = None, lora_request: Optional[LoRARequest] = None) -> List[int]:
+    async def encode_async(self, prompt: str, request_id: Optional[str] = None, lora_request: Optional[LoRARequest] = None) -> list[int]:
         tokenizer = await self.get_lora_tokenizer_async(lora_request)
         return tokenizer.encode(prompt)
 

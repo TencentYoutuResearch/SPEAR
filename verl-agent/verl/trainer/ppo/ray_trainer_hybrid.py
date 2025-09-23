@@ -18,146 +18,49 @@ FSDP PPO Trainer with Ray-based single controller.
 This trainer supports model-agonistic model initialization with huggingface
 Note that this hybrid mode means the online rollout trajectories are added into SFT training
 """
-from copy import deepcopy
 import json
 import os
-import uuid
-import warnings
 from collections import defaultdict
 from copy import deepcopy
-from dataclasses import dataclass, field
-from enum import Enum
 from pprint import pprint
-from typing import Optional
-from collections import defaultdict
+
 import numpy as np
 import ray
 import torch
-from omegaconf import OmegaConf, open_dict
-from torch.utils.data import Dataset, Sampler
-from torchdata.stateful_dataloader import StatefulDataLoader
+from omegaconf import OmegaConf
+from torch.utils.data import DataLoader, DistributedSampler
 from tqdm import tqdm
-from PIL import Image
+
 from verl import DataProto
+
 # from verl.experimental.dataset.sampler import AbstractCurriculumSampler
-from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
-from verl.single_controller.ray.base import create_colocated_worker_cls
 from verl.trainer.ppo import core_algos
 from verl.trainer.ppo.core_algos import agg_loss
 from verl.trainer.ppo.metric_utils import (
     compute_data_metrics,
     compute_throughout_metrics,
     compute_timing_metrics,
-    process_validation_metrics,
 )
 from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path
 from verl.utils.metric import reduce_metrics
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
-from verl.utils.torch_functional import masked_mean
-from verl.utils.tracking import ValidationGenerationsLogger
 
-import json
-import os
-import uuid
-from collections import defaultdict
-from copy import deepcopy
-from dataclasses import dataclass, field
-from enum import Enum
-from pprint import pprint
-from typing import Optional, Type
-from tensordict import TensorDict
-import numpy as np
-import ray
-import torch
-from omegaconf import OmegaConf, open_dict
-from torch.utils.data import Dataset, Sampler
-from torchdata.stateful_dataloader import StatefulDataLoader
-from tqdm import tqdm
-from verl.utils.dataset.multiturn_sft_dataset import MultiTurnSFTDataset
-from verl.utils.dataset.multiturn_sft_dataset_online import MultiTurnSFTDatasetOnline
-
-from verl import DataProto
-from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
-from verl.single_controller.base import Worker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
-from verl.single_controller.ray.base import create_colocated_worker_cls
-from verl.trainer.ppo import core_algos
-from verl.trainer.ppo.core_algos import agg_loss
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-    process_validation_metrics,
-)
-from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.checkpoint.checkpoint_manager import BaseCheckpointManager, find_latest_ckpt_path
-from verl.utils.metric import (
-    reduce_metrics,
-)
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
-from verl.utils.torch_functional import masked_mean
-from verl.utils.tracking import ValidationGenerationsLogger
-from torch.utils.data import DataLoader, Dataset, DistributedSampler
-WorkerType = Type[Worker]
-from verl.trainer.ppo.ray_trainer import AdvantageEstimator, RayPPOTrainer, apply_kl_penalty, compute_advantage, compute_response_mask, _timer, apply_invalid_action_penalty
-from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path
-from verl.utils.metric import reduce_metrics
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
-from verl.utils.torch_functional import masked_mean
-from verl.utils.tracking import ValidationGenerationsLogger
-from torch import nn, optim
-from copy import deepcopy
+WorkerType = type[Worker]
 import random
-import numpy as np
 
-import json
-import os
-import uuid
-from collections import defaultdict
-from contextlib import contextmanager
-from copy import deepcopy
-from dataclasses import dataclass, field
-from enum import Enum
-from pprint import pprint
-from typing import Dict, Optional, Type
-
-import numpy as np
-import ray
-import torch
-from codetiming import Timer
-from omegaconf import OmegaConf, open_dict
-from torch.utils.data import Dataset, Sampler
-from torchdata.stateful_dataloader import StatefulDataLoader
-from tqdm import tqdm
-
-from verl import DataProto
-from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
-from verl.single_controller.base import Worker
-from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
-from verl.single_controller.ray.base import create_colocated_worker_cls
-from verl.trainer.ppo import core_algos
-from verl.trainer.ppo.core_algos import agg_loss
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-    process_validation_metrics,
-)
-from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path
-from verl.utils.metric import (
-    reduce_metrics,
-)
-from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
-from verl.utils.torch_functional import masked_mean
-from verl.utils.tracking import ValidationGenerationsLogger
-from verl.workers.rollout.async_server import AsyncLLMServerManager
+from agent_system.multi_turn_rollout import adjust_batch
 from gigpo import core_gigpo
 
-from agent_system.multi_turn_rollout import TrajectoryCollector, adjust_batch
+from verl.single_controller.base import Worker
+from verl.trainer.ppo.ray_trainer import (
+    AdvantageEstimator,
+    RayPPOTrainer,
+    _timer,
+    apply_invalid_action_penalty,
+    apply_kl_penalty,
+    compute_advantage,
+    compute_response_mask,
+)
 
 
 class TrajectoryBuffer:
@@ -195,11 +98,11 @@ class TrajectoryBuffer:
 
     def reset_buffer(self):
         self.trajectory_buffer = []
-        
+
     def update_batch(self, batch_messages, batch_scores, batch_response_masks, global_step):
         cur_batch_valid = []
         count_by_prompt = {}
-        for batch_message, batch_score, batch_response_mask in zip(batch_messages, batch_scores, batch_response_masks):
+        for batch_message, batch_score, batch_response_mask in zip(batch_messages, batch_scores, batch_response_masks, strict=False):
             # 使用advantage来判断是否大于阈值
             if batch_score < self.threshold:
                 continue
@@ -209,7 +112,7 @@ class TrajectoryBuffer:
             tools = batch_message.get("tools", None)
             messages = batch_message["messages"]
             prompt = messages[0]["content"]
-            if not (prompt in count_by_prompt):
+            if prompt not in count_by_prompt:
                 count_by_prompt[prompt] = 0
             count_by_prompt[prompt] += 1
             has_tool_call = False
@@ -231,7 +134,7 @@ class TrajectoryBuffer:
         for valid_tools_messages in cur_batch_valid:
             tools, messages = valid_tools_messages
             prompt = messages[0]["content"]
-            # here we only use the prompt for counting and 
+            # here we only use the prompt for counting and
             # keep those with at least two different responses
             if prompt in count_by_prompt and count_by_prompt[prompt] > 1:
                 self.update(tools, messages, global_step)
@@ -287,7 +190,7 @@ class TrajectoryBufferBatch:
         for reward_std_history_item in self.reward_std_history:
             reward_std_history_flatten += reward_std_history_item[1]
             reward_std_history_step[reward_std_history_item[0]] = np.percentile(reward_std_history_item[1], 50)
-        
+
         reward_mean_maximum_step = reward_mean_history_step[step_maximum]
         reward_std_maximum_step = reward_std_history_step[step_maximum]
         reward_mean_flatten = [v for k, v in reward_mean_history_step.items()]
@@ -310,7 +213,7 @@ class TrajectoryBufferBatch:
         with current:{reward_mean_maximum_step}/p50:{reward_mean_50p}/maximum:{reward_mean_maximum}""")
         print(f"""🐹 计算step-wise reward batch std percentile {reward_std_history_step}
         with current:{reward_std_maximum_step}/p50:{reward_std_50p}/maximum:{reward_std_maximum}""")
-    
+
         return reward_mean_history_flatten, reward_std_history_flatten,\
             reward_mean_history_step, reward_std_history_step, reward_mean_maximum_step,\
                 reward_std_maximum_step, reward_mean_maximum, reward_std_maximum,\
@@ -352,7 +255,7 @@ class TrajectoryBufferBatch:
                 if isinstance(value, np.ndarray):
                     batch_concat.non_tensor_batch[key] = value[mask]
                 elif isinstance(value, list) or isinstance(value, tuple):
-                    batch_concat.non_tensor_batch[key] = [v for v, m in zip(value, mask) if m]
+                    batch_concat.non_tensor_batch[key] = [v for v, m in zip(value, mask, strict=False) if m]
                 else:
                     batch_concat.non_tensor_batch[key] = value
 
@@ -360,7 +263,7 @@ class TrajectoryBufferBatch:
                 if isinstance(value, np.ndarray):
                     batch_concat.meta_info[key] = value[mask]
                 elif isinstance(value, list) or isinstance(value, tuple):
-                    batch_concat.meta_info[key] = [v for v, m in zip(value, mask) if m]
+                    batch_concat.meta_info[key] = [v for v, m in zip(value, mask, strict=False) if m]
                 else:
                     batch_concat.meta_info[key] = value
 
@@ -368,7 +271,7 @@ class TrajectoryBufferBatch:
                 if isinstance(value, np.ndarray):
                     reward_extra_info_dict_concat[key] = value[mask]
                 elif isinstance(value, list) or isinstance(value, tuple):
-                    reward_extra_info_dict_concat[key] = [v for v, m in zip(value, mask) if m]
+                    reward_extra_info_dict_concat[key] = [v for v, m in zip(value, mask, strict=False) if m]
                 else:
                     reward_extra_info_dict_concat[key] = value
 
@@ -376,7 +279,7 @@ class TrajectoryBufferBatch:
             # here we apply advantage weight decay to the original advantages
             batch_concat.batch["advantages"] *= self.weight_decay_trajectory_replay
         return batch_concat
-        
+
 
     def get_buffer(self):
         def nearest_lower_power_of_2(n):
@@ -410,7 +313,7 @@ class TrajectoryBufferBatch:
         # import pdb;pdb.set_trace();
         for reward_extra_infos_dict in reward_extra_infos_dict_list:
             for key, value in reward_extra_infos_dict.items():
-                if not (key in reward_extra_info_dict_concat):
+                if key not in reward_extra_info_dict_concat:
                     reward_extra_info_dict_concat[key] = value
                     continue
                 if isinstance(value, np.ndarray):
@@ -433,7 +336,7 @@ class TrajectoryBufferBatch:
         # prepare for selection
         batch_concat = self.prepare_for_selection(batch_concat, reward_tensor_concat, reward_extra_info_dict_concat,\
             reward_mean_50p, reward_std_50p)
-        
+
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
         # here we only use the 2**N samples as trajectory buffer
         len_batch = batch_concat.batch["advantages"].size(0)
@@ -446,7 +349,7 @@ class TrajectoryBufferBatch:
         idx = torch.randperm(len_batch)[:len_batch_valid]
         mask[idx] = True
         # ------------------------Only Select Positive BufferSize Samples------------------------------ #
-        
+
         batch_concat.batch = batch_concat.batch[mask]
         reward_tensor_concat = reward_tensor_concat[mask]
         # assert (len(batch_concat.batch) == len_batch_valid)
@@ -455,21 +358,21 @@ class TrajectoryBufferBatch:
             if isinstance(value, np.ndarray):
                 batch_concat.non_tensor_batch[key] = value[mask]
             elif isinstance(value, list) or isinstance(value, tuple):
-                batch_concat.non_tensor_batch[key] = [v for v, m in zip(value, mask) if m]
+                batch_concat.non_tensor_batch[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 batch_concat.non_tensor_batch[key] = value
         for key, value in batch_concat.meta_info.items():
             if isinstance(value, np.ndarray):
                 batch_concat.meta_info[key] = value[mask]
             elif isinstance(value, list) or isinstance(value, tuple):
-                batch_concat.meta_info[key] = [v for v, m in zip(value, mask) if m]
+                batch_concat.meta_info[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 batch_concat.meta_info[key] = value
         for key, value in reward_extra_info_dict_concat.items():
             if isinstance(value, np.ndarray):
                 reward_extra_info_dict_concat[key] = value[mask]
             elif isinstance(value, list) or isinstance(value, tuple):
-                reward_extra_info_dict_concat[key] = [v for v, m in zip(value, mask) if m]
+                reward_extra_info_dict_concat[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 reward_extra_info_dict_concat[key] = value
 
@@ -500,16 +403,16 @@ class TrajectoryBufferBatch:
 
         uid_list = batch.non_tensor_batch["uid"]
         traj_uid_list = batch.non_tensor_batch["traj_uid"]
-        reward_by_uid_traj_uid = {}     
+        reward_by_uid_traj_uid = {}
         idx2uid = {}
         idx = 0
-        
-        for uid, traj_uid, rm_score in zip(uid_list, traj_uid_list, rm_scores):
+
+        for uid, traj_uid, rm_score in zip(uid_list, traj_uid_list, rm_scores, strict=False):
             idx2uid[idx] = uid
-            if not (uid in reward_by_uid_traj_uid):
+            if uid not in reward_by_uid_traj_uid:
                 reward_by_uid_traj_uid[uid] = {}
-            if not (traj_uid in reward_by_uid_traj_uid[uid]):
-                reward_by_uid_traj_uid[uid][traj_uid] = []            
+            if traj_uid not in reward_by_uid_traj_uid[uid]:
+                reward_by_uid_traj_uid[uid][traj_uid] = []
             reward_by_uid_traj_uid[uid][traj_uid].append(rm_score.item())
             idx += 1
 
@@ -522,7 +425,7 @@ class TrajectoryBufferBatch:
                 reward_traj_rwscore.append(np.mean(reward_traj[traj_uid]))
             reward_by_uid_mean.append([uid, float(np.mean(reward_traj_rwscore))])
             reward_by_uid_std.append([uid, float(np.std(reward_traj_rwscore))])
-        
+
         # import pdb;pdb.set_trace();
         in_group_std_list = [item[1] for item in reward_by_uid_std]
         in_group_mean_list = [item[1] for item in reward_by_uid_mean]
@@ -572,7 +475,7 @@ class TrajectoryBufferBatch:
             if isinstance(value, np.ndarray):
                 batch.non_tensor_batch[key] = value[mask]
             elif isinstance(value, list) or isinstance(value, tuple):
-                batch.non_tensor_batch[key] = [v for v, m in zip(value, mask) if m]
+                batch.non_tensor_batch[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 batch.non_tensor_batch[key] = value
 
@@ -580,7 +483,7 @@ class TrajectoryBufferBatch:
             if isinstance(value, np.ndarray):
                 batch.meta_info[key] = value[mask]
             elif isinstance(value, list) or isinstance(value, tuple):
-                batch.meta_info[key] = [v for v, m in zip(value, mask) if m]
+                batch.meta_info[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 batch.meta_info[key] = value
 
@@ -588,7 +491,7 @@ class TrajectoryBufferBatch:
             if isinstance(value, np.ndarray):
                 reward_extra_infos_dict[key] = value[mask]
             elif isinstance(value, list) or isinstance(value, tuple):
-                reward_extra_infos_dict[key] = [v for v, m in zip(value, mask) if m]
+                reward_extra_infos_dict[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 reward_extra_infos_dict[key] = value
 
@@ -690,7 +593,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 gamma=self.config.algorithm.gamma
             )
             batch.batch['step_rewards'] = step_rewards_tensor
-        
+
         batch = adjust_batch(self.config, batch)
         batch.meta_info["global_steps"] = self.global_steps
         batch.meta_info["use_toolcall_reward"] = self.config.algorithm.use_toolcall_reward
@@ -864,7 +767,6 @@ class RayPPOSFTTrainer(RayPPOTrainer):
         to construct the PPO dataflow.
         The light-weight advantage computation is done on the driver process.
         """
-        from omegaconf import OmegaConf
 
         from verl.utils.tracking import Tracking
 
@@ -906,10 +808,10 @@ class RayPPOSFTTrainer(RayPPOTrainer):
         self.global_steps += 1
         last_val_metrics = None
         self.max_steps_duration = 0
-        
+
         ################ Newly Added Buffer Replay for Self-Imitation Learning PG Loss ################
         # here we respectively treat the trajectory buffer for replaying
-        
+
         if self.config.actor_rollout_ref.actor.enable_trajectory_replay:
             trajectory_buffer_replay = TrajectoryBufferBatch(
                 tokenizer=self.tokenizer,\
@@ -921,7 +823,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                                         norm_adv_by_std_in_grpo = self.config.algorithm.get("norm_adv_by_std_in_grpo", True))
         else:
             trajectory_buffer_replay = None
-        
+
         self.train_dataset_sft_online = None
         self.train_dataloader_sft_online = None
         self.train_dataset_replay_online = None
@@ -949,7 +851,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                 )
                 gen_batch.meta_info["global_steps"] = self.global_steps
                 is_last_step = self.global_steps >= self.total_training_steps
-                
+
                 with _timer("step", timing_raw):
                     # generate a batch
                     batch, gen_batch_output, metrics = self.generate_batch(timing_raw, batch, gen_batch, metrics)
@@ -996,7 +898,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                                         "overlong_responses": mask_len,
                                     }
                                 )
-                            
+
                             if "is_repetitive" in reward_extra_infos_dict and self.config.algorithm.filter_repetitive_responses:
                                 is_repetitive_list = reward_extra_infos_dict["is_repetitive"]
                                 response_masks = deepcopy(batch.batch["response_mask"])

@@ -15,7 +15,14 @@
 import pytest
 
 import verl.single_controller.base.decorator as decorator_module
-from verl.single_controller.base.decorator import DISPATCH_MODE_FN_REGISTRY, Dispatch, _check_dispatch_mode, get_predefined_dispatch_fn, register_dispatch_mode, update_dispatch_mode
+from verl.single_controller.base.decorator import (
+    DISPATCH_MODE_FN_REGISTRY,
+    Dispatch,
+    _check_dispatch_mode,
+    get_predefined_dispatch_fn,
+    register_dispatch_mode,
+    update_dispatch_mode,
+)
 
 
 @pytest.fixture

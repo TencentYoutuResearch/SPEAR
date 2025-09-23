@@ -10,8 +10,8 @@ export VLLM_USE_V1=1
 export HF_DATASETS_DISABLE_PROGRESS_BARS=1
 
 
-NNODES=16
-GPUS_PER_NODE=8
+NNODES=1
+GPUS_PER_NODE=2
 
 
 max_turns=8
@@ -20,11 +20,11 @@ max_response_length=16384
 max_token_length=$max_response_length
 actor_lr=1e-6
 
-train_batch_size=128
-ppo_mini_batch_size=64
+train_batch_size=4
+ppo_mini_batch_size=2
 
-infer_tp=4 # vllm
-train_sp=8 # train
+infer_tp=1 # vllm
+train_sp=1 # train
 
 n_resp_per_prompt=16
 n_resp_per_prompt_val=32
@@ -41,10 +41,10 @@ project_name=dapo_math_17k
 # =============== path settings ===============
 ROOT_PATH=${1:-$PWD}
 
-model_path=checkpoints/retool_sft/qwen-2.5-32b-instruct/global_step_372_merge
-dapo_math_17k=${ROOT_PATH}/datasets/BytedTsinghua-SIA/DAPO-Math-17k
-aime_2024=${ROOT_PATH}/datasets/Maxwell-Jia/AIME_2024
-aime_2025=${ROOT_PATH}/datasets/yentinglin/aime_2025
+model_path=/cfs_turbo/beauzbhe/retool/verl/checkpoint/multiturn-sft-qwen-2.5-3b-instruct/global_step_372_merge
+dapo_math_17k=/cfs_turbo/beauzbhe/retool/verl/datasets/BytedTsinghua-SIA/DAPO-Math-17k
+aime_2024=/cfs_turbo/beauzbhe/retool/verl/datasets/Maxwell-Jia/AIME_2024
+aime_2025=/cfs_turbo/beauzbhe/retool/verl/datasets/yentinglin/aime_2025
 
 train_files="['$dapo_math_17k']"
 test_files="['$aime_2024','$aime_2025']"

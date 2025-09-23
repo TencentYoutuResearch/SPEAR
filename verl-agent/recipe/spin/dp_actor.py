@@ -20,8 +20,8 @@ from collections import defaultdict
 
 import numpy as np
 import torch
-
 from recipe.spin.core_algos import compute_online_dpo_loss, get_batch_logps
+
 from verl import DataProto
 from verl.utils.seqlen_balancing import get_reverse_idx, rearrange_micro_batches
 from verl.workers.actor import DataParallelPPOActor
@@ -29,7 +29,7 @@ from verl.workers.actor import DataParallelPPOActor
 __all__ = ['DataParallelPPOActor']
 
 class SPINDataParallelPPOActor(DataParallelPPOActor):
-    
+
     def compute_log_prob(self, data: DataProto) -> torch.Tensor:
         """Compute the log probability of the responses given input_ids, attention_mask and position_ids
 

@@ -18,8 +18,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from megatron.core import ModelParallelConfig, tensor_parallel
-from megatron.core import parallel_state as mpu
+from megatron.core import ModelParallelConfig, parallel_state as mpu, tensor_parallel
 from torch import nn
 from transformers.activations import ACT2FN
 

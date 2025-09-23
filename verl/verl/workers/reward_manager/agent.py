@@ -12,18 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from collections import defaultdict
+import os
+from collections import Counter, defaultdict
 
+import numpy as np
 import torch
+from tqdm import tqdm
 
 from verl import DataProto
 from verl.utils.reward_score import _default_compute_score
-import os
-from tqdm import tqdm
 from verl.workers.reward_manager import register
-import numpy as np
-
-from collections import Counter
 
 
 def has_repeated_ngrams(words, n=20, threshold=10):
@@ -43,7 +41,7 @@ def get_file_path(download_dir):
         except:
             print(f"Failed to convert download_dir from {type(download_dir)} to str")
             return None
-            
+
     try:
         not_downloaded_files = ["prompt.jsonl"]
         file_names = os.listdir(download_dir)
@@ -56,7 +54,7 @@ def get_file_path(download_dir):
             if name not in not_downloaded_files:
                 file_path = os.path.join(download_dir, name)
                 break
-        
+
         return file_path
     except Exception as e:
         # Print error details including variable types and values
@@ -119,7 +117,7 @@ class AgentRewardManager:
             response_ids = data_item.batch["responses"]
             valid_response_length = data_item.batch["attention_mask"][prompt_length:].sum()
             valid_response_ids = response_ids[:valid_response_length]
-            
+
             # decode
             prompt_str = self.tokenizer.decode(valid_prompt_ids, skip_special_tokens=True)
             response_str = self.tokenizer.decode(valid_response_ids, skip_special_tokens=True)
@@ -132,7 +130,7 @@ class AgentRewardManager:
                 user_query = data_item.non_tensor_batch["extra_info"]["question"]
             else:
                 user_query = ""
-                
+
             if "download_list" in data_item.non_tensor_batch:
                 download_dir = data_item.non_tensor_batch["download_list"]
                 if data_source in ["web_download"]:
@@ -142,7 +140,7 @@ class AgentRewardManager:
             else:
                 download_dir = None
                 file_path = None
-                
+
             extra_info = data_item.non_tensor_batch.get("extra_info", {})
             num_turns = data_item.non_tensor_batch.get("__num_turns__", None)
             extra_info["num_turns"] = num_turns
@@ -163,7 +161,7 @@ class AgentRewardManager:
             )
             if data_source in ["web_donwload"]:
                 print(f"🌏 Download score: {score}, 🗂️ Download_dir: {download_dir}")
-            
+
             is_incomplete = 0
             is_overlong = 0
             if valid_response_length >= max_response_len:
@@ -180,13 +178,13 @@ class AgentRewardManager:
             if isinstance(score, dict):
                 score["score"] = np.float64(score["score"])
                 reward = score["score"]
-                if not ("is_incomplete" in score):
+                if "is_incomplete" not in score:
                     score["is_incomplete"] = is_incomplete
-                if not ("is_overlong" in score):
+                if "is_overlong" not in score:
                     score["is_overlong"] = is_overlong
-                if not ("is_repetitive" in score):
+                if "is_repetitive" not in score:
                     score["is_repetitive"] = is_repetitive
-                if not ("is_unreadable" in score):
+                if "is_unreadable" not in score:
                     score["is_unreadable"] = is_unreadable
                 # Store the information including original reward
                 for key, value in score.items():

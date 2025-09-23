@@ -13,7 +13,7 @@
 # limitations under the License.
 # Adapted from https://github.com/vllm-project/vllm/blob/main/vllm/entrypoints/llm.py
 
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import Iterable, Optional
 
 import torch
 import torch.nn as nn
@@ -86,8 +86,8 @@ class LLM(LLM):
 
     def __init__(
         self,
-        model: Union[nn.Module, Dict],  # model itself or its parameter dict
-        tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast, HybridEngineBaseTokenizer],
+        model: nn.Module | dict,  # model itself or its parameter dict
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast | HybridEngineBaseTokenizer,
         model_hf_config: PretrainedConfig,
         tokenizer_mode: str = "auto",
         trust_remote_code: bool = False,
@@ -141,16 +141,16 @@ class LLM(LLM):
     def free_cache_engine(self):
         self.llm_engine.free_cache_engine()
 
-    def get_tokenizer(self) -> Union[PreTrainedTokenizer, PreTrainedTokenizerFast]:
+    def get_tokenizer(self) -> PreTrainedTokenizer | PreTrainedTokenizerFast:
         return self.llm_engine.tokenizer
 
     def set_tokenizer(
         self,
-        tokenizer: Union[PreTrainedTokenizer, PreTrainedTokenizerFast],
+        tokenizer: PreTrainedTokenizer | PreTrainedTokenizerFast,
     ) -> None:
         self.llm_engine.tokenizer = tokenizer
 
-    def _run_engine(self, *, use_tqdm: bool) -> List[Union[RequestOutput, EmbeddingRequestOutput]]:
+    def _run_engine(self, *, use_tqdm: bool) -> list[RequestOutput | EmbeddingRequestOutput]:
         # Initialize tqdm.
         if use_tqdm:
             num_requests = self.llm_engine.get_num_unfinished_requests()
@@ -161,7 +161,7 @@ class LLM(LLM):
                 postfix=(f"est. speed input: {0:.2f} toks/s, output: {0:.2f} toks/s"),
             )
         # Run the engine.
-        outputs: List[Union[RequestOutput, EmbeddingRequestOutput]] = []
+        outputs: list[RequestOutput | EmbeddingRequestOutput] = []
         total_in_toks = 0
         total_out_toks = 0
         while self.llm_engine.has_unfinished_requests():
@@ -196,7 +196,7 @@ class LLM(LLM):
     #     return token_ids
 
     # NOTE(shengguangming): add for verl
-    def _post_process_outputs(self, request_outputs: List[RequestOutput]) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _post_process_outputs(self, request_outputs: list[RequestOutput]) -> tuple[torch.Tensor, torch.Tensor]:
         output_token_ids = []
         logprobs = []
         for request_output in request_outputs:  # List[RequestOutput]
@@ -207,7 +207,7 @@ class LLM(LLM):
                 logprobs_dicts = output.logprobs
                 if logprobs_dicts is not None:
                     logprob = []
-                    for logprobs_dict, id in zip(logprobs_dicts, output.token_ids):
+                    for logprobs_dict, id in zip(logprobs_dicts, output.token_ids, strict=False):
                         logprob.append(logprobs_dict[id].logprob)
                     logprobs.append(torch.tensor(logprob))
 

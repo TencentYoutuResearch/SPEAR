@@ -51,8 +51,7 @@ def _megatron_calc_layer_map(config):
 
 def load_state_dict_to_megatron_gptmodel(state_dict, wrapped_models, config, params_dtype, is_value_model=False):
     """Load merged state_dict to sharded Megatron module in training."""
-    from megatron.core import DistributedDataParallel as LocalDDP
-    from megatron.core import mpu
+    from megatron.core import DistributedDataParallel as LocalDDP, mpu
     from megatron.core.transformer.module import Float16Module
     from torch.nn.parallel import DistributedDataParallel as torchDDP
 
@@ -382,7 +381,7 @@ def load_state_dict_to_megatron_gptmodel(state_dict, wrapped_models, config, par
                 sync_layer.self_attention.linear_qkv.layer_norm_weight if dst_pp_rank == pp_rank else None,
                 f"{layer_name}.input_layernorm.weight",
             )
-     
+
             if f"{layer_name}.self_attn.q_norm.weight" in state_dict:
                 _broadcast_tensor(
                     sync_layer.self_attention.q_layernorm.weight if dst_pp_rank == pp_rank else None,

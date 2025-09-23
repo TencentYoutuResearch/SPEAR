@@ -54,17 +54,17 @@ def test_connection(name, url, timeout=10):
     try:
         socket.gethostbyname(urlinfo.netloc)
     except Exception as e:
-        print("Error resolving DNS for {}: {}, {}".format(name, url, e))
+        print(f"Error resolving DNS for {name}: {url}, {e}")
         return
     dns_elapsed = time.time() - start
     start = time.time()
     try:
         _ = urlopen(url, timeout=timeout)
     except Exception as e:
-        print("Error open {}: {}, {}, DNS finished in {} sec.".format(name, url, e, dns_elapsed))
+        print(f"Error open {name}: {url}, {e}, DNS finished in {dns_elapsed} sec.")
         return
     load_elapsed = time.time() - start
-    print("Timing for {}: {}, DNS: {:.4f} sec, LOAD: {:.4f} sec.".format(name, url, dns_elapsed, load_elapsed))
+    print(f"Timing for {name}: {url}, DNS: {dns_elapsed:.4f} sec, LOAD: {load_elapsed:.4f} sec.")
 
 
 def check_python():
@@ -151,7 +151,7 @@ def check_hardware():
 def check_network(args):
     print("----------Network Test----------")
     if args.timeout > 0:
-        print("Setting timeout: {}".format(args.timeout))
+        print(f"Setting timeout: {args.timeout}")
         socket.setdefaulttimeout(10)
     for region in args.region.strip().split(","):
         r = region.strip().lower()
@@ -162,7 +162,7 @@ def check_network(args):
         else:
             import warnings
 
-            warnings.warn("Region {} do not need specific test, please refer to global sites.".format(r), stacklevel=2)
+            warnings.warn(f"Region {r} do not need specific test, please refer to global sites.", stacklevel=2)
     for name, url in URLS.items():
         test_connection(name, url, args.timeout)
 
@@ -171,7 +171,7 @@ def check_environment():
     print("----------Environment----------")
     for k, v in os.environ.items():
         if k.startswith("VERL_") or k.startswith("OMP_") or k.startswith("KMP_") or k == "CC" or k == "CXX":
-            print('{}="{}"'.format(k, v))
+            print(f'{k}="{v}"')
 
 
 def check_pip_package_versions():
@@ -268,7 +268,7 @@ def parse_args():
     )
     choices = ["python", "pip", "verl", "system", "os", "environment"]
     for choice in choices:
-        parser.add_argument("--" + choice, default=1, type=int, help="Diagnose {}.".format(choice))
+        parser.add_argument("--" + choice, default=1, type=int, help=f"Diagnose {choice}.")
     parser.add_argument("--network", default=0, type=int, help="Diagnose network.")
     parser.add_argument("--hardware", default=0, type=int, help="Diagnose hardware.")
     parser.add_argument(

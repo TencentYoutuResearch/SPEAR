@@ -17,7 +17,7 @@ Metrics related to the PPO trainer.
 
 from collections import defaultdict
 from functools import partial
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -25,8 +25,9 @@ import torch
 from verl import DataProto
 from verl.utils.import_utils import deprecated
 
+
 @deprecated("verl.utils.metric.reduce_metrics")
-def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
+def reduce_metrics(metrics: dict[str, list[Any]]) -> dict[str, Any]:
     """
     Reduces a dictionary of metric lists by computing the mean of each list.
 
@@ -46,7 +47,7 @@ def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
     return reduce_metrics(metrics)
 
 
-def _compute_response_info(batch: DataProto) -> Dict[str, Any]:
+def _compute_response_info(batch: DataProto) -> dict[str, Any]:
     """
     Computes information about prompts and responses from a batch.
     
@@ -76,7 +77,7 @@ def _compute_response_info(batch: DataProto) -> Dict[str, Any]:
     )
 
 
-def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str, Any]:
+def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> dict[str, Any]:
     """
     Computes various metrics from a batch of data for PPO training.
 
@@ -165,24 +166,24 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
         "prompt_length/min": torch.min(prompt_length).detach().item(),
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
         # episode
-        "episode/reward/mean": 
+        "episode/reward/mean":
             batch.non_tensor_batch["episode_rewards_mean"][0].item(),
-        "episode/reward/max": 
+        "episode/reward/max":
             batch.non_tensor_batch["episode_rewards_max"][0].item(),
-        "episode/reward/min": 
+        "episode/reward/min":
             batch.non_tensor_batch["episode_rewards_min"][0].item(),
-        "episode/length/mean": 
+        "episode/length/mean":
             batch.non_tensor_batch["episode_lengths_mean"][0].item(),
         "episode/length/max":
             batch.non_tensor_batch["episode_lengths_max"][0].item(),
-        "episode/length/min": 
+        "episode/length/min":
             batch.non_tensor_batch["episode_lengths_min"][0].item(),
         **({f"episode/{k}": v[0].item() for k, v in batch.non_tensor_batch.items() if "success_rate" in k}),
     }
     return metrics
 
 
-def compute_timing_metrics(batch: DataProto, timing_raw: Dict[str, float]) -> Dict[str, Any]:
+def compute_timing_metrics(batch: DataProto, timing_raw: dict[str, float]) -> dict[str, Any]:
     """
     Computes timing metrics for different processing stages in PPO training.
     
@@ -212,7 +213,7 @@ def compute_timing_metrics(batch: DataProto, timing_raw: Dict[str, float]) -> Di
 
     num_tokens_of_section = {
         "gen": num_response_tokens,
-        **{name: num_overall_tokens for name in ["ref", "values", "adv", "update_critic", "update_actor"]},
+        **dict.fromkeys(["ref", "values", "adv", "update_critic", "update_actor"], num_overall_tokens),
     }
 
     return {
@@ -221,7 +222,7 @@ def compute_timing_metrics(batch: DataProto, timing_raw: Dict[str, float]) -> Di
     }
 
 
-def compute_throughout_metrics(batch: DataProto, timing_raw: Dict[str, float], n_gpus: int) -> Dict[str, Any]:
+def compute_throughout_metrics(batch: DataProto, timing_raw: dict[str, float], n_gpus: int) -> dict[str, Any]:
     """
     Computes throughput metrics for PPO training.
     
@@ -411,7 +412,7 @@ def process_validation_metrics(data_sources: list[str], sample_inputs: list[str]
                         metric[f"best@{n}/mean"], metric[f"best@{n}/std"] = bon_mean, bon_std
                         metric[f"worst@{n}/mean"], metric[f"worst@{n}/std"] = won_mean, won_std
                         if var2vals.get("pred", None) is not None:
-                            vote_data = [{"val": val, "pred": pred} for val, pred in zip(var_vals, var2vals["pred"])]
+                            vote_data = [{"val": val, "pred": pred} for val, pred in zip(var_vals, var2vals["pred"], strict=False)]
                             [(maj_n_mean, maj_n_std)] = bootstrap_metric(
                                 data=vote_data,
                                 subset_size=n,

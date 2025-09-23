@@ -29,7 +29,6 @@ import logging
 import os
 from contextlib import contextmanager
 from copy import deepcopy
-from typing import List
 
 import torch
 import torch.distributed
@@ -39,8 +38,7 @@ from torch import nn
 from vllm import SamplingParams
 
 from verl import DataProto
-from verl.third_party.vllm import LLM, vllm_version
-from verl.third_party.vllm import parallel_state as vllm_ps
+from verl.third_party.vllm import LLM, parallel_state as vllm_ps, vllm_version
 from verl.utils.debug import GPUMemoryLogger
 from verl.utils.torch_functional import get_response_mask, pad_sequence_to_length
 from verl.workers.rollout.base import BaseRollout
@@ -56,7 +54,7 @@ from vllm.lora.request import LoRARequest
 
 
 # NOTE(sgm): add for verl. We can optimize it by making the dataloader yield List[int] without padding.
-def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> List[int]:
+def _pre_process_inputs(pad_token_id, prompt_token_ids: torch.Tensor) -> list[int]:
     # remove the left padding in the prompt token_id
     # pad_token_id = self.llm_engine.tokenizer.pad_token_id if self.llm_engine.tokenizer.pad_token_id is not None else self.llm_engine.tokenizer.eos_token_id
     non_pad_index = torch.nonzero(prompt_token_ids != pad_token_id, as_tuple=False)[0][0]

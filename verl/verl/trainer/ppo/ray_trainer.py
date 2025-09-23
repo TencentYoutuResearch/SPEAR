@@ -36,7 +36,7 @@ from omegaconf import OmegaConf, open_dict
 from torch.utils.data import Dataset, Sampler
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
-from copy import deepcopy
+
 from verl import DataProto
 from verl.experimental.dataset.sampler import AbstractCurriculumSampler
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
@@ -889,7 +889,7 @@ class RayPPOTrainer:
         # indeed reward_tensor torch.Size([16, 8192])
         # rm_scores = batch.batch["original_rm_scores"].sum(dim=-1).view(num_groups, group_size)
         rm_scores = reward_tensor.sum(dim=-1).view(num_groups, group_size)
-        
+
         in_group_std = rm_scores.std(dim=-1)
         in_group_max = rm_scores.max(dim=-1).values
         in_group_mean = rm_scores.mean(dim=-1)
@@ -912,14 +912,14 @@ class RayPPOTrainer:
             if isinstance(value, np.ndarray):
                 batch.non_tensor_batch[key] = value[mask]
             else:
-                batch.non_tensor_batch[key] = [v for v, m in zip(value, mask) if m]
+                batch.non_tensor_batch[key] = [v for v, m in zip(value, mask, strict=False) if m]
         print(">>> Rollout bs before filtering ", len(mask), " after filtering ", len(reward_tensor))
 
         for key, value in batch.meta_info.items():
             if isinstance(value, np.ndarray):
                 batch.meta_info[key] = value[mask]
             elif isinstance(value, list):
-                batch.meta_info[key] = [v for v, m in zip(value, mask) if m]
+                batch.meta_info[key] = [v for v, m in zip(value, mask, strict=False) if m]
             else:
                 batch.meta_info[key] = value
 
@@ -928,7 +928,7 @@ class RayPPOTrainer:
             if isinstance(value, np.ndarray):
                 reward_extra_infos_dict[key] = value[mask]
             else:
-                reward_extra_infos_dict[key] = [v for v, m in zip(value, mask) if m]
+                reward_extra_infos_dict[key] = [v for v, m in zip(value, mask, strict=False) if m]
 
         metrics_update = {
             "rollout/in_group_std": in_group_std.mean(),
@@ -1178,7 +1178,7 @@ class RayPPOTrainer:
                             "overlong_responses": mask_len,
                         }
                     )
-                
+
                 if "is_repetitive" in reward_extra_infos_dict and self.config.algorithm.filter_repetitive_responses:
                     is_repetitive_list = reward_extra_infos_dict["is_repetitive"]
                     response_masks = deepcopy(batch.batch["response_mask"])
@@ -1213,7 +1213,7 @@ class RayPPOTrainer:
 
         return timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward
 
-    
+
     def recompute_old_log_prob_ref_critic(self, timing_raw, batch, metrics):
         # recompute old_log_probs
         with marked_timer("old_log_prob", timing_raw, color="blue"):
@@ -1379,7 +1379,7 @@ class RayPPOTrainer:
             self._start_profiling(do_profile)
 
         batch: DataProto = DataProto.from_single_dict(batch_dict)
-        
+
         # pop those keys for generation
         batch_keys_to_pop = ["input_ids", "attention_mask", "position_ids"]
         non_tensor_batch_keys_to_pop = ["raw_prompt_ids"]
@@ -1428,7 +1428,7 @@ class RayPPOTrainer:
             batch.meta_info["global_steps"] = self.global_steps
             batch.meta_info["use_toolcall_reward"] = self.config.algorithm.use_toolcall_reward
             batch.meta_info["max_toolcall_steps"] = self.config.algorithm.max_toolcall_steps
-            
+
             # compute reward model score
             timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict, future_reward = self.reward_model_compute(timing_raw, batch, metrics)
 
@@ -1671,7 +1671,7 @@ class RayPPOTrainer:
                         "content": msg.content,
                         "tool_calls": tool_calls
                     })
-            
+
             save_dict["messages"] = list(save_msg)
             save_list.append(save_dict)
         return save_list
@@ -1705,7 +1705,7 @@ class RayPPOTrainer:
 
         except Exception as e:
             print(f"failed to save messages: {e}")
-        
+
         return
 
 

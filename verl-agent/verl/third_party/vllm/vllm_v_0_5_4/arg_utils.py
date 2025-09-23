@@ -17,7 +17,7 @@ import argparse
 import dataclasses
 import os
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, List, Optional, Tuple, Type, Union
+from typing import TYPE_CHECKING, Optional
 
 from transformers import PretrainedConfig
 from vllm.config import (
@@ -72,7 +72,7 @@ class EngineArgs:
     # Note: Specifying a custom executor backend by passing a class
     # is intended for expert use only. The API may change without
     # notice.
-    distributed_executor_backend: Optional[Union[str, Type[ExecutorBase]]] = None
+    distributed_executor_backend: Optional[str | type[ExecutorBase]] = None
     pipeline_parallel_size: int = 1
     tensor_parallel_size: int = 1
     max_parallel_loading_workers: Optional[int] = None
@@ -101,7 +101,7 @@ class EngineArgs:
     # Note: Specifying a tokenizer pool by passing a class
     # is intended for expert use only. The API may change without
     # notice.
-    tokenizer_pool_type: Union[str, Type["BaseTokenizerGroup"]] = "ray"
+    tokenizer_pool_type: str | type["BaseTokenizerGroup"] = "ray"
     tokenizer_pool_extra_config: Optional[dict] = None
     enable_lora: bool = False
     max_loras: int = 1
@@ -111,7 +111,7 @@ class EngineArgs:
     max_prompt_adapter_token: int = 0
     fully_sharded_loras: bool = False
     lora_extra_vocab_size: int = 256
-    long_lora_scaling_factors: Optional[Tuple[float]] = None
+    long_lora_scaling_factors: Optional[tuple[float]] = None
     lora_dtype: str = "auto"
     max_cpu_loras: Optional[int] = None
     device: str = "auto"
@@ -119,7 +119,7 @@ class EngineArgs:
     num_gpu_blocks_override: Optional[int] = None
     num_lookahead_slots: int = 0
     model_loader_extra_config: Optional[dict] = None
-    ignore_patterns: Optional[Union[str, List[str]]] = None
+    ignore_patterns: Optional[str | list[str]] = None
     preemption_mode: Optional[str] = None
 
     scheduler_delay_factor: float = 0.0

@@ -18,8 +18,7 @@ import os
 import warnings
 
 import torch
-from megatron.core import dist_checkpointing
-from megatron.core import parallel_state as mpu
+from megatron.core import dist_checkpointing, parallel_state as mpu
 from megatron.core.dist_checkpointing.serialization import StrictHandling
 from megatron.core.models.gpt.gpt_model import ModelType
 from megatron.core.tensor_parallel.random import model_parallel_cuda_manual_seed
@@ -106,7 +105,7 @@ def convert_checkpoint_from_transformers_to_megatron(hf_model, model, hf_config)
     has_share_expert = getattr(hf_config, "shared_expert_intermediate_size", None)
     with torch.no_grad():
         model.embedding.word_embeddings.weight.copy_(hf_model.model.embed_tokens.weight)
-        for layer, hf_layer in zip(model.decoder.layers, hf_model.model.layers):
+        for layer, hf_layer in zip(model.decoder.layers, hf_model.model.layers, strict=False):
             layer.self_attention.linear_qkv.layer_norm_weight.copy_(hf_layer.input_layernorm.weight)
 
             q = hf_layer.self_attn.q_proj.weight.view([num_key_value_heads, head_dim * num_attention_heads // num_key_value_heads, -1])
@@ -163,7 +162,7 @@ def convert_checkpoint_from_transformers_to_megatron_dpskv3(hf_model, model, hf_
         return src_tensor.numel()
 
     model.embedding.word_embeddings.weight.copy_(hf_model.model.embed_tokens.weight)
-    for layer_idx, (layer, hf_layer) in enumerate(zip(model.decoder.layers, hf_model.model.layers)):
+    for layer_idx, (layer, hf_layer) in enumerate(zip(model.decoder.layers, hf_model.model.layers, strict=False)):
         print(layer_idx)
         layer.input_layernorm.weight.copy_(hf_layer.input_layernorm.weight)
 

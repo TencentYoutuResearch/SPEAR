@@ -17,16 +17,14 @@ Multi-turn SFT dataset that supports training on conversation data with multiple
 """
 
 import logging
-from typing import Any, Dict, List, Optional, Tuple, Union
-from tqdm import tqdm
+from typing import Any, Optional
+
 import numpy as np
-import pandas as pd
 import torch
 from torch.utils.data import Dataset
 from transformers import PreTrainedTokenizer
 
 from verl.utils import hf_tokenizer
-from verl.utils.fs import copy_local_path_from_hdfs
 
 
 def convert_nested_value_to_list_recursive(data_item):
@@ -67,7 +65,7 @@ class MultiTurnSFTDatasetOnline(Dataset):
         self.messages = messages
         self.tools = tools
         self.enable_thinking = None
-            
+
 
     def __len__(self):
         return len(self.messages)
@@ -75,13 +73,13 @@ class MultiTurnSFTDatasetOnline(Dataset):
 
     def _process_message_tokens(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         start_idx: int,
         end_idx: int,
         is_assistant: bool = False,
         enable_thinking: Optional[bool] = None,
-        tools: Optional[List[Dict[str, Any]]] = None,
-    ) -> Tuple[List[int], List[int], List[int]]:
+        tools: Optional[list[dict[str, Any]]] = None,
+    ) -> tuple[list[int], list[int], list[int]]:
         """
         Process tokens for a single message or a group of messages.
 
@@ -150,10 +148,10 @@ class MultiTurnSFTDatasetOnline(Dataset):
     def _validate_and_convert_tokens(
         self,
         full_tokens: torch.Tensor,
-        concat_tokens: List[int],
-        concat_loss_mask: List[int],
-        concat_attention_mask: List[int],
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        concat_tokens: list[int],
+        concat_loss_mask: list[int],
+        concat_attention_mask: list[int],
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Validate tokenization and convert to tensors.
 
@@ -166,11 +164,11 @@ class MultiTurnSFTDatasetOnline(Dataset):
         Returns:
             Tuple of (input_ids, loss_mask, attention_mask) as tensors
         """
-        
+
         full_tokens_list = full_tokens.tolist()
         full_tokens_list_str = ",".join([str(token) for token in full_tokens_list])
         concat_tokens_str = ",".join([str(token) for token in concat_tokens])
-        if len(concat_tokens) != len(full_tokens_list) or not all(a == b for a, b in zip(concat_tokens, full_tokens_list)):
+        if len(concat_tokens) != len(full_tokens_list) or not all(a == b for a, b in zip(concat_tokens, full_tokens_list, strict=False)):
             logging.warning(
                 f"Token mismatch detected! Full tokenization length: {len(full_tokens_list)}, Concatenated tokens length: {len(concat_tokens)}. Using concatenated version."
                 # f"full tokens id: {full_tokens_list_str}"

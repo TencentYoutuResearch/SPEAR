@@ -29,8 +29,7 @@ from transformers.modeling_outputs import BaseModelOutputWithPast
 from transformers.models.llama.configuration_llama import LlamaConfig
 from transformers.models.llama.modeling_llama import CausalLMOutputWithPast
 
-from verl.utils.megatron import sequence_parallel as sp_utils
-from verl.utils.megatron import tensor_parallel as tp_utils
+from verl.utils.megatron import sequence_parallel as sp_utils, tensor_parallel as tp_utils
 from verl.utils.megatron_utils import TransformerConfig, convert_config
 
 from .layers import ParallelLlamaDecoderLayer, ParallelLlamaDecoderLayerRmPad, ParallelLlamaRMSNorm

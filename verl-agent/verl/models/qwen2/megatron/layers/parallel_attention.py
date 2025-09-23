@@ -19,7 +19,7 @@
 # limitations under the License.
 
 import math
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch.nn.functional as F
 from einops import rearrange
@@ -30,8 +30,7 @@ if is_flash_attn_2_available():
     from flash_attn.bert_padding import index_first_axis, pad_input, unpad_input  # noqa
 import torch
 from flash_attn.layers.rotary import apply_rotary_emb
-from megatron.core import ModelParallelConfig, tensor_parallel
-from megatron.core import parallel_state as mpu
+from megatron.core import ModelParallelConfig, parallel_state as mpu, tensor_parallel
 from torch import nn
 from transformers import Qwen2Config
 
@@ -223,7 +222,7 @@ class ParallelQwen2Attention(nn.Module):
         hidden_states: torch.Tensor,
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
-    ) -> Tuple[torch.Tensor, Optional[torch.Tensor], Optional[Tuple[torch.Tensor]]]:
+    ) -> tuple[torch.Tensor, Optional[torch.Tensor], Optional[tuple[torch.Tensor]]]:
         bsz, q_len, _ = hidden_states.size()
         qkv = self.qkv_proj(hidden_states)[0]
         query_states, key_states, value_states = qkv.split([self.q_size, self.k_size, self.v_size], dim=-1)

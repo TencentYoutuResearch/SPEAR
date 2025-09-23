@@ -39,8 +39,7 @@ from verl.utils.fsdp_utils import (
 from verl.utils.import_utils import import_external_libs
 from verl.utils.model import get_generation_config, update_model_config
 from verl.utils.vllm_utils import patch_vllm_moe_model_weight_loader
-from verl.workers.fsdp_workers import ActorRolloutRefWorker as ARRWorker
-from verl.workers.fsdp_workers import CriticWorker
+from verl.workers.fsdp_workers import ActorRolloutRefWorker as ARRWorker, CriticWorker
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))

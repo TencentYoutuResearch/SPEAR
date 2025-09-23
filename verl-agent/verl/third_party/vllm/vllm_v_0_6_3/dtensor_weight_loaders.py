@@ -13,7 +13,6 @@
 # limitations under the License.
 # Adapted from https://github.com/vllm-project/vllm/tree/main/vllm/model_executor/model_loader
 
-from typing import Dict
 
 import torch.nn as nn
 from torch.distributed._tensor import DTensor
@@ -22,7 +21,7 @@ from vllm.model_executor.model_loader.weight_utils import default_weight_loader
 from vllm.model_executor.models.utils import is_pp_missing_parameter
 
 
-def gemma_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def gemma_dtensor_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     stacked_params_mapping = [
         # (param_name, shard_name, shard_id)
         ("qkv_proj", "q_proj", "q"),
@@ -59,7 +58,7 @@ def gemma_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> n
             weight_loader(param, local_loaded_weight.to(dtype=param.dtype))
 
 
-def gptbigcode_dtensor_load_weights(actor_weights: Dict, vllm_model: nn.Module):
+def gptbigcode_dtensor_load_weights(actor_weights: dict, vllm_model: nn.Module):
     params_dict = dict(vllm_model.named_parameters(remove_duplicate=False))
     for name, loaded_weight in actor_weights.items():
         if "lm_head.weight" in name:
@@ -74,7 +73,7 @@ def gptbigcode_dtensor_load_weights(actor_weights: Dict, vllm_model: nn.Module):
         weight_loader(param, local_loaded_weight.to(dtype=param.dtype))
 
 
-def starcoder2_dtensor_load_weights(actor_weights: Dict, vllm_model: nn.Module):
+def starcoder2_dtensor_load_weights(actor_weights: dict, vllm_model: nn.Module):
     stacked_params_mapping = [
         # (param_name, shard_name, shard_id)
         ("qkv_proj", "q_proj", "q"),
@@ -105,7 +104,7 @@ def starcoder2_dtensor_load_weights(actor_weights: Dict, vllm_model: nn.Module):
             weight_loader(param, local_loaded_weight.to(dtype=param.dtype))
 
 
-def llama_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def llama_dtensor_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     stacked_params_mapping = [
         # (param_name, shard_name, shard_id)
         (".qkv_proj", ".q_proj", "q"),
@@ -149,7 +148,7 @@ def llama_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> n
             weight_loader(param, local_loaded_weight)
 
 
-def qwen2_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def qwen2_dtensor_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     stacked_params_mapping = [
         # (param_name, shard_name, shard_id)
         ("qkv_proj", "q_proj", "q"),
@@ -186,7 +185,7 @@ def qwen2_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> n
             weight_loader(param, local_loaded_weight.to(dtype=param.dtype))
 
 
-def qwen2vl_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def qwen2vl_dtensor_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     stacked_params_mapping = [
         # (param_name, shard_name, shard_id)
         ("qkv_proj", "q_proj", "q"),
@@ -223,7 +222,7 @@ def qwen2vl_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) ->
             weight_loader(param, local_loaded_weight.to(dtype=param.dtype))
 
 
-def deepseekv2_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def deepseekv2_dtensor_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     stacked_params_mapping = [
         # (param_name, shard_name, shard_id)
         ("gate_up_proj", "gate_proj", 0),
@@ -303,11 +302,11 @@ def deepseekv2_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module)
                 weight_loader(param, local_loaded_weight.to(dtype=param.dtype))
 
 
-def gpt2_dtensor_weight_loader(actor_weights: Dict, vllm_model: nn.Module) -> nn.Module:
+def gpt2_dtensor_weight_loader(actor_weights: dict, vllm_model: nn.Module) -> nn.Module:
     pass
 
 
-def redistribute_dtensor(param_name: str, loaded_weights: DTensor, parallelize_plan: Dict = None):
+def redistribute_dtensor(param_name: str, loaded_weights: DTensor, parallelize_plan: dict = None):
     param_name = _process_parameter_names(name=param_name)
     if parallelize_plan is not None:
         assert param_name in parallelize_plan, f"param name: {param_name} not in parallelize_plan :{parallelize_plan.keys()}"
@@ -355,7 +354,7 @@ __MODEL_DTENSOR_WEIGHT_LOADER_REGISTRY__ = {
 
 # the actor model is .state_dict()
 # Load dtensor weights
-def load_dtensor_weights(actor_weights: Dict, vllm_model: nn.Module):
+def load_dtensor_weights(actor_weights: dict, vllm_model: nn.Module):
     weight_loader = _get_model_weight_loader(vllm_model.__class__.__name__)
     weight_loader(actor_weights, vllm_model)
     # NOTE(sgm) to reduce peak memory usage, we offload vllm model to cpu

@@ -15,34 +15,35 @@
 
 import os
 import traceback
-import uuid
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from enum import Enum
 from pprint import pprint
-from typing import Dict, Optional, Type
+from typing import Optional
 
 import numpy as np
 import ray
 from codetiming import Timer
 from omegaconf import OmegaConf, open_dict
+from recipe.spin import core_algos
 from torch.utils.data import Dataset, Sampler
 from torchdata.stateful_dataloader import StatefulDataLoader
 from tqdm import tqdm
 
-from recipe.spin import core_algos
 from verl import DataProto
 from verl.protocol import pad_dataproto_to_divisor, unpad_dataproto
 from verl.single_controller.base import Worker
 from verl.single_controller.ray import RayClassWithInitArgs, RayResourcePool, RayWorkerGroup
 from verl.single_controller.ray.base import create_colocated_worker_cls
-from verl.trainer.ppo.metric_utils import compute_throughout_metrics, compute_timing_metrics, process_validation_metrics, reduce_metrics
+from verl.trainer.ppo.metric_utils import (
+    process_validation_metrics,
+)
 from verl.utils.checkpoint.checkpoint_manager import find_latest_ckpt_path
 from verl.utils.seqlen_balancing import get_seqlen_balanced_partitions, log_seqlen_unbalance
 from verl.utils.tracking import ValidationGenerationsLogger
 
-WorkerType = Type[Worker]
+WorkerType = type[Worker]
 
 
 class Role(Enum):
@@ -137,7 +138,7 @@ import torch
 from verl.utils.torch_functional import masked_mean
 
 
-def _compute_response_info(batch: DataProto) -> Dict[str, Any]:
+def _compute_response_info(batch: DataProto) -> dict[str, Any]:
     """Placeholder: Computes prompt and response lengths."""
     try:
         # Assuming 'prompts' and 'responses' keys exist after generation/union
@@ -184,7 +185,7 @@ def _compute_response_info(batch: DataProto) -> Dict[str, Any]:
 
 
 # --- Modified Metric Function ---
-def compute_dpo_data_metrics(batch: DataProto) -> Dict[str, Any]:
+def compute_dpo_data_metrics(batch: DataProto) -> dict[str, Any]:
     """
     Computes and returns metrics relevant for the DPO-like process.
     Assumes 'batch' contains results after generation and preference marking,
@@ -340,7 +341,7 @@ def compute_onlineDPO_pref(data: DataProto):
 
 
 @contextmanager
-def _timer(name: str, timing_raw: Dict[str, float]):
+def _timer(name: str, timing_raw: dict[str, float]):
     with Timer(name=name, logger=None) as timer:
         yield
     timing_raw[name] = timer.last
@@ -597,7 +598,7 @@ class RaySPINTrainer:
         import numpy as np
 
         # Create tuples of (input, output, score) and sort by input text
-        samples = list(zip(inputs, outputs, scores))
+        samples = list(zip(inputs, outputs, scores, strict=False))
         samples.sort(key=lambda x: x[0])  # Sort by input text
 
         # Use fixed random seed for deterministic shuffling
@@ -726,7 +727,7 @@ class RaySPINTrainer:
                     metric_dict[pfx] = metric_val
 
         return metric_dict
-    
+
     def init_workers(self):
         """Init resource pool and worker group"""
         self.resource_pool_manager.create_resource_pool()
@@ -916,14 +917,13 @@ class RaySPINTrainer:
                                                     prefix=logging_prefix)
         metrics.update(global_balance_stats)
 
-        
+
     def fit_dpo(self): # Renamed for clarity as standard PPO loop
         """
         The training loop of Online DPO using a periodically updated reference model.
         The driver process calls worker groups for computation.
         Advantage computation is replaced by DPO logic.
         """
-        import traceback  # Ensure traceback is imported
 
         from omegaconf import OmegaConf
 
@@ -1115,7 +1115,7 @@ class RaySPINTrainer:
         #                     # Use 'token_level_rewards' as the key for preference calculation
         #                     batch.batch['token_level_rewards'] = reward_tensor
         #                     if reward_extra_infos_dict: batch.non_tensor_batch.update({k: np.array(v) for k, v in reward_extra_infos_dict.items()})
-                            
+
 
         #                 # --- Determine Preferences ---
         #                 # Uses 'token_level_rewards' to determine chosen/rejected based on score
@@ -1313,4 +1313,4 @@ class RaySPINTrainer:
         pprint(f'Final validation metrics: {last_val_metrics}')
         if logger and hasattr(logger, 'finish'): logger.finish()
         print("Online DPO Training Run Complete.")
-    
+

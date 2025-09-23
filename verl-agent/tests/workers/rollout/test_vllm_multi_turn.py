@@ -13,15 +13,20 @@
 # limitations under the License.
 import asyncio
 import json
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 import ray
 from omegaconf import DictConfig, OmegaConf
 from openai.types.chat.chat_completion import ChatCompletion
-from vllm.entrypoints.openai.protocol import ChatCompletionRequest, ChatCompletionResponse, ChatCompletionStreamResponse, ErrorResponse
-
 from tests.workers.rollout.async_rollout_utils import init_async_rollout_manager
+from vllm.entrypoints.openai.protocol import (
+    ChatCompletionRequest,
+    ChatCompletionResponse,
+    ChatCompletionStreamResponse,
+    ErrorResponse,
+)
+
 from verl.protocol import DataProto
 
 
@@ -64,7 +69,7 @@ def test_vllm_multi_turn(config):
     async_chat_scheduler = async_rollout_manager.chat_scheduler
 
     # =========================== 2. Multi turn rollout  ===========================
-    async def callback(completions: ChatCompletion, info: Dict[str, Any], exception: Exception):
+    async def callback(completions: ChatCompletion, info: dict[str, Any], exception: Exception):
         assert exception is None, f"exception: {exception}"
         messages, round = info["messages"], info["round"]
         message = completions.choices[0].message

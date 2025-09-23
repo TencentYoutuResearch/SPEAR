@@ -14,7 +14,7 @@
 # limitations under the License.
 
 import pickle
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 import numpy as np
 import torch
@@ -22,7 +22,7 @@ import torch.distributed as dist
 
 
 def broadcast_pyobj(
-    data: List[Any],
+    data: list[Any],
     rank: int,
     dist_group: Optional[torch.distributed.ProcessGroup] = None,
     src: int = 0,

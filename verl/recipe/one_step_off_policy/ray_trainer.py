@@ -18,39 +18,21 @@
 This trainer supports model-agonistic model initialization with huggingface
 """
 
-import uuid
-from pprint import pprint
 
-import numpy as np
 import ray
-import torch
 from omegaconf import OmegaConf
 from torch.utils.data import Dataset, Sampler
-from tqdm import tqdm
 
 from verl import DataProto
 from verl.single_controller.ray import RayClassWithInitArgs, RayWorkerGroup
 from verl.single_controller.ray.base import create_colocated_worker_cls
 from verl.trainer.ppo import core_algos
-from verl.trainer.ppo.core_algos import AdvantageEstimator, agg_loss
-from verl.trainer.ppo.metric_utils import (
-    compute_data_metrics,
-    compute_throughout_metrics,
-    compute_timing_metrics,
-)
+from verl.trainer.ppo.core_algos import AdvantageEstimator
 from verl.trainer.ppo.ray_trainer import (
     RayPPOTrainer,
     ResourcePoolManager,
     Role,
     WorkerType,
-    apply_kl_penalty,
-    compute_advantage,
-    compute_response_mask,
-)
-from verl.trainer.ppo.reward import compute_reward, compute_reward_async
-from verl.utils.debug import marked_timer
-from verl.utils.metric import (
-    reduce_metrics,
 )
 from verl.utils.tracking import ValidationGenerationsLogger
 

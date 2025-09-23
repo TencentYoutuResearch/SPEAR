@@ -26,7 +26,7 @@ from verl.single_controller.base import Worker
 from verl.single_controller.base.decorator import Dispatch, register
 from verl.utils import hf_tokenizer
 from verl.utils.checkpoint.fsdp_checkpoint_manager import FSDPCheckpointManager
-from verl.utils.device import get_device_id, get_device_name, get_nccl_backend
+from verl.utils.device import get_device_id, get_device_name
 from verl.utils.flops_counter import FlopsCounter
 from verl.utils.fs import copy_local_path_from_hdfs
 from verl.utils.fsdp_utils import (
@@ -89,8 +89,7 @@ class PRIMERewardModelWorker(Worker):
     def _build_reward_ref_model_optimizer(self, config):
         # the following line is necessary
         from torch import optim
-        from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-        from torch.distributed.fsdp import MixedPrecision
+        from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, MixedPrecision
 
         from verl.utils.model import print_model_size
         from verl.utils.torch_dtypes import PrecisionType

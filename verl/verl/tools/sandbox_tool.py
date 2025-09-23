@@ -13,12 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import json
 import logging
 import os
 import threading
 from contextlib import ExitStack
 from enum import Enum
-from typing import Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Callable, Optional, TypeVar
 from uuid import uuid4
 
 import ray
@@ -26,12 +27,10 @@ import ray.actor
 import ray.util.multiprocessing
 
 from verl.tools.base_tool import BaseTool
-from verl.utils.reward_score.sandbox_fusion import compute_score as compute_score_sandbox
 from verl.utils.reward_score.prime_code import compute_score as compute_score_prime
+from verl.utils.reward_score.sandbox_fusion import compute_score as compute_score_sandbox
 
 from .schemas import OpenAIFunctionToolSchema
-import json
-import asyncio
 
 logger = logging.getLogger(__name__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))
@@ -44,6 +43,7 @@ class PoolMode(Enum):
     ProcessMode = 2
 
 import sys
+
 sys.set_int_max_str_digits(10000)
 
 @ray.remote(concurrency_groups={"acquire": 1, "release": 10})
@@ -143,7 +143,7 @@ class SandBoxTool(BaseTool):
                     test_cases["inputs"] = test_cases["inputs"][:3]
                     test_cases["outputs"] = test_cases["outputs"][:3]
                 ground_truth_str = json.dumps(test_cases, ensure_ascii=False)
-            except json.JSONDecodeError as e:
+            except json.JSONDecodeError:
                 ground_truth_str = ground_truth
         else:
             ground_truth_str = json.dumps(ground_truth, ensure_ascii=False)
@@ -155,7 +155,7 @@ class SandBoxTool(BaseTool):
         }
         return instance_id
 
-    async def execute(self, instance_id: str, parameters: dict[str, Any], assistant_content="", time_limit=30, **kwargs) -> Tuple[str, float, dict]:
+    async def execute(self, instance_id: str, parameters: dict[str, Any], assistant_content="", time_limit=30, **kwargs) -> tuple[str, float, dict]:
         # code = parameters.get("code", "")
         code = str(assistant_content)
         self._instance_dict[instance_id]["response"] = code
@@ -199,4 +199,3 @@ class SandBoxTool(BaseTool):
     async def release(self, instance_id: str, **kwargs) -> None:
         del self._instance_dict[instance_id]
 
-    

@@ -17,8 +17,8 @@ import os
 
 import hydra
 import ray
-
 from recipe.spin.spin_trainer import RaySPINTrainer
+
 from verl.trainer.ppo.reward import get_custom_reward_fn
 
 
@@ -67,6 +67,7 @@ class TaskRunner:
             assert config.actor_rollout_ref.actor.strategy == config.critic.strategy
             # from recipe.spin.fsdp_workers import ActorRolloutRefWorker
             from recipe.spin.fsdp_workers import SPINRolloutRefWorker
+
             from verl.single_controller.ray import RayWorkerGroup
 
             ray_worker_group_cls = RayWorkerGroup

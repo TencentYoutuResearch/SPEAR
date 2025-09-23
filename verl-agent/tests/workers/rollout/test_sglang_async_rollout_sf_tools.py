@@ -30,7 +30,12 @@ from utils_sglang import (
 
 from verl.protocol import DataProto
 from verl.tools.sandbox_fusion_tools import TokenBucketWorker
-from verl.tools.schemas import OpenAIFunctionParametersSchema, OpenAIFunctionPropertySchema, OpenAIFunctionSchema, OpenAIFunctionToolSchema
+from verl.tools.schemas import (
+    OpenAIFunctionParametersSchema,
+    OpenAIFunctionPropertySchema,
+    OpenAIFunctionSchema,
+    OpenAIFunctionToolSchema,
+)
 from verl.workers.rollout.schemas import AsyncRolloutRequest, AsyncRolloutRequestStateEnum, Message
 from verl.workers.rollout.sglang_rollout.sglang_rollout import SGLangRollout
 
@@ -294,7 +299,7 @@ class TestRolloutWithTools:
         # here we mock a meta info with 'length'. indicate the response is truncate
         rollout._handle_engine_call = MagicMock()
         futures = [asyncio.Future() for i in expect_turn_array]
-        for idx, (i, turn) in enumerate(zip(futures, expect_turn_array)):
+        for idx, (i, turn) in enumerate(zip(futures, expect_turn_array, strict=False)):
             i.set_result({"text": turn, "meta_info": {"id": "d1188d81cba840359df5b352b344bc8e", "finish_reason": {"type": "tool_calls" if idx < len(expect_turn_array) - 1 else "stop"}, "prompt_tokens": len(turn), "completion_tokens": 100, "cached_tokens": 0, "e2e_latency": 9.9304039478302}})
             if idx < len(expect_turn_array) - 1:
                 assert rollout._function_call_parser.has_tool_call(turn)
@@ -343,7 +348,7 @@ class TestRolloutWithTools:
             _temp_req.request_id = i
             req_list.append(MagicMock(wraps=_temp_req, spec=AsyncRolloutRequest))
             futures = [asyncio.Future() for i in expect_turn_array]
-            for idx, (i, turn) in enumerate(zip(futures, expect_turn_array)):
+            for idx, (i, turn) in enumerate(zip(futures, expect_turn_array, strict=False)):
                 i.set_result({"text": turn, "meta_info": {"id": "d1188d81cba840359df5b352b344bc8e", "finish_reason": {"type": "tool_calls" if idx < len(expect_turn_array) - 1 else "stop"}, "prompt_tokens": len(turn), "completion_tokens": 100, "cached_tokens": 0, "e2e_latency": 9.9304039478302}})
                 if idx < len(expect_turn_array) - 1:
                     assert rollout._function_call_parser.has_tool_call(turn)

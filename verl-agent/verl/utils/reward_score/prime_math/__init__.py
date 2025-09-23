@@ -38,7 +38,7 @@ from .grader import math_equal
 
 # sympy might hang -- we don't care about trying to be lenient in these cases
 BAD_SUBSTRINGS = ["^{", "^("]
-BAD_REGEXES = ["\^[0-9]+\^", "\^[0-9][0-9]+"]
+BAD_REGEXES = [r"\^[0-9]+\^", r"\^[0-9][0-9]+"]
 TUPLE_CHARS = "()[]"
 
 def _sympy_parse(expr: str):
@@ -114,7 +114,7 @@ def _inject_implicit_mixed_number(step: str):
 
 def _strip_properly_formatted_commas(expr: str):
     # We want to be careful because we don't want to strip tuple commas
-    p1 = re.compile("(\d)(,)(\d\d\d)($|\D)")
+    p1 = re.compile(r"(\d)(,)(\d\d\d)($|\D)")
     while True:
         next_expr = p1.sub("\\1\\3\\4", expr)
         if next_expr == expr:
@@ -129,7 +129,7 @@ def _normalize(expr: str) -> str:
         return None
 
     # Remove enclosing `\text{}`.
-    m = re.search("^\\\\text\{(?P<text>.+?)\}$", expr)
+    m = re.search("^\\\\text\\{(?P<text>.+?)\\}$", expr)
     if m is not None:
         expr = m.group("text")
 
@@ -163,8 +163,8 @@ def _normalize(expr: str) -> str:
         "yard",
         "liter",
     ]:
-        expr = re.sub(f"{unit}(es)?(s)? *(\^[0-9]+)?", "", expr)
-    expr = re.sub("\^ *\\\\circ", "", expr)
+        expr = re.sub(rf"{unit}(es)?(s)? *(\^[0-9]+)?", "", expr)
+    expr = re.sub("\\^ *\\\\circ", "", expr)
 
     if len(expr) > 0 and expr[0] == "{" and expr[-1] == "}":
         expr = expr[1:-1]
@@ -278,13 +278,13 @@ def grade_answer(given_answer: str, ground_truth: str) -> bool:
                 len(ground_truth_elems) != len(given_elems):
         is_correct = False
     else:
-        for ground_truth_elem, given_elem in zip(ground_truth_elems, given_elems):
+        for ground_truth_elem, given_elem in zip(ground_truth_elems, given_elems, strict=False):
             if _is_frac(ground_truth_elem) and _is_frac(given_elem):
                 # if fractions aren't reduced, then shouldn't be marked as correct
                 # so, we don't want to allow sympy.simplify in this case
                 is_correct = ground_truth_elem == given_elem
             elif _str_is_int(ground_truth_elem) != _str_is_int(given_elem):
-                # if the ground truth answer is an integer, 
+                # if the ground truth answer is an integer,
                 # we require the given answer to be a strict match (no sympy.simplify)
                 is_correct = False
             else:
@@ -394,7 +394,7 @@ def compute_score(model_output: str, ground_truth: str) -> bool:
         return True, True, extracted_model_output
 
     try:
-        if "\pi" in extracted_model_output or "\pi" in ground_truth:
+        if r"\pi" in extracted_model_output or r"\pi" in ground_truth:
             equivs = []
             for pi in [math.pi, 3.14]:
                 equivs.append(math_equal(extracted_model_output, ground_truth, timeout=True, pi=pi))

@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from typing import List, Dict, Any, Tuple
+from typing import Any
+
 from .base import BaseMemory
+
 
 class SimpleMemory(BaseMemory):
     """
@@ -38,7 +40,7 @@ class SimpleMemory(BaseMemory):
         self.batch_size = batch_size
         self.keys = None
 
-    def store(self, record: Dict[str, List[Any]]):
+    def store(self, record: dict[str, list[Any]]):
         """
         Store a new record (one step of history) for each environment instance.
 
@@ -60,7 +62,7 @@ class SimpleMemory(BaseMemory):
         history_length: int,
         obs_key: str = "text_obs",
         action_key: str = "action",
-    ) -> Tuple[List[str], List[int]]:
+    ) -> tuple[list[str], list[int]]:
         """
         Fetch and format recent interaction history for each environment instance.
         Args:

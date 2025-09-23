@@ -701,7 +701,7 @@ def check_device_is_available():
     This context manager checks if CUDA is available and raises an error if it is not.
     """
     if not get_torch_device().is_available():
-        raise RuntimeError("Device {} must be initialized before importing this module.".format(get_device_name()))
+        raise RuntimeError(f"Device {get_device_name()} must be initialized before importing this module.")
 
     yield
 

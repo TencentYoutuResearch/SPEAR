@@ -19,9 +19,9 @@ import pytest
 import ray
 from langchain_core.tools import tool
 from omegaconf import DictConfig
-
 from recipe.langgraph_agent.react_agent_loop import ReactAgentLoop
 from tests.experimental.agent_loop.agent_utils import init_agent_loop_manager
+
 from verl.protocol import DataProto
 from verl.utils import hf_tokenizer
 

@@ -96,7 +96,6 @@ import contextlib
 import math
 import re
 from math import isclose
-from typing import Union
 
 # sympy related
 from sympy import N, simplify
@@ -147,9 +146,9 @@ def handle_base(x) -> str:
 
 
 def handle_pi(string, pi):
-    if isinstance(string, str) and "\pi" in string:
+    if isinstance(string, str) and r"\pi" in string:
         # Find the first occurrence of "\pi"
-        idx = string.find("\pi")
+        idx = string.find(r"\pi")
 
         # Iterate over the string and find all occurrences of "\pi" with a valid previous character
         while idx != -1:
@@ -161,7 +160,7 @@ def handle_pi(string, pi):
                 string = string[:idx] + f"1*{pi}" + string[idx + 3 :]
 
             # Find the next occurrence of "\pi"
-            idx = string.find("\pi", idx + 1)
+            idx = string.find(r"\pi", idx + 1)
 
         # Evaluate the expression using eval() function
         with contextlib.suppress(Exception):
@@ -171,8 +170,8 @@ def handle_pi(string, pi):
 
 
 def math_equal(
-    prediction: Union[bool, float, str],
-    reference: Union[float, str],
+    prediction: bool | float | str,
+    reference: float | str,
     include_percentage: bool = True,
     tolerance: float = 1e-4,
     timeout: float = 10.0,
@@ -237,7 +236,7 @@ def math_equal(
     if prediction and reference and prediction[0] in "([" and prediction[-1] in ")]" and prediction[0] == reference[0] and prediction[-1] == reference[-1]:
         pred_parts = prediction[1:-1].split(",")
         ref_parts = reference[1:-1].split(",")
-        if len(pred_parts) == len(ref_parts) and all([math_equal(pred_pt, ref_pt, include_percentage, tolerance) for pred_pt, ref_pt in zip(pred_parts, ref_parts)]):
+        if len(pred_parts) == len(ref_parts) and all([math_equal(pred_pt, ref_pt, include_percentage, tolerance) for pred_pt, ref_pt in zip(pred_parts, ref_parts, strict=False)]):
             return True
 
     if "," in prediction and "," in reference:
@@ -251,7 +250,7 @@ def math_equal(
     if prediction.startswith("Point") and reference[0] == "(" and reference[-1] == ")":
         pred_parts = prediction[prediction.find("(") + 1 : -1].split(",")
         ref_parts = reference[1:-1].split(",")
-        if len(pred_parts) == len(ref_parts) and all([math_equal(pred_pt, ref_pt, include_percentage, tolerance) for pred_pt, ref_pt in zip(pred_parts, ref_parts)]):
+        if len(pred_parts) == len(ref_parts) and all([math_equal(pred_pt, ref_pt, include_percentage, tolerance) for pred_pt, ref_pt in zip(pred_parts, ref_parts, strict=False)]):
             return True
 
     # if reference is a matrix
@@ -259,7 +258,7 @@ def math_equal(
         try:
             pred_matrix = parse_expr(prediction)
             ref_matrix_items = reference.split()[1:-1:2]
-            if len(pred_matrix) == len(ref_matrix_items) and all([math_equal(pred, ref, include_percentage, tolerance) for ref, pred in zip(ref_matrix_items, pred_matrix)]):
+            if len(pred_matrix) == len(ref_matrix_items) and all([math_equal(pred, ref, include_percentage, tolerance) for ref, pred in zip(ref_matrix_items, pred_matrix, strict=False)]):
                 return True
         except Exception:
             pass
@@ -268,10 +267,10 @@ def math_equal(
             try:
                 pred_matrix = eval(prediction)
                 # ref_matrix_items = reference.split()[1:-1:2]
-                ref_matrix_items = reference.lstrip("\\begin{pmatrix}").lstrip("\begin{pmatrix}").rstrip("\\end{pmatrix}").rstrip("\end{pmatrix}")  # noqa: B005
+                ref_matrix_items = reference.lstrip("\\begin{pmatrix}").lstrip("\begin{pmatrix}").rstrip("\\end{pmatrix}").rstrip(r"\end{pmatrix}")  # noqa: B005
                 ref_matrix_items = ref_matrix_items.split("\\")
                 ref_matrix_items = [row.split("&") if "&" in row else row for row in ref_matrix_items]
-                if len(pred_matrix) == len(ref_matrix_items) and all([math_equal(pred, ref, include_percentage, tolerance) for ref, pred in zip(ref_matrix_items, pred_matrix)]):
+                if len(pred_matrix) == len(ref_matrix_items) and all([math_equal(pred, ref, include_percentage, tolerance) for ref, pred in zip(ref_matrix_items, pred_matrix, strict=False)]):
                     return True
             except Exception:
                 pass
@@ -300,7 +299,7 @@ def symbolic_equal(a, b, tolerance, timeout=10.0):
             if simplify(a - b) == 0:
                 return True
     except TimeoutError:
-        print(f"Simplification timed out for {a} - {b}") 
+        print(f"Simplification timed out for {a} - {b}")
         pass
     except Exception:
         pass

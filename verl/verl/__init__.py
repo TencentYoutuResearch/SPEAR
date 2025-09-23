@@ -15,8 +15,7 @@
 import importlib
 import logging
 import os
-from importlib.metadata import PackageNotFoundError
-from importlib.metadata import version as get_version
+from importlib.metadata import PackageNotFoundError, version as get_version
 
 from packaging.version import parse as parse_version
 

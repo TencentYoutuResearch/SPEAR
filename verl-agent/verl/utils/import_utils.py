@@ -18,7 +18,7 @@ We assume package availability won't change during runtime.
 
 import importlib.util
 from functools import cache
-from typing import List, Optional
+from typing import Optional
 
 
 @cache
@@ -51,7 +51,7 @@ def is_sglang_available():
 def import_external_libs(external_libs=None):
     if external_libs is None:
         return
-    if not isinstance(external_libs, List):
+    if not isinstance(external_libs, list):
         external_libs = [external_libs]
     import importlib
 
@@ -91,8 +91,8 @@ def _get_qualified_name(func):
 
 def deprecated(replacement: str = ""):
     """Decorator to mark APIs as deprecated."""
-    import warnings
     import functools
+    import warnings
 
     def decorator(func):
         qualified_name = _get_qualified_name(func)

@@ -204,7 +204,7 @@ class MegatronCheckpointManager(BaseCheckpointManager):
             ckpt_name = self.get_checkpoint_name(model_path, return_base_dir=False)
             state_dicts = torch.load(os.path.join(ckpt_name), weights_only=False)
             assert len(state_dicts) == len(self.model), f"state_dicts length: {len(state_dicts)} mismatch with model length: {len(self.model)}"
-            for vpp_rank, (state_dict, model) in enumerate(zip(state_dicts, self.model)):
+            for vpp_rank, (state_dict, model) in enumerate(zip(state_dicts, self.model, strict=False)):
                 model.load_state_dict(state_dict)
             print(f"Loaded sharded model checkpoint from {model_path}")
 

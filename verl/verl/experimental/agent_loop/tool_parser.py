@@ -103,8 +103,8 @@ class HermesToolParser(ToolParser):
         # remaing text exclude tool call tokens
         content = self.tool_call_regex.sub("", text)
         content_id = await loop.run_in_executor(None, self.tokenizer.encode, content)
-        content_id = [token_id for token_id in content_id if not (token_id in [self.tokenizer.bos_token_id,\
-            self.tokenizer.eos_token_id, self.tokenizer.unk_token_id, self.tokenizer.pad_token_id])]
+        content_id = [token_id for token_id in content_id if token_id not in [self.tokenizer.bos_token_id,\
+            self.tokenizer.eos_token_id, self.tokenizer.unk_token_id, self.tokenizer.pad_token_id]]
         content = await loop.run_in_executor(None,
             lambda: self.tokenizer.decode(
                 content_id, skip_special_tokens=True

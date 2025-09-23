@@ -27,8 +27,7 @@ from verl.utils.debug import (
 from verl.utils.device import get_device_name, get_torch_device
 from verl.utils.fs import copy_to_local
 from verl.utils.vllm_utils import patch_vllm_moe_model_weight_loader
-from verl.workers.megatron_workers import ActorRolloutRefWorker as ARRWorker
-from verl.workers.megatron_workers import CriticWorker, RewardModelWorker
+from verl.workers.megatron_workers import ActorRolloutRefWorker as ARRWorker, CriticWorker, RewardModelWorker
 
 logger = logging.getLogger(__file__)
 logger.setLevel(os.getenv("VERL_LOGGING_LEVEL", "WARN"))

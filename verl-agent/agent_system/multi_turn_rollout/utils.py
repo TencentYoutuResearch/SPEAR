@@ -13,13 +13,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
-import numpy as np
-import random
-from typing import List, Tuple, Dict
 import math
+
+import numpy as np
+import torch
 from PIL import Image
+
 from verl import DataProto
+
 
 def to_list_of_dict(batch: DataProto) -> list[dict]:
     tensors = batch.batch
@@ -95,13 +96,13 @@ def adjust_batch(config, data: DataProto, mode="copy") -> DataProto:
     remainder = bs % size_divisor
     if remainder == 0:
         return data
-    
+
     if mode == "delete":
         # Generate indices to remove, rather than indices to keep
         remove_indices = np.random.choice(bs, remainder, replace=False)
         # Sort remove_indices to maintain stability when deleting
         remove_indices = np.sort(remove_indices)
-        
+
         # Create a boolean mask for elements to keep
         keep_mask = np.ones(bs, dtype=bool)
         keep_mask[remove_indices] = False
@@ -124,10 +125,10 @@ def adjust_batch(config, data: DataProto, mode="copy") -> DataProto:
     return adjusted_batch
 
 
-def filter_group_data(batch_list : List[Dict],
+def filter_group_data(batch_list : list[dict],
                         episode_rewards: np.ndarray,
                         episode_lengths: np.ndarray,
-                        success: Dict[str, np.ndarray],
+                        success: dict[str, np.ndarray],
                         traj_uid: np.ndarray,
                         config,
                         last_try: bool = False,
@@ -139,7 +140,7 @@ def filter_group_data(batch_list : List[Dict],
     """
     if last_try:
         return batch_list, episode_rewards, episode_lengths, success, traj_uid
-    
+
     batch_size = config.data.train_batch_size
     group_n = config.env.rollout.n
     if group_n <= 1:
@@ -160,7 +161,7 @@ def filter_group_data(batch_list : List[Dict],
         if not np.all(group_rewards == group_rewards[0]):
             # If so, keep the entire group, otherwise, remove it
             keep_indices = np.concatenate((keep_indices, group_indices))
-    
+
     # Filter the batch_list, episode_rewards, episode_lengths, and success based on the keep_indices
     success = {
         key: value[keep_indices]

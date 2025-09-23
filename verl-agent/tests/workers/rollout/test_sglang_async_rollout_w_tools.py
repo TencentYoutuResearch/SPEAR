@@ -22,8 +22,7 @@ import numpy as np
 import torch
 from tensordict import TensorDict
 from torch.distributed.device_mesh import init_device_mesh
-from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-from torch.distributed.fsdp import MixedPrecision, ShardingStrategy
+from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, MixedPrecision, ShardingStrategy
 from utils_sglang import (
     are_lists_similar,
     clean_torchelastic_env,

@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import torch
 from transformers import PretrainedConfig
-from verl.utils.device import is_cuda_available, get_torch_device
+
+from verl.utils.device import get_torch_device
 
 VALID_CONFIG_TYPE = {"llama", "qwen2", "qwen2_vl", "qwen2_5_vl", "qwen3", "qwen3_moe", "deepseek_v3"}
 
@@ -165,7 +165,7 @@ class FlopsCounter:
         num_hidden_layers = self.config.num_hidden_layers
         num_key_value_heads = self.config.num_key_value_heads
         num_attention_heads = self.config.num_attention_heads
-        moe_intermediate_size = self.config.moe_intermediate_size       
+        moe_intermediate_size = self.config.moe_intermediate_size
         moe_topk = self.config.num_experts_per_tok
         num_experts = self.config.num_experts
 

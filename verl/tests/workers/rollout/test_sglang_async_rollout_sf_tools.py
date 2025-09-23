@@ -336,7 +336,7 @@ class TestRolloutWithTools:
         # here we mock a meta info with 'length'. indicate the response is truncate
         mock_rollout._handle_engine_call = MagicMock()
         futures = [asyncio.Future() for i in expect_turn_array]
-        for idx, (i, turn) in enumerate(zip(futures, expect_turn_array)):
+        for idx, (i, turn) in enumerate(zip(futures, expect_turn_array, strict=False)):
             i.set_result(
                 {
                     "text": turn,
@@ -394,7 +394,7 @@ class TestRolloutWithTools:
             _temp_req.request_id = i
             req_list.append(MagicMock(wraps=_temp_req, spec=AsyncRolloutRequest))
             futures = [asyncio.Future() for i in expect_turn_array]
-            for idx, (i, turn) in enumerate(zip(futures, expect_turn_array)):
+            for idx, (i, turn) in enumerate(zip(futures, expect_turn_array, strict=False)):
                 i.set_result(
                     {
                         "text": turn,

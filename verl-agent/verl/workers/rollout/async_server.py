@@ -20,7 +20,7 @@ import socket
 import threading
 from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
-from typing import Any, Callable, Dict, List, Tuple, Type
+from typing import Any, Callable
 from uuid import uuid4
 
 import aiohttp
@@ -76,7 +76,7 @@ class AsyncServerBase(ABC):
         server = uvicorn.Server(config)
         await server.serve()
 
-    async def get_server_address(self) -> Tuple[str, int]:
+    async def get_server_address(self) -> tuple[str, int]:
         """Get FastAPI server address."""
         await self.server_ready.wait()
         return f"{self.address}:{self.port}"
@@ -110,7 +110,7 @@ class ChatCompletionScheduler:
         self,
         config: DictConfig,
         model_path: str,
-        server_addresses: List[str],
+        server_addresses: list[str],
         max_cache_size: int = 10000,
     ):
         """
@@ -134,8 +134,8 @@ class ChatCompletionScheduler:
 
     async def submit_chat_completions(
         self,
-        callback: Callable[[ChatCompletion, Dict[str, Any], Exception], None],
-        callback_additional_info: Dict[str, Any],
+        callback: Callable[[ChatCompletion, dict[str, Any], Exception], None],
+        callback_additional_info: dict[str, Any],
         **chat_complete_request,
     ):
         """
@@ -218,7 +218,7 @@ class ChatCompletionScheduler:
 class AsyncLLMServerManager:
     """AsyncLLMServerManager manage a group of vllm instances, i.e AsyncvLLMServer."""
 
-    def __init__(self, config: DictConfig, worker_group: RayWorkerGroup, *, scheduler_kwargs: Dict[str, Any] = None):
+    def __init__(self, config: DictConfig, worker_group: RayWorkerGroup, *, scheduler_kwargs: dict[str, Any] = None):
         """Initialize AsyncLLMServerManager.
 
         Args:
@@ -307,8 +307,8 @@ class AsyncLLMServerManager:
 
     def submit_chat_completions(
         self,
-        callback: Callable[[ChatCompletion, Dict[str, Any], Exception], None],
-        callback_additional_info: Dict[str, Any],
+        callback: Callable[[ChatCompletion, dict[str, Any], Exception], None],
+        callback_additional_info: dict[str, Any],
         **chat_complete_request,
     ):
         """Submit a chat completion request to chat scheduler and wait until it is done.
@@ -337,7 +337,7 @@ class AsyncLLMServerManager:
         return future.result()
 
 
-def async_server_class(rollout_backend: str) -> Type[AsyncServerBase]:
+def async_server_class(rollout_backend: str) -> type[AsyncServerBase]:
     """Get async server class.
 
     Args:

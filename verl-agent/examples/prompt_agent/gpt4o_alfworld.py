@@ -1,23 +1,24 @@
-import os
-import numpy as np
-import time
 import logging
+import os
+import time
 from datetime import datetime
+
+import numpy as np
 from agent_system.environments.env_manager import *
 from openai import OpenAI
+
 
 def build_env(env_name, env_num=1):
     group_n = 1
     if env_name == "alfworld":
         # Test AlfWorldEnvironmentManager
-        from agent_system.environments.env_package.alfworld import alfworld_projection
-        from agent_system.environments.env_package.alfworld import build_alfworld_envs
+        from agent_system.environments.env_package.alfworld import alfworld_projection, build_alfworld_envs
         alf_config_path = os.path.join(os.path.dirname(__file__), '../../agent_system/environments/env_package/alfworld/configs/config_tw.yaml')
         envs = build_alfworld_envs(alf_config_path, seed=1, env_num=env_num, group_n=group_n, is_train=False)
         env_manager = AlfWorldEnvironmentManager(envs, alfworld_projection, 'alfworld/AlfredThorEnv')
     else:
         raise ValueError(f"Unsupported environment name: {env_name}")
-    
+
     return env_manager
 
 class Agent:
@@ -26,13 +27,13 @@ class Agent:
         self.client = OpenAI(
             api_key=os.environ['OPENAI_API_KEY'],
         )
-        
+
     def get_action_from_gpt(self, obs):
         response = self.client.chat.completions.create(
             model=self.model_name,
             messages=[
                 {
-                    "role": "user", 
+                    "role": "user",
                     "content": obs
                 }
             ],
@@ -60,7 +61,7 @@ if __name__ == "__main__":
     max_steps = 50
     env_num = 200
     test_times = 3
-    env_name = "alfworld" 
+    env_name = "alfworld"
 
     # Keywords for 6 subtasks
     TASKS = [

@@ -1,0 +1,29 @@
+# ruff.toml（放在项目根目录）
+line-length = 120
+target-version = "py310"
+
+exclude = [
+  "**/*.pyi",
+  ".*",
+  "configs/",
+]
+
+[lint]
+# 启用的规则集
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "B",   # flake8-bugbear
+  "C4",  # flake8-comprehensions
+  "UP",  # pyupgrade
+]
+ignore = ["UP045", "UP035"]
+
+[lint.isort]
+combine-as-imports = true
+known-first-party = ["verl"]
+
+[lint.pydocstyle]
+convention = "google"

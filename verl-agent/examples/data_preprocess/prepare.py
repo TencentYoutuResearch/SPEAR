@@ -15,11 +15,12 @@
 Preprocess the Geometry3k dataset to parquet format
 """
 
+import argparse
 import os
+
 import datasets
 
 from verl.utils.hdfs_io import copy, makedirs
-import argparse
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
