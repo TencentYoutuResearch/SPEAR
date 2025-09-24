@@ -18,6 +18,18 @@ SPEAR <img src="./imgs/spear-logo-in-line.png" alt="spear-logo-in-line" height="
 
 # News
 
+* **`Sep. 2025`:** 🔥🔥🔥 Codes of our SPEAR are released. 
+
+# Overview
+
+The core concept of our proposed SPEAR for training long-horizon LLM agents via group-based RL. Compared with the vanilla GRPO-like algorithms, we introduce the curriculum-based self-imitation learning with intrinsic reward shaping. Given the same data input, a group of trajectories are generated with multi-turn tool interactions and then engaged for episode-level reward computation and advantage estimation. Then, we propose filtering valuable good trajectories to update the replay buffer, where the stored past experiences guide the agent to explore effectively on sparsely rewarded tasks via self-imitation. The total training batch contains both on-policy and off-policy data from the replay buffer.
+
+![The core concept of our proposed SPEAR.](./imgs/framework-concept.png)
+
+
+Overview of SPEAR in terms of data flow. During each episode, the agent interacts with the environment to generate a set of trajectories. These trajectories are processed along two complementary paths. First, they are used for intrinsic reward shaping, advantage estimation, and on-policy updates, following a mechanism similar to the vanilla GRPO. Second, they are selectively filtered and stored in a replay buffer, enabling off-policy updates through the proposed self-imitation scheme with advantage recalibration and regularization. This dual integration allows the agent to maximize the utility of rewarding past experiences, thereby expanding the exploration space effectively, while simultaneously mitigating persistent over-uncertainty in decision-making under shifting distributions of external feedback. As a result, SPEAR achieves a stable balance between exploration and exploitation through self-guided policy adaptation.
+
+![Overview of SPEAR in terms of data flow.](./imgs/overview.png)
 
 
 # Contents
