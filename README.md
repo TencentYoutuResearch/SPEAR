@@ -1,5 +1,6 @@
-# Learn the Ropes, Then Trust the Wins: Taming Exploration with Curriculum-based Self-Imitation for Agentic LLMs
-
+<div align="center">
+  <img src="./imgs/spear-agent.png" width="400"/>
+</div>
 <p align="center">
   <a href="xxxx">
     <img src="https://img.shields.io/badge/arXiv-Paper-red?style=flat-square&logo=arxiv" alt="arXiv Paper"></a>
@@ -12,8 +13,7 @@
   &nbsp;
 </p>
 
-SPEAR is a curriculum-based self-imitation learning (SIL) framework for training agentic LLMs on long-horizon, sparse-reward tasks. It balances exploration and exploitation by first leveraging auxiliary tool-use rewards to encourage broad skill-level exploration, and later strengthening self-imitation to exploit successful trajectories from replayed experiences. This adaptive curriculum stabilizes training and improves efficiency while maintaining well-controlled entropy.
-
+SPEAR <img src="./imgs/spear-logo-in-line.png" alt="spear-logo-in-line" style="height:15px; line-height:15px;"/> is a curriculum-based self-imitation learning (SIL) framework for training agentic LLMs on long-horizon, sparse-reward tasks. It balances exploration and exploitation by first leveraging auxiliary tool-use rewards to encourage broad skill-level exploration, and later strengthening self-imitation to exploit successful trajectories from replayed experiences. This adaptive curriculum stabilizes training and improves efficiency while maintaining well-controlled entropy.
 
 
 # News
