@@ -13,7 +13,7 @@
   &nbsp;
 </p>
 
-SPEAR <img src="./imgs/spear-logo-in-line.png" alt="spear-logo-in-line" style="height:15px; line-height:15px;"/> is a curriculum-based self-imitation learning (SIL) framework for training agentic LLMs on long-horizon, sparse-reward tasks. It balances exploration and exploitation by first leveraging auxiliary tool-use rewards to encourage broad skill-level exploration, and later strengthening self-imitation to exploit successful trajectories from replayed experiences. This adaptive curriculum stabilizes training and improves efficiency while maintaining well-controlled entropy.
+SPEAR <img src="./imgs/spear-logo-in-line.png" alt="spear-logo-in-line" height="15px"/> is a curriculum-based self-imitation learning (SIL) framework for training agentic LLMs on long-horizon, sparse-reward tasks. It balances exploration and exploitation by first leveraging auxiliary tool-use rewards to encourage broad skill-level exploration, and later strengthening self-imitation to exploit successful trajectories from replayed experiences. This adaptive curriculum stabilizes training and improves efficiency while maintaining well-controlled entropy.
 
 
 # News
