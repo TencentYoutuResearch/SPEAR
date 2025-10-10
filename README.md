@@ -510,3 +510,17 @@ bash examples/gigpo_trainer/run_webshop_spear.sh # SPEAR
 ## Acknowledgement
 
 Our codebase is bulit upon [verl](https://github.com/volcengine/verl) and [verl-agent](https://github.com/langfengQ/verl-agent). We greatly appreciate their awesome work and the dedication of the contributors who made these projects available to the community. 
+
+
+## Citation
+
+If you find this project useful, please consider the following citation:
+
+```
+@article{qin2025learn,
+  title={Learn the Ropes, Then Trust the Wins: Self-imitation with Progressive Exploration for Agentic Reinforcement Learning},
+  author={Qin, Yulei and Tan, Xiaoyu and He, Zhengbao and Li, Gang and Lin, Haojia and Li, Zongyi and Xu, Zihan and Shi, Yuchen and Cai, Siqi and Rui, Renting and others},
+  journal={arXiv preprint arXiv:2509.22601},
+  year={2025}
+}
+```
