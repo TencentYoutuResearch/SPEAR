@@ -742,6 +742,7 @@ class RayPPOSFTTrainer(RayPPOTrainer):
         return timing_raw, batch, metrics, future_reward, reward_tensor, reward_extra_infos_dict
 
     def critic_warmup(self, timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict):
+        batch_replay: DataProto = DataProto.from_single_dict({})
         if self.config.trainer.critic_warmup <= self.global_steps:
             if self.trajectory_buffer_replay is not None and self.trajectory_buffer_replay.is_full_capacity():
                 print(">>> ⚠️ REPLAY 通过设置bs=整个buffer大小实现1次loss计算结束")
@@ -751,8 +752,6 @@ class RayPPOSFTTrainer(RayPPOTrainer):
                     print(">>>> 🚨 遇到了筛选adv后过少的replay buffer batch", len(batch_replay.batch))
                     batch_replay: DataProto = DataProto.from_single_dict({})
                 self.trajectory_buffer_replay.reset_buffer()
-            else:
-                batch_replay: DataProto = DataProto.from_single_dict({})
 
             with marked_timer("update_actor", timing_raw, color="red"):
                 batch.meta_info["multi_turn"] = self.config.actor_rollout_ref.rollout.multi_turn.enable
