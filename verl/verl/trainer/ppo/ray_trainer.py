@@ -1334,7 +1334,7 @@ class RayPPOTrainer:
                 actor_output = self.actor_rollout_wg.update_actor(batch)
             actor_output_metrics = reduce_metrics(actor_output.meta_info["metrics"])
             metrics.update(actor_output_metrics)
-        return timing_raw, batch, batch_replay, metrics
+        return timing_raw, batch, None, metrics
 
     def log_rollout(self, timing_raw, batch, reward_extra_infos_dict):
         rollout_data_dir = self.config.trainer.get("rollout_data_dir", None)
@@ -1470,7 +1470,7 @@ class RayPPOTrainer:
                 metrics.update(critic_output_metrics)
 
             # implement critic warmup
-            timing_raw, batch, batch_replay, metrics = self.critic_warmup(
+            timing_raw, batch, _, metrics = self.critic_warmup(
                 timing_raw, batch, metrics, reward_tensor, reward_extra_infos_dict
             )
 
