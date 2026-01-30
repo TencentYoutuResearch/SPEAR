@@ -18,6 +18,7 @@ SPEAR <img src="./imgs/spear-logo-in-line.png" alt="spear-logo-in-line" height="
 
 # News
 
+* **`Jan. 2026`:** SPEAR is accepted to ICLR 2026. 
 * **`Sep. 2025`:** 🔥🔥🔥 Codes of our SPEAR are released. 
 
 # Overview
